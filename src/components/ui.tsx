@@ -1,15 +1,13 @@
 import type { Plan } from '../data/plans'
 
-/* ---------- Background (guidelines: canvas + four blurred blobs) ---------- */
+/* ---------- Aurora-Hintergrund ----------
+   Verlaufsbild aus Figma (siehe global.css). Die frueheren vier
+   weichgezeichneten CSS-Flaechen entfallen — das Bild ist exakt und auf
+   dem Geraet schneller. */
 export function BackgroundGradient() {
   return (
     <>
-      <div className="bg-grad">
-        <div className="blob blob-blue" />
-        <div className="blob blob-coral" />
-        <div className="blob blob-purple" />
-        <div className="blob blob-navy" />
-      </div>
+      <div className="bg-grad" />
       <div className="bg-noise" />
     </>
   )
@@ -42,20 +40,32 @@ export function StatusBar() {
   )
 }
 
-/* ---------- Vodafone speechmark ---------- */
+/* ---------- Vodafone-Zeichen ----------
+   Echter Pfad aus Figma (Plan-Karte, 20x20) statt CSS-Nachbau. */
 export function VodaMark({ size = '' }: { size?: '' | 'sm' | 'md' }) {
-  return <span className={`voda-mark ${size}`} />
+  return (
+    <svg className={`voda-mark ${size}`} viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M10 20C15.5228 20 20 15.5229 20 10C20 5.95726 17.601 2.47486 14.149 0.898657C12.4152 1.36083 11.0661 3.01019 11.0722 4.87175C11.0725 4.93574 11.0782 5.00414 11.0845 5.03599C14.1529 5.7833 15.5458 7.63468 15.5543 10.1964C15.5628 12.758 13.5404 15.5648 10.1223 15.5761C7.35364 15.5853 4.4732 13.2223 4.46062 9.42798C4.45223 6.91873 5.80599 4.5034 7.53643 3.07042C9.22429 1.67278 11.5366 0.775887 13.6337 0.768919C13.7106 0.768656 13.7885 0.770298 13.8647 0.774133C12.6757 0.275504 11.37 0 10 0C4.47717 0 0 4.47711 0 10C0 15.5229 4.47717 20 10 20Z"
+        fill="currentColor"
+      />
+    </svg>
+  )
 }
 
-/* ---------- eSIM chip icon ---------- */
-export function EsimIcon({ large = false }: { large?: boolean }) {
+/* ---------- eSIM-Chip-Symbol ----------
+   Figma 1330:1790: 38x38, Chipflaeche in Akzentrot, umlaufend je vier
+   Kontaktpunkte. Wird nur auf der SIM-Karte verwendet. */
+export function EsimIcon() {
   const dots = (
     <>
       <i /> <i /> <i /> <i />
     </>
   )
   return (
-    <div className={`esim-icon${large ? ' lg' : ''}`}>
+    <div className="esim-icon">
       <div className="dots top">{dots}</div>
       <div className="dots bottom">{dots}</div>
       <div className="dots left">{dots}</div>
@@ -71,17 +81,20 @@ export function SimCard({
   plan,
   chipText,
   onClick,
+  showMark = true,
 }: {
   plan: Plan
   chipText?: string | null
   onClick?: () => void
+  /* Home zeigt in Figma nur Plan-Name + Chip, kein Vodafone-Zeichen. */
+  showMark?: boolean
 }) {
   const Tag = onClick ? 'button' : 'div'
   return (
     <Tag className={`sim-card ${plan.key}`} onClick={onClick}>
       <div className="head">
         <span className="name">{plan.name}</span>
-        <VodaMark size="md" />
+        {showMark && <VodaMark size="md" />}
         {chipText && <span className="chip">{chipText}</span>}
       </div>
       <div className="foot">
@@ -101,9 +114,10 @@ export function FeatureList({ plan }: { plan: Plan }) {
     <div className="feat-list">
       {plan.features.map((f) => (
         <div className="feat" key={f}>
+          {/* Figma: gefuellter weisser Punkt in einem 24x24-Feld, kein Haekchen */}
           <span className="ic">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e15055" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 6L9 17l-5-5" />
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="5" fill="currentColor" />
             </svg>
           </span>
           <span>{f}</span>

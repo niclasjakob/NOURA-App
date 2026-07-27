@@ -6,3 +6,6 @@ dist-ssr
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# TypeScript build cache
+*.tsbuildinfo

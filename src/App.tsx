@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Capacitor } from '@capacitor/core'
-import { PLANS } from './data/plans'
 import { BackgroundGradient, StatusBar } from './components/ui'
 import { Activation, Home, Intro, Onboarding, SelectPlan } from './screens/screens'
 import { PlanSheet, ProfileSheet, SupportSheet, type SheetId } from './sheets/sheets'
@@ -20,14 +19,15 @@ export default function App() {
   }
 
   const startActivation = (login: boolean) => {
+    /* Texte wortgleich aus Figma (Komponente "Animation v2", 1330:2404) */
     setActMessages(
       login
-        ? ['Du wirst angemeldet …', 'Willkommen zurück, Marcel! 👋🏼']
+        ? ['Account wird eingerichtet...', 'Willkommen zurück, Marcel! 👋🏼']
         : [
-            'Deine eSIM wird eingerichtet …',
-            `${PLANS[planIdx].name} Plan wird aktiviert …`,
-            'Verbindung zum 5G-Netz …',
-            'Fertig! 🎉',
+            'Account wird eingerichtet...',
+            'eSim wird konfiguriert...',
+            'Konfiguration wird übermittelt...',
+            'Deine eSim ist bereit!',
           ],
     )
     setScreen('activation')
