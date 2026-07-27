@@ -1,0 +1,5 @@
+/* NOURA fonts — see guidelines/setup.md
+   "General Sans" (original design font) is not on Google Fonts;
+   Plus Jakarta Sans is the prescribed substitute. Poppins Bold is
+   reserved for the NOURA wordmark. */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Poppins:wght@700&display=swap');

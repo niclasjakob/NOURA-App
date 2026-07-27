@@ -83,9 +83,9 @@ export function SupportSheet({ open }: { open: boolean }) {
 }
 
 /* ================= Profile ================= */
-function ListRow({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick?: () => void }) {
+function ListRow({ icon, label, danger, onClick }: { icon: React.ReactNode; label: string; danger?: boolean; onClick?: () => void }) {
   return (
-    <button className="list-row" onClick={onClick}>
+    <button className={`list-row${danger ? ' danger' : ''}`} onClick={onClick}>
       <span className="ic">{icon}</span>
       {label}
     </button>
@@ -136,7 +136,7 @@ export function ProfileSheet({ open, onLogout }: { open: boolean; onLogout: () =
           <h3>Service</h3>
           <ListRow icon={<span>?</span>} label="Hilfe" />
           <ListRow icon={ic('M6 2h9l5 5v15H6z')} label="Dokumente" />
-          <ListRow icon={ic('M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9')} label="Abmelden" onClick={onLogout} />
+          <ListRow icon={ic('M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9')} label="Abmelden" danger onClick={onLogout} />
         </div>
         <div style={{ height: 40 }} />
       </div>
@@ -171,7 +171,7 @@ export function PlanSheet({
           <FeatureList plan={plan} />
         </div>
         <div className="plan-sheet-actions">
-          <button className="btn" onClick={onSwitchPlan}>Plan wechseln</button>
+          <button className="btn primary" onClick={onSwitchPlan}>Plan wechseln</button>
           <button className="link-danger" onClick={onCancelPlan}>Plan kündigen</button>
         </div>
         <div style={{ height: 24 }} />

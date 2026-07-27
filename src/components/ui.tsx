@@ -1,10 +1,15 @@
 import type { Plan } from '../data/plans'
 
-/* ---------- Background (Figma "Gradient 2") ---------- */
+/* ---------- Background (guidelines: canvas + four blurred blobs) ---------- */
 export function BackgroundGradient() {
   return (
     <>
-      <div className="bg-grad" />
+      <div className="bg-grad">
+        <div className="blob blob-blue" />
+        <div className="blob blob-coral" />
+        <div className="blob blob-purple" />
+        <div className="blob blob-navy" />
+      </div>
       <div className="bg-noise" />
     </>
   )

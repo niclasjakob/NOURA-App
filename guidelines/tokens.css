@@ -1,0 +1,207 @@
+/* ==========================================================================
+   NOURA Design Tokens
+   Extracted from Figma: NOURA-Concept → 📱 Hi-Fi: V7 (node 1330-1774)
+   ========================================================================== */
+
+:root {
+  /* --------------------------------------------------------------------
+     Color — Brand
+     -------------------------------------------------------------------- */
+  --noura-color-brand: #e15055;            /* Coral red — wordmark, chips, active tab, eSIM icon, accent numerals */
+  --noura-color-bg-base: #232452;          /* Deep indigo — gradient base layer behind organic shape overlay */
+
+  /* --------------------------------------------------------------------
+     Color — Text (dark surface)
+     -------------------------------------------------------------------- */
+  --noura-color-text-primary: #ffffff;                 /* Figma style: Labels/Primary - Dark */
+  --noura-color-text-primary-soft: rgba(255, 255, 255, 0.9);  /* Card price line (Bold @ 90% opacity) */
+  --noura-color-text-secondary: rgba(255, 255, 255, 0.5);     /* Body copy, captions, inactive tabs */
+
+  /* --------------------------------------------------------------------
+     Color — Surfaces (glassmorphism)
+     -------------------------------------------------------------------- */
+  --noura-surface-glass: rgba(255, 255, 255, 0.1);     /* Stat cards, list tiles */
+  --noura-surface-glass-strong: rgba(255, 255, 255, 0.2); /* Buttons, navbar pills, FABs */
+  --noura-surface-scrim: rgba(0, 0, 0, 0.5);           /* Dark contact dots on Creator sim card */
+
+  /* --------------------------------------------------------------------
+     Blur
+     -------------------------------------------------------------------- */
+  --noura-blur-card: 5px;    /* backdrop-filter on glass cards */
+  --noura-blur-nav: 12px;    /* backdrop-filter on floating navbar buttons */
+
+  /* --------------------------------------------------------------------
+     Typography
+     General Sans is the single product typeface; SF Pro appears only
+     in the iOS status bar mock.
+     -------------------------------------------------------------------- */
+  --noura-font-family: 'General Sans', -apple-system, 'Segoe UI', sans-serif;
+
+  --noura-font-weight-medium: 500;    /* General Sans Medium — captions, chip labels */
+  --noura-font-weight-semibold: 600;  /* General Sans Semibold — buttons, body, stat values */
+  --noura-font-weight-bold: 700;      /* General Sans Bold — headings, prices, wordmark */
+
+  --noura-text-display: 40px;   /* Bold — NOURA wordmark (Intro) */
+  --noura-text-xl: 24px;        /* Bold — accent numerals (∞ in usage ring) */
+  --noura-text-lg: 20px;        /* Bold/Semibold — screen & card headings, stat values */
+  --noura-text-md: 16px;        /* Semibold — buttons, navbar labels; Bold — card price */
+  --noura-text-sm: 14px;        /* Semibold — body, feature list, tabs; Medium — stat labels */
+  --noura-text-xs: 12px;        /* Medium — chips, card sub-copy */
+
+  --noura-leading-tight: normal;  /* Headings, labels ("normal" in Figma) */
+  --noura-leading-body: 1.4;      /* Multi-line body copy */
+
+  /* --------------------------------------------------------------------
+     Shadow / Glow
+     -------------------------------------------------------------------- */
+  --noura-glow-brand: 1px 1px 8px rgba(217, 104, 108, 0.2); /* text-shadow on wordmark */
+
+  /* --------------------------------------------------------------------
+     Radius
+     -------------------------------------------------------------------- */
+  --noura-radius-card: 16px;   /* Glass stat cards */
+  --noura-radius-pill: 24px;   /* Buttons, chips, tabs, navbar */
+  --noura-radius-full: 1000px; /* Avatars */
+
+  /* --------------------------------------------------------------------
+     Spacing (4px base grid)
+     -------------------------------------------------------------------- */
+  --noura-space-1: 4px;    /* Heading ↔ body gap */
+  --noura-space-2: 8px;    /* Icon ↔ label, heading ↔ chip */
+  --noura-space-3: 12px;   /* Card grid gutter */
+  --noura-space-4: 16px;   /* Stacked buttons gap */
+  --noura-space-5: 20px;   /* Card inner padding, button padding */
+  --noura-space-6: 24px;   /* Page padding, section gap, card padding */
+  --noura-space-8: 48px;   /* Bottom-nav vertical padding */
+  --noura-space-16: 64px;  /* Plan card: sim card ↔ feature list gap */
+
+  /* --------------------------------------------------------------------
+     Layout
+     -------------------------------------------------------------------- */
+  --noura-viewport-width: 393px;     /* iPhone 15 frame */
+  --noura-viewport-height: 852px;
+  --noura-content-width: 345px;      /* viewport − 2 × 24px page padding */
+  --noura-statusbar-height: 54px;
+
+  /* --------------------------------------------------------------------
+     Component sizes
+     -------------------------------------------------------------------- */
+  --noura-size-icon: 24px;
+  --noura-size-icon-sm: 20px;
+  --noura-size-avatar: 54px;
+  --noura-size-sim-card-h: 173px;
+  --noura-size-stat-card-h: 150px;
+  --noura-size-usage-ring: 126px;
+  --noura-size-tab-h: 35px;
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+.noura {
+  font-family: var(--noura-font-family);
+  color: var(--noura-color-text-primary);
+  background-color: var(--noura-color-bg-base);
+}
+
+/* ==========================================================================
+   Component recipes
+   ========================================================================== */
+
+/* Primary button — "Jetzt loslegen", navbar "Mehr" */
+.noura-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--noura-space-2);
+  padding: var(--noura-space-5);
+  border-radius: var(--noura-radius-pill);
+  background: var(--noura-surface-glass-strong);
+  backdrop-filter: blur(var(--noura-blur-nav));
+  font-size: var(--noura-text-md);
+  font-weight: var(--noura-font-weight-semibold);
+  color: var(--noura-color-text-primary);
+  border: none;
+  cursor: pointer;
+}
+
+/* Ghost / text button — "Einloggen" (same metrics, no fill) */
+.noura-btn--ghost {
+  background: transparent;
+  backdrop-filter: none;
+}
+
+/* Glass card — usage stats, list tiles */
+.noura-card {
+  padding: var(--noura-space-5);
+  border-radius: var(--noura-radius-card);
+  background: var(--noura-surface-glass);
+  backdrop-filter: blur(var(--noura-blur-card));
+}
+
+/* Status chip — "Aktiv", "Beliebt" */
+.noura-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--noura-space-2) 1px;
+  border-radius: var(--noura-radius-pill);
+  background: var(--noura-color-brand);
+  font-size: var(--noura-text-xs);
+  font-weight: var(--noura-font-weight-medium);
+  color: var(--noura-color-text-primary);
+}
+
+/* Tab switch — Create / Consume / Message */
+.noura-tab {
+  display: flex;
+  gap: var(--noura-space-1);
+  position: relative;
+}
+.noura-tab__button {
+  padding: var(--noura-space-2) var(--noura-space-4);
+  border-radius: var(--noura-radius-pill);
+  font-size: var(--noura-text-sm);
+  font-weight: var(--noura-font-weight-semibold);
+  color: var(--noura-color-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+.noura-tab__button--active {
+  color: var(--noura-color-text-primary);
+}
+.noura-tab__indicator {
+  position: absolute;
+  height: var(--noura-size-tab-h);
+  border-radius: var(--noura-radius-pill);
+  background: var(--noura-color-brand);
+  z-index: 0;
+}
+
+/* Typography utilities */
+.noura-display {
+  font-size: var(--noura-text-display);
+  font-weight: var(--noura-font-weight-bold);
+  color: var(--noura-color-brand);
+  text-shadow: var(--noura-glow-brand);
+}
+.noura-heading {
+  font-size: var(--noura-text-lg);
+  font-weight: var(--noura-font-weight-bold);
+  line-height: var(--noura-leading-tight);
+}
+.noura-body {
+  font-size: var(--noura-text-sm);
+  font-weight: var(--noura-font-weight-semibold);
+  line-height: var(--noura-leading-body);
+  color: var(--noura-color-text-secondary);
+}
+.noura-caption {
+  font-size: var(--noura-text-xs);
+  font-weight: var(--noura-font-weight-medium);
+  color: var(--noura-color-text-secondary);
+}

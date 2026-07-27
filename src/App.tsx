@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { PLANS } from './data/plans'
 import { BackgroundGradient, StatusBar } from './components/ui'
 import { Activation, Home, Intro, Onboarding, SelectPlan } from './screens/screens'
@@ -36,7 +37,8 @@ export default function App() {
     <div className="stage">
       <div className="phone">
         <BackgroundGradient />
-        <StatusBar />
+        {/* On the native build iOS draws the real status bar, so skip the mock one */}
+        {!Capacitor.isNativePlatform() && <StatusBar />}
 
         <Intro
           active={screen === 'intro'}

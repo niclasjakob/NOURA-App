@@ -36,7 +36,7 @@ export function Intro({ active, onStart, onLogin }: ScreenProps & { onStart: () 
         </div>
       </div>
       <div className="intro-nav">
-        <button className="btn" onClick={onStart}>Jetzt loslegen</button>
+        <button className="btn primary" onClick={onStart}>Jetzt loslegen</button>
         <button className="btn ghost" onClick={onLogin}>Einloggen</button>
       </div>
     </Screen>
@@ -47,8 +47,10 @@ export function Intro({ active, onStart, onLogin }: ScreenProps & { onStart: () 
 export function Onboarding({ active, onBack, onDone }: ScreenProps & { onBack: () => void; onDone: () => void }) {
   const [step, setStep] = useState(0)
   const [fading, setFading] = useState(false)
+  const swipeX = useRef<number | null>(null)
 
   const change = (next: number) => {
+    if (next === step || fading) return
     setFading(true)
     window.setTimeout(() => {
       setStep(next)
@@ -57,59 +59,91 @@ export function Onboarding({ active, onBack, onDone }: ScreenProps & { onBack: (
   }
   const nextStep = () => (step < 2 ? change(step + 1) : onDone())
   const prevStep = () => (step > 0 ? change(step - 1) : onBack())
+  const lastStep = step === 2
   const ob = ONBOARDING[step]
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    swipeX.current = e.clientX
+  }
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (swipeX.current == null) return
+    const dx = e.clientX - swipeX.current
+    swipeX.current = null
+    if (dx < -60) nextStep()
+    else if (dx > 60 && step > 0) change(step - 1)
+  }
 
   return (
     <Screen active={active}>
+      <div className="ob-swipe" onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
+        <div className={`feature-visual fade-step${fading ? ' out' : ''}`}>
+          {step === 0 && (
+            <div className="iso-card iso-sim">
+              <div className="row1">
+                NOURA <VodaMark size="sm" />
+              </div>
+              <div className="row2">
+                <div>
+                  <div className="t1">DIE MOBILFUNK APP</div>
+                  <div className="t2">MIT DER SCHNELLSPUR ZUR DIGITALEN FREIHEIT</div>
+                </div>
+                <EsimIcon />
+              </div>
+            </div>
+          )}
+          {step === 1 && (
+            <div className="iso-card iso-cal">
+              <div className="cal-head"><i /><i /></div>
+              <div className="cal-body">10</div>
+            </div>
+          )}
+          {step === 2 && (
+            <div className="iso-card iso-5g"><span>5G</span></div>
+          )}
+        </div>
+
+        <div className={`feature-text fade-step${fading ? ' out' : ''}`} aria-live="polite">
+          <h2>
+            <span className="hl">{ob.tag}</span>
+            {ob.title}
+          </h2>
+          <p>{ob.body}</p>
+        </div>
+      </div>
+
       <div className="top-nav">
         <button className="icon-plain" aria-label="Zurück" onClick={prevStep}>
           <ArrowLeft />
         </button>
-      </div>
-
-      <div className={`feature-visual fade-step${fading ? ' out' : ''}`}>
-        {step === 0 && (
-          <div className="iso-card iso-sim">
-            <div className="row1">
-              NOURA <VodaMark size="sm" />
-            </div>
-            <div className="row2">
-              <div>
-                <div className="t1">DIE MOBILFUNK APP</div>
-                <div className="t2">MIT DER SCHNELLSPUR ZUR DIGITALEN FREIHEIT</div>
-              </div>
-              <EsimIcon />
-            </div>
-          </div>
+        {!lastStep && (
+          <button className="skip-btn" onClick={onDone}>Überspringen</button>
         )}
-        {step === 1 && (
-          <div className="iso-card iso-cal">
-            <div className="cal-head"><i /><i /></div>
-            <div className="cal-body">10</div>
-          </div>
-        )}
-        {step === 2 && (
-          <div className="iso-card iso-5g"><span>5G</span></div>
-        )}
-      </div>
-
-      <div className={`feature-text fade-step${fading ? ' out' : ''}`}>
-        <h2>
-          <span className="hl">{ob.tag}</span>
-          {ob.title}
-        </h2>
-        <p>{ob.body}</p>
       </div>
 
       <div className="ob-bottom">
         <div className="pagination">
           {[0, 1, 2].map((i) => (
-            <i key={i} className={i === step ? 'on' : ''} />
+            <button
+              key={i}
+              className={i === step ? 'on' : ''}
+              aria-label={`Schritt ${i + 1} von 3`}
+              aria-current={i === step}
+              onClick={() => change(i)}
+            >
+              <i />
+            </button>
           ))}
         </div>
-        <button className="btn icon-btn" aria-label="Weiter" onClick={nextStep}>
-          <ArrowRight />
-        </button>
+        {lastStep ? (
+          <button className="btn primary cta-next" onClick={onDone}>
+            Los geht&rsquo;s
+            <ArrowRight />
+          </button>
+        ) : (
+          <button className="btn icon-btn" aria-label="Weiter" onClick={nextStep}>
+            <ArrowRight />
+          </button>
+        )}
       </div>
     </Screen>
   )
@@ -206,7 +240,7 @@ export function SelectPlan({
         </div>
       </div>
       <div className="plan-cta">
-        <button className="btn" onClick={onChoose}>Plan auswählen</button>
+        <button className="btn primary" onClick={onChoose}>Plan auswählen</button>
       </div>
     </Screen>
   )

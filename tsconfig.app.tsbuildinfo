@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/main.tsx","./src/components/ui.tsx","./src/data/plans.ts","./src/screens/screens.tsx","./src/sheets/sheets.tsx"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/ui.tsx","./src/data/plans.ts","./src/screens/screens.tsx","./src/sheets/sheets.tsx"],"version":"5.9.3"}
