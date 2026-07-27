@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import avatarMarcel from '../assets/img/avatar-marcel.webp'
 import { PLANS } from '../data/plans'
 import { FeatureList, SimCard } from '../components/ui'
 
@@ -73,9 +74,10 @@ export function SupportSheet({ open }: { open: boolean }) {
           onKeyDown={(e) => e.key === 'Enter' && send()}
         />
         <button className="send" aria-label="Senden" onClick={send}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 19V5" />
-            <path d="M5 12l7-7 7 7" />
+          {/* Figma: Papierflieger-Symbol, 18x18 */}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 2L11 13" />
+            <path d="M22 2l-7 20-4-9-9-4 20-7z" />
           </svg>
         </button>
       </div>
@@ -93,9 +95,10 @@ function ListRow({ icon, label, danger, onClick }: { icon: React.ReactNode; labe
   )
 }
 
-const ic = (path: string) => (
-  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-    <path d={path} />
+/* Figma: schlichter leerer Kreis vor jedem Listeneintrag */
+const ic = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" />
   </svg>
 )
 
@@ -106,38 +109,46 @@ export function ProfileSheet({ open, onLogout }: { open: boolean; onLogout: () =
         <div className="acct-head">
           <div className="tx">
             <h2>Dein Account</h2>
-            <p>Nächste Zahlung am 08.08.2026</p>
+            <p>Nächste Zahlung am 08.07.2026</p>
           </div>
-          <span className="avatar" style={{ cursor: 'default' }} />
+          <img src={avatarMarcel} className="avatar" alt="" />
         </div>
+        {/* Figma: zwei Karten mit Karten-Symbol, Label oben klein, Wert darunter */}
         <div className="quick-cards">
           <button className="qc">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" />
-            </svg>
-            Mein Profil
+            <span className="qc-icon">
+              <svg width="28" height="20" viewBox="0 0 28 20" fill="none" aria-hidden="true">
+                <rect x="0.5" y="0.5" width="27" height="19" rx="3" fill="rgba(255,255,255,.35)" />
+                <rect x="3" y="4" width="12" height="3" rx="1.5" fill="rgba(255,255,255,.8)" />
+                <rect x="3" y="13" width="8" height="2" rx="1" fill="rgba(255,255,255,.5)" />
+              </svg>
+            </span>
+            <span className="qc-label">Dein Plan</span>
+            <span className="qc-value">Create</span>
           </button>
           <button className="qc">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 2h9l5 5v15H6z" />
-              <path d="M15 2v5h5" />
-              <path d="M9 13h6M9 17h6" />
-            </svg>
-            Rechnungen
+            <span className="qc-icon">
+              <svg width="28" height="20" viewBox="0 0 28 20" fill="none" aria-hidden="true">
+                <rect x="0.5" y="0.5" width="27" height="19" rx="3" fill="rgba(255,255,255,.35)" />
+                <rect x="3" y="4" width="7" height="5" rx="1" fill="#f5c542" />
+                <rect x="3" y="13" width="8" height="2" rx="1" fill="rgba(255,255,255,.5)" />
+              </svg>
+            </span>
+            <span className="qc-label">Deine Karte</span>
+            <span className="qc-value">*9876</span>
           </button>
         </div>
         <div className="list-section">
           <h3>Sonstiges</h3>
-          <ListRow icon={ic('M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z')} label="Sicherheit und Datenschutz" />
-          <ListRow icon={ic('M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9')} label="Benachrichtigungen" />
-          <ListRow icon={ic('M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v3M12 19v3M2 12h3M19 12h3')} label="Ansichtsmodus" />
+          <ListRow icon={ic()} label="Sicherheit und Datenschutz" />
+          <ListRow icon={ic()} label="Benachrichtigungen" />
+          <ListRow icon={ic()} label="Ansichtsmodus" />
         </div>
         <div className="list-section">
           <h3>Service</h3>
-          <ListRow icon={<span>?</span>} label="Hilfe" />
-          <ListRow icon={ic('M6 2h9l5 5v15H6z')} label="Dokumente" />
-          <ListRow icon={ic('M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9')} label="Abmelden" danger onClick={onLogout} />
+          <ListRow icon={ic()} label="Hilfe" />
+          <ListRow icon={ic()} label="Dokumente" />
+          <ListRow icon={ic()} label="Abmelden" danger onClick={onLogout} />
         </div>
         <div style={{ height: 40 }} />
       </div>
@@ -172,7 +183,8 @@ export function PlanSheet({
           <FeatureList plan={plan} />
         </div>
         <div className="plan-sheet-actions">
-          <button className="btn primary" onClick={onSwitchPlan}>Plan wechseln</button>
+          {/* Figma: Glas-Button, nicht rot gefuellt */}
+          <button className="btn" onClick={onSwitchPlan}>Plan wechseln</button>
           <button className="link-danger" onClick={onCancelPlan}>Plan kündigen</button>
         </div>
         <div style={{ height: 24 }} />

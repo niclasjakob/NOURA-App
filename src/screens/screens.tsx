@@ -8,7 +8,6 @@ import {
   ArrowRight,
   BackgroundGradient,
   ChevronDown,
-  EsimIcon,
   FeatureList,
   Plus,
   SimCard,
@@ -120,16 +119,10 @@ export function Onboarding({ active, onBack, onDone }: ScreenProps & { onBack: (
             </button>
           ))}
         </div>
-        {lastStep ? (
-          <button className="btn primary cta-next" onClick={onDone}>
-            Los geht&rsquo;s
-            <ArrowRight />
-          </button>
-        ) : (
-          <button className="btn icon-btn" aria-label="Weiter" onClick={nextStep}>
-            <ArrowRight />
-          </button>
-        )}
+        {/* Figma: auf allen drei Schritten derselbe runde 64x64-Glas-Button */}
+        <button className="btn icon-btn" aria-label={lastStep ? 'Los geht\'s' : 'Weiter'} onClick={nextStep}>
+          <ArrowRight />
+        </button>
       </div>
     </Screen>
   )
@@ -261,13 +254,10 @@ export function Activation({ active, messages, onDone }: ScreenProps & { message
 
   return (
     <Screen active={active}>
+      {/* Figma 1330:1775: dieselbe 3D-SIM-Karte wie im Onboarding, der
+          Statustext steht mittig darunter. Kein pulsierender Kreis. */}
       <div className="act-center">
-        <div className="pulse-wrap">
-          <div className="pulse-ring" />
-          <div className="pulse-ring" />
-          <div className="pulse-ring" />
-          <EsimIcon large />
-        </div>
+        <img src={onboardCard} className="act-card" alt="" />
         <p className={`act-msg${fading ? ' fading' : ''}`}>{messages[msgIdx]}</p>
       </div>
     </Screen>
