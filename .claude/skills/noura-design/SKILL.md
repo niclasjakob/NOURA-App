@@ -214,11 +214,23 @@ Stellen ab. **Beim Umbau eines Screens gegen diese Liste prüfen.**
 | 8 | Verbrauchsring | roter Fortschrittsbogen | **heller Ring, ∞ in Akzentfarbe** | niedrig |
 | 9 | Token-System | zwei konkurrierende Sätze | ein Satz | niedrig (Wartbarkeit) |
 
-### Offener Widerspruch: CREATE-Preis
+### Geklärt: CREATE-Preis ist 40 €
 
-Figma selbst ist widersprüchlich — **35 €** auf `Select Plan / Creator`,
-**40 €** auf `Home`. Der Code sagt 40 €. **Nicht eigenmächtig entscheiden**,
-mit Robert/Niclas klären. Bis dahin 40 € beibehalten (Code-Stand).
+Figma zeigt an einer Stelle 35 €, sonst überall 40 €. Auszählung über alle
+Screens (2026-07-27):
+
+| Screen | CREATE-Preis |
+|---|---|
+| Select Plan / Creator | 35 € ← Ausreißer |
+| Select Plan / Consumer | 40 € |
+| Select Plan / Consumer 2 | 40 € |
+| Home | 40 € |
+| Home (Variante) | 40 € |
+
+**40 € gilt** (4 von 5 Vorkommen, und beide Home-Screens). Die 35 € auf
+`Select Plan / Creator` sind ein nicht nachgezogenes Überbleibsel. Der Code
+war bereits korrekt. Falls Niclas widerspricht: hier und in
+`src/data/plans.ts` ändern.
 
 ---
 

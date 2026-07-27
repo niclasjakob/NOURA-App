@@ -93,61 +93,52 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
 .screen.active { opacity: 1; pointer-events: auto; visibility: visible; transition: opacity 0.45s ease; }
 
 /* ---------- Buttons (liquid glass) ---------- */
+/* Buttons nach Figma: Glasfuellung #ffffff@20%, Radius 24px, Hoehe 61px,
+   Label General Sans Semibold 16px. Ohne Glanzverlaeufe und Schlagschatten —
+   die hat die Vorlage nicht. */
 .btn {
-  position: relative; overflow: hidden;
+  position: relative;
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 20px; border-radius: var(--r-btn); cursor: pointer;
-  font-weight: 600; font-size: 16px; color: #fff;
-  background: var(--glass-strong);
-  backdrop-filter: blur(12px) saturate(170%); -webkit-backdrop-filter: blur(12px) saturate(170%);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.06),
-    0 8px 24px rgba(0, 0, 0, 0.18);
-  width: 100%; transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease; user-select: none;
+  height: 61px; padding: 20px; border-radius: var(--noura-radius-card); cursor: pointer;
+  font-weight: 600; font-size: 16px; line-height: 21px; color: var(--noura-text);
+  background: var(--noura-glass-strong);
+  backdrop-filter: blur(var(--noura-blur-glass)); -webkit-backdrop-filter: blur(var(--noura-blur-glass));
+  border: none;
+  width: 100%; transition: transform 0.15s ease, background 0.2s ease; user-select: none;
 }
-/* specular sheen sweeping from the top-left — the "liquid" highlight */
-.btn::before {
-  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: linear-gradient(115deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.06) 34%, transparent 55%, rgba(255, 255, 255, 0.1) 100%);
-  opacity: 0.75; transition: opacity 0.25s ease, transform 0.4s ease;
-}
-.btn:hover::before { opacity: 1; transform: translateX(4%); }
 .btn:active { transform: scale(0.97); }
 .btn.primary {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 45%), var(--primary);
-  border-color: rgba(255, 255, 255, 0.22);
+  background: var(--noura-accent);
   backdrop-filter: none; -webkit-backdrop-filter: none;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 10px 28px rgba(225, 80, 85, 0.35);
 }
-.btn.primary:active { background: linear-gradient(160deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 45%), var(--primary-active); }
+.btn.primary:active { background: var(--primary-active); }
 .btn.ghost {
-  background: transparent; border: none; box-shadow: none;
-  backdrop-filter: none; -webkit-backdrop-filter: none;
+  background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
 }
-.btn.ghost::before { display: none; }
 .btn.icon-btn { width: auto; border-radius: 100px; }
 .icon-plain { background: transparent; border: none; cursor: pointer; padding: 20px; display: flex; align-items: center; color: #fff; }
 .top-nav { position: absolute; top: 54px; left: 0; right: 0; display: flex; align-items: center; padding-top: 12px; z-index: 10; }
 
-/* ---------- Intro ---------- */
-.intro-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 10px; }
-.intro-logo { font-family: var(--font-wordmark); font-weight: 700; font-size: 40px; color: var(--primary); letter-spacing: 0.5px; text-shadow: 1px 1px 18px var(--primary-glow); }
-.intro-by { display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 2px; gap: 2px; }
-.intro-by small { font-size: 9px; font-weight: 500; color: var(--muted); letter-spacing: 0.4px; text-transform: uppercase; }
-.intro-vodafone { display: flex; align-items: center; gap: 5px; font-weight: 600; font-size: 15px; color: #fff; }
-.voda-mark { width: 18px; height: 18px; border-radius: 50%; background: var(--primary); position: relative; flex-shrink: 0; display: inline-block; }
-.voda-mark::after {
-  content: ''; position: absolute; width: 38%; height: 60%;
-  border: 2.2px solid #fff; border-left: none; border-radius: 0 8px 8px 0;
-  right: 16%; top: 13%; transform: rotate(14deg);
+/* ---------- Intro ----------
+   Figma 1330:1947: Wortmarke General Sans Bold 40px in Akzentrot bei y=399,
+   daneben das "Connected by Vodafone"-Lockup als Bild (98x32 bei y=410). */
+.intro-center {
+  position: absolute; top: 399px; left: 67px;
+  display: flex; align-items: center; gap: 8px;
 }
-.voda-mark.sm { width: 12px; height: 12px; } .voda-mark.sm::after { border-width: 1.4px; }
+.intro-logo {
+  font-family: var(--font); font-weight: 700; font-size: 40px; line-height: 54px;
+  color: var(--noura-accent); letter-spacing: 0;
+  text-shadow: 1px 1px 8px rgba(217, 104, 108, 0.2);
+}
+.intro-lockup { width: 98px; height: 32px; object-fit: contain; align-self: flex-end; margin-bottom: 11px; }
+/* Vodafone-Zeichen als echter Figma-Pfad (20x20), Farbe via currentColor. */
+.voda-mark { width: 20px; height: 20px; flex-shrink: 0; display: inline-block; color: var(--noura-accent); }
+.voda-mark.sm { width: 13px; height: 13px; }
 .voda-mark.md { width: 20px; height: 20px; }
-.intro-nav { position: absolute; bottom: 0; left: 0; right: 0; padding: 48px 24px; display: flex; flex-direction: column; gap: 16px; }
+/* Figma: erster Button y=666, zweiter y=743 (Abstand 16px), Rand 24px,
+   unten 48px bis zur Screen-Kante. */
+.intro-nav { position: absolute; bottom: 48px; left: 24px; right: 24px; display: flex; flex-direction: column; gap: 16px; }
 
 /* ---------- Onboarding ---------- */
 .skip-btn {
@@ -157,60 +148,72 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
 }
 .skip-btn:hover { color: #fff; }
 .ob-swipe { position: absolute; inset: 0; touch-action: pan-y; }
+/* Figma 1330:1958 "Feature Card": Visual 334x193 bei (30,276),
+   Text ab y=552, Bottom-Nav mit Pagination y=770 und Weiter-Button 64x64. */
 .feature-visual {
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -72%) rotate(-30deg) skewX(30deg) scaleY(0.87);
-  width: 245px; height: 142px;
+  position: absolute; top: 276px; left: 30px;
+  width: 334px; height: 193px;
+  display: flex; align-items: center; justify-content: center;
 }
+/* Die perspektivische SIM-Karte kommt als Bild aus Figma — eine 3D-Ansicht
+   laesst sich in CSS nicht exakt nachbauen. */
+.iso-visual { width: 100%; height: 100%; object-fit: contain; }
 .iso-card {
-  width: 100%; height: 100%; border-radius: 10px; position: relative;
-  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.5); border-left: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 14px 20px 40px rgba(0, 0, 0, 0.35); overflow: hidden;
+  width: 100%; height: 100%; border-radius: 9px; position: relative;
+  background: var(--noura-glass);
+  backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
-.iso-sim { background: linear-gradient(115deg, rgba(239, 106, 110, 0.95) 0%, rgba(170, 45, 70, 0.9) 45%, rgba(40, 16, 40, 0.92) 100%); padding: 16px; display: flex; flex-direction: column; justify-content: space-between; }
-.iso-sim .row1 { display: flex; align-items: center; gap: 4px; font-family: var(--font-wordmark); font-weight: 700; font-size: 13px; letter-spacing: 0.5px; }
-.iso-sim .row2 { display: flex; justify-content: space-between; align-items: flex-end; }
-.iso-sim .t1 { font-weight: 700; font-size: 10px; letter-spacing: 0.4px; }
-.iso-sim .t2 { font-weight: 500; font-size: 6.5px; color: rgba(255, 255, 255, 0.85); letter-spacing: 0.3px; }
-.iso-cal { background: rgba(255, 255, 255, 0.14); display: flex; flex-direction: column; }
-.iso-cal .cal-head { height: 34px; background: var(--primary); display: flex; align-items: center; justify-content: center; gap: 5px; }
+.iso-cal { flex-direction: column; }
+.iso-cal .cal-head { height: 34px; width: 100%; background: var(--noura-accent); display: flex; align-items: center; justify-content: center; gap: 5px; }
 .iso-cal .cal-head i { width: 5px; height: 12px; background: rgba(255, 255, 255, 0.7); border-radius: 3px; display: block; }
-.iso-cal .cal-body { flex: 1; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 52px; color: #fff; }
-.iso-5g { background: rgba(255, 255, 255, 0.14); display: flex; align-items: center; justify-content: center; }
-.iso-5g span { font-weight: 700; font-size: 58px; color: var(--primary); text-shadow: 0 2px 16px rgba(225, 80, 85, 0.5); }
-.feature-text { position: absolute; left: 0; right: 0; top: calc(50% + 96px); padding: 24px; display: flex; flex-direction: column; gap: 8px; }
-.feature-text h2 { font-weight: 700; font-size: 24px; line-height: 1.4; }
-.feature-text h2 .hl { color: var(--primary); display: block; }
-.feature-text p { font-weight: 600; font-size: 14px; line-height: 1.4; color: var(--muted); }
-.ob-bottom { position: absolute; bottom: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 48px 24px; }
-.pagination { display: flex; }
-.pagination button { background: none; border: none; cursor: pointer; padding: 12px 2px; display: flex; }
-.pagination i { height: 4px; width: 8px; border-radius: 5px; background: rgba(255, 255, 255, 0.2); transition: all 0.35s ease; display: block; }
-.pagination button.on i { width: 20px; background: var(--primary); }
-.cta-next { width: auto; padding: 20px 28px; }
+.iso-cal .cal-body { flex: 1; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 52px; color: var(--noura-text); }
+.iso-5g span { font-weight: 700; font-size: 58px; color: var(--noura-accent); }
+.feature-text { position: absolute; left: 0; right: 0; top: 498px; padding: 0 24px; display: flex; flex-direction: column; gap: 8px; }
+.feature-text h2 { font-weight: 700; font-size: 24px; line-height: 34px; }
+.feature-text h2 .hl { color: var(--noura-accent); display: block; }
+.feature-text p { font-weight: 600; font-size: 14px; line-height: 19px; color: var(--noura-text-muted); }
+.ob-bottom { position: absolute; bottom: 34px; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
+.pagination { display: flex; gap: 4px; }
+.pagination button { background: none; border: none; cursor: pointer; padding: 12px 0; display: flex; }
+.pagination i { height: 4px; width: 8px; border-radius: var(--noura-radius-chip); background: var(--noura-glass-strong); transition: all 0.35s ease; display: block; }
+.pagination button.on i { width: 20px; background: var(--noura-accent); }
+/* Weiter-Button: 64x64 rund, Glas @20% */
+.btn.icon-btn { width: 64px; height: 64px; padding: 0; border-radius: var(--noura-radius-pill); }
+.cta-next { width: auto; padding: 0 28px; }
 .fade-step { transition: opacity 0.35s ease, transform 0.35s ease; }
 .fade-step.out { opacity: 0; transform: translateY(10px); }
-.feature-visual.fade-step.out { opacity: 0; transform: translate(-50%, -72%) rotate(-30deg) skewX(30deg) scaleY(0.87) translateY(10px); }
 
-/* ---------- eSIM cards ---------- */
+/* ---------- eSIM-Karte ----------
+   Figma 1330:1789: 345x173, einheitlich dunkel (#1d1d1d@75%) fuer alle Plaene
+   — keine plan-spezifischen Farbverlaeufe. Die obere rechte Ecke ist
+   abgeschnitten (SIM-Karten-Silhouette), Pfad exakt aus Figma. */
 .sim-card {
-  position: relative; width: 100%; height: 173px; border-radius: 24px;
+  position: relative; width: 100%; height: 173px;
   padding: 24px; display: flex; flex-direction: column; justify-content: space-between;
-  overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35); text-align: left; color: #fff;
+  text-align: left; color: var(--noura-text);
+  background: var(--noura-card-fill);
+  border: none;
+  /* SVG-Maske statt clip-path in festen Pixeln: skaliert mit der Kartenbreite,
+     damit die abgeschnittene Ecke auf jeder Geraetebreite am Rand sitzt.
+     Pfad aus Figma (345x173), preserveAspectRatio="none" streckt ihn mit. */
+  -webkit-mask: var(--sim-shape) center / 100% 100% no-repeat;
+  mask: var(--sim-shape) center / 100% 100% no-repeat;
+}
+:root {
+  --sim-shape: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 345 173' preserveAspectRatio='none'%3E%3Cpath d='M0 16C0 7.16344 7.16344 0 16 0H289.102C292.799 0 296.381 1.27972 299.24 3.62172L320.497 21.0314L339.793 38.6615C343.11 41.6928 345 45.9796 345 50.4735V157C345 165.837 337.837 173 329 173H16C7.16345 173 0 165.837 0 157V16Z' fill='%23000'/%3E%3C/svg%3E");
 }
 button.sim-card { cursor: pointer; }
-.sim-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 85% -20%, rgba(255, 255, 255, 0.28), transparent 55%); pointer-events: none; }
-.sim-card.create { background: linear-gradient(118deg, #ef6a6e 0%, #c73c47 38%, #571c31 78%, #2b1026 100%); }
-.sim-card.consume { background: linear-gradient(118deg, #f2989b 0%, #d9646c 40%, #6b2a4c 85%); }
-.sim-card.message { background: linear-gradient(118deg, #454a73 0%, #2b2d4f 55%, #171830 100%); }
 .sim-card .head { display: flex; align-items: center; gap: 8px; }
-.sim-card .head .name { font-weight: 700; font-size: 20px; letter-spacing: 0.5px; }
-.chip { background: var(--primary); border-radius: 24px; padding: 6px 12px; font-weight: 500; font-size: 12px; line-height: 1.3; }
+.sim-card .head .name { font-weight: 700; font-size: 20px; line-height: 27px; letter-spacing: 0; }
+.chip {
+  background: var(--noura-accent); border-radius: var(--noura-radius-card);
+  padding: 0 8px; height: 17px; display: inline-flex; align-items: center;
+  font-weight: 500; font-size: 12px; line-height: 16px;
+}
 .sim-card .foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
-.sim-card .price { font-weight: 700; font-size: 16px; opacity: 0.92; }
-.sim-card .sub { font-weight: 500; font-size: 12px; color: rgba(255, 255, 255, 0.55); margin-top: 1px; }
+.sim-card .price { font-weight: 700; font-size: 16px; line-height: 22px; }
+.sim-card .sub { font-weight: 500; font-size: 12px; line-height: 16px; color: var(--noura-text-muted); margin-top: 0; }
 
 /* eSIM chip icon */
 .esim-icon { position: relative; width: 38px; height: 38px; flex-shrink: 0; }
@@ -232,10 +235,11 @@ button.sim-card { cursor: pointer; }
 /* ---------- Select plan ---------- */
 .plan-header { position: absolute; top: 130px; left: 0; right: 0; padding: 0 24px 12px; z-index: 10; }
 .plan-header h2 { font-weight: 700; font-size: 20px; }
-.plan-header p { font-weight: 600; font-size: 14px; line-height: 1.4; color: var(--muted); margin-top: 4px; }
-.tabs { display: flex; gap: 4px; margin-top: 24px; position: relative; }
-.tabs .pill { position: absolute; top: 0; height: 35px; border-radius: 24px; background: var(--primary); transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s cubic-bezier(0.4, 0, 0.2, 1); z-index: 0; }
-.tabs button { position: relative; z-index: 1; background: none; border: none; cursor: pointer; padding: 8px 16px; border-radius: 24px; font-weight: 600; font-size: 14px; color: var(--muted); transition: color 0.3s ease; }
+.plan-header p { font-weight: 600; font-size: 14px; line-height: 20px; color: var(--noura-text-muted); margin-top: 4px; }
+/* Figma: Tab-Leiste 277x35 bei y=225, aktive Pille in Akzentrot r24. */
+.tabs { display: flex; gap: 4px; margin-top: 33px; position: relative; }
+.tabs .pill { position: absolute; top: 0; height: 35px; border-radius: var(--noura-radius-card); background: var(--noura-accent); transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s cubic-bezier(0.4, 0, 0.2, 1); z-index: 0; }
+.tabs button { position: relative; z-index: 1; background: none; border: none; cursor: pointer; height: 35px; padding: 8px 16px; border-radius: var(--noura-radius-card); font-weight: 600; font-size: 14px; line-height: 19px; color: var(--noura-text-muted); transition: color 0.3s ease; }
 .tabs button.on { color: #fff; }
 .plan-track-wrap { position: absolute; top: 276px; bottom: 0; left: 0; right: 0; overflow: hidden; }
 .plan-track { display: flex; height: 100%; transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1); touch-action: pan-y; }
@@ -247,8 +251,9 @@ button.sim-card { cursor: pointer; }
 .features-block h3 { font-weight: 700; font-size: 20px; }
 .features-block .desc { font-weight: 600; font-size: 14px; color: var(--muted); line-height: 1.4; margin-top: 4px; }
 .feat-list { display: flex; flex-direction: column; gap: 24px; margin-top: 24px; }
-.feat { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 14px; }
-.feat .ic { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; border: 1.6px solid var(--primary); display: flex; align-items: center; justify-content: center; }
+.feat { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 14px; line-height: 19px; }
+/* Figma: schlichter weisser Punkt, kein Ring */
+.feat .ic { width: 24px; height: 24px; flex-shrink: 0; color: var(--noura-text); display: flex; align-items: center; justify-content: center; }
 .feat .ic svg { display: block; }
 .plan-cta { position: absolute; bottom: 0; left: 0; right: 0; padding: 24px 24px 48px; z-index: 10; background: linear-gradient(to top, rgba(20, 15, 35, 0.75) 40%, transparent); }
 
@@ -266,13 +271,13 @@ button.sim-card { cursor: pointer; }
 /* ---------- Home ---------- */
 .home-header { position: absolute; top: 54px; left: 0; right: 0; padding: 24px 24px 12px; display: flex; align-items: center; gap: 10px; z-index: 10; }
 .home-header h1 { font-weight: 700; font-size: 20px; flex: 1; }
+.avatar-btn { width: 54px; height: 54px; padding: 0; border: none; background: none; cursor: pointer; flex-shrink: 0; border-radius: var(--noura-radius-pill); overflow: hidden; display: block; }
+/* Figma 1330:1860: echtes Profilfoto, 54x54, voll rund. */
 .avatar {
-  width: 54px; height: 54px; border-radius: 50%; cursor: pointer; border: none; flex-shrink: 0;
-  background: linear-gradient(135deg, #f7b3a0, #c9756b 55%, #5f3a52);
-  position: relative; overflow: hidden; box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.25); display: inline-block;
+  width: 54px; height: 54px; border-radius: var(--noura-radius-pill);
+  cursor: pointer; border: none; flex-shrink: 0; padding: 0;
+  overflow: hidden; display: inline-block; object-fit: cover;
 }
-.avatar::before { content: ''; position: absolute; width: 22px; height: 22px; border-radius: 50%; background: rgba(255, 255, 255, 0.85); top: 9px; left: 16px; }
-.avatar::after { content: ''; position: absolute; width: 36px; height: 24px; border-radius: 18px 18px 0 0; background: rgba(255, 255, 255, 0.85); bottom: -6px; left: 9px; }
 .home-scroll { position: absolute; top: 144px; bottom: 0; left: 0; right: 0; overflow-y: auto; padding: 24px; scrollbar-width: none; }
 .home-scroll::-webkit-scrollbar { display: none; }
 .section-toggle { display: flex; align-items: center; gap: 8px; background: none; border: none; cursor: pointer; color: #fff; font-weight: 600; font-size: 20px; padding: 0; margin: 48px 0 24px; }
@@ -280,14 +285,24 @@ button.sim-card { cursor: pointer; }
 .section-toggle.closed svg { transform: rotate(-90deg); }
 .usage { display: flex; gap: 12px; overflow: hidden; transition: max-height 0.45s ease, opacity 0.35s ease; max-height: 320px; }
 .usage.hidden { max-height: 0; opacity: 0; }
-.usage .card { background: var(--glass); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255, 255, 255, 0.08); }
+/* Figma 1330:1831: Kacheln 166x312 bzw. 166x150, Luecke 12px, Glas @10%,
+   Radius 16px, Innenabstand 20px. Icons in Akzentrot. */
+.usage .card {
+  background: var(--noura-glass);
+  backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
+  border-radius: var(--noura-radius-tile); padding: 20px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  border: none;
+}
+.usage .card svg { color: var(--noura-accent); }
 .usage .col-l { flex: 1; height: 312px; }
 .usage .col-r { flex: 1; display: flex; flex-direction: column; gap: 12px; }
 .usage .col-r .card { height: 150px; }
-.usage .label { font-weight: 500; font-size: 14px; color: var(--muted); }
-.usage .val { font-weight: 600; font-size: 20px; margin-top: 4px; }
+.usage .label { font-weight: 500; font-size: 14px; line-height: 19px; color: var(--noura-text-muted); }
+.usage .val { font-weight: 600; font-size: 20px; line-height: 27px; margin-top: 4px; }
+/* Figma: leerer heller Kreisumriss, kein Fortschrittsbogen. ∞ in Akzentrot. */
 .ring-wrap { position: relative; width: 126px; height: 126px; align-self: center; }
-.ring-wrap .inf { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 26px; color: var(--primary); }
+.ring-wrap .inf { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 24px; line-height: 32px; color: var(--noura-accent); }
 
 /* ---------- Navbar / FABs ---------- */
 .navbar { position: absolute; bottom: 0; left: 0; right: 0; padding: 48px 24px; display: flex; justify-content: flex-end; z-index: 20; }
@@ -300,17 +315,20 @@ button.sim-card { cursor: pointer; }
 .mehr-btn.open svg { transform: rotate(45deg); }
 
 /* ---------- Bottom sheets ---------- */
-.sheet-backdrop { position: absolute; inset: 0; background: rgba(10, 8, 25, 0.55); z-index: 48; opacity: 0; pointer-events: none; transition: opacity 0.35s ease; }
+/* Figma: Sheets 393x782, Glas @10%, Backdrop-Blur 40px, Radius 24px,
+   Griff 29x4 oben. */
+.sheet-backdrop { position: absolute; inset: 0; background: var(--noura-scrim); z-index: 48; opacity: 0; pointer-events: none; transition: opacity 0.35s ease; }
 .sheet-backdrop.on { opacity: 1; pointer-events: auto; }
 .sheet {
   position: absolute; left: 0; right: 0; bottom: 0; height: 782px; max-height: 94%; z-index: 50;
-  background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border-radius: 40px 40px 0 0; border-top: 1px solid var(--border);
+  background: var(--noura-glass);
+  backdrop-filter: blur(var(--noura-blur-bar)); -webkit-backdrop-filter: blur(var(--noura-blur-bar));
+  border-radius: var(--noura-radius-card) var(--noura-radius-card) 0 0; border: none;
   transform: translateY(105%); transition: transform 0.45s cubic-bezier(0.32, 0.72, 0.25, 1);
   display: flex; flex-direction: column; overflow: hidden;
 }
 .sheet.on { transform: translateY(0); }
-.sheet .handle { width: 29px; height: 4px; border-radius: 3px; background: rgba(255, 255, 255, 0.35); margin: 10px auto 0; flex-shrink: 0; }
+.sheet .handle { width: 29px; height: 4px; border-radius: 3px; background: var(--noura-glass); margin: 4px auto 0; flex-shrink: 0; }
 .sheet-body { flex: 1; overflow-y: auto; padding: 24px; scrollbar-width: none; }
 .sheet-body::-webkit-scrollbar { display: none; }
 
@@ -336,16 +354,20 @@ button.sim-card { cursor: pointer; }
 
 /* Support chat */
 .chat-area { display: flex; flex-direction: column; gap: 12px; padding-bottom: 12px; min-height: 100%; }
+/* Figma: Blasen Glas @20%, Radius 24px, Innenabstand 20px, kein Rand.
+   Eigene Nachrichten unterscheiden sich nur durch die Ausrichtung. */
 .bubble {
-  max-width: 75%; padding: 20px; border-radius: 24px; font-weight: 600; font-size: 14px; line-height: 1.5;
-  background: var(--glass-strong); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border); align-self: flex-start;
+  max-width: 75%; padding: 20px; border-radius: var(--noura-radius-card);
+  font-weight: 600; font-size: 16px; line-height: 21px; white-space: pre-line;
+  background: var(--noura-glass-strong);
+  backdrop-filter: blur(var(--noura-blur-glass)); -webkit-backdrop-filter: blur(var(--noura-blur-glass));
+  border: none; align-self: flex-start;
   animation: bubbleIn 0.3s ease;
 }
-.bubble.me { align-self: flex-end; background: var(--primary); border: none; }
+.bubble.me { align-self: flex-end; }
 @keyframes bubbleIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.quick-replies { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; margin-top: auto; padding-top: 24px; }
-.quick-replies .btn { width: auto; font-size: 15px; }
+.quick-replies { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; margin-top: auto; padding-top: 24px; }
+.quick-replies .btn { width: auto; font-size: 16px; }
 .chat-input { display: flex; gap: 12px; padding: 12px 24px 28px; flex-shrink: 0; }
 .chat-input input {
   flex: 1; background: var(--secondary); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);

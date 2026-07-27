@@ -21,7 +21,7 @@ interface ChatMsg {
 
 export function SupportSheet({ open }: { open: boolean }) {
   const [messages, setMessages] = useState<ChatMsg[]>([
-    { text: 'Hey Marcel! Wie möchtest Du Hilfe erhalten?', me: false },
+    { text: 'Hey Marcel!\nWie möchtest Du Hilfe erhalten?', me: false },
   ])
   const [showQuick, setShowQuick] = useState(true)
   const [input, setInput] = useState('')
@@ -33,7 +33,7 @@ export function SupportSheet({ open }: { open: boolean }) {
     setShowQuick(false)
     setMessages((m) => [...m, { text: label, me: true }])
     reply(
-      label.includes('Rückruf')
+      label.includes('Anruf')
         ? 'Alles klar! Wir rufen Dich heute zwischen 16–18 Uhr zurück. Passt das für Dich?'
         : 'Super! Ich bin für Dich da. Worum geht es denn?',
     )
@@ -56,9 +56,10 @@ export function SupportSheet({ open }: { open: boolean }) {
             <div key={i} className={`bubble${m.me ? ' me' : ''}`}>{m.text}</div>
           ))}
           {showQuick && (
+            /* Figma: rechtsbuendig untereinander, wie eigene Nachrichten */
             <div className="quick-replies">
-              <button className="btn" onClick={() => pick('Rückruf vereinbaren')}>📞&ensp;Rückruf vereinbaren</button>
-              <button className="btn" onClick={() => pick('Chat starten')}>💬&ensp;Chat starten</button>
+              <button className="btn" onClick={() => pick('Einen Anruf anfordern')}>Einen Anruf anfordern</button>
+              <button className="btn" onClick={() => pick('Chatte mit uns')}>Chatte mit uns</button>
             </div>
           )}
         </div>

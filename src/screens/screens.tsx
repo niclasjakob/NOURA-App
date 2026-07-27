@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import lockup from '../assets/img/connected-by-vodafone.png'
+import avatarMarcel from '../assets/img/avatar-marcel.webp'
+import onboardCard from '../assets/img/onboard-simcard.webp'
 import { ONBOARDING, PLANS } from '../data/plans'
 import {
   ArrowLeft,
@@ -10,7 +13,6 @@ import {
   Plus,
   SimCard,
   StatusBar,
-  VodaMark,
 } from '../components/ui'
 
 interface ScreenProps {
@@ -27,16 +29,11 @@ export function Intro({ active, onStart, onLogin }: ScreenProps & { onStart: () 
     <Screen active={active}>
       <div className="intro-center">
         <span className="intro-logo">NOURA</span>
-        <div className="intro-by">
-          <small>powered by</small>
-          <div className="intro-vodafone">
-            <VodaMark />
-            vodafone
-          </div>
-        </div>
+        <img src={lockup} className="intro-lockup" alt="Connected by Vodafone" />
       </div>
       <div className="intro-nav">
-        <button className="btn primary" onClick={onStart}>Jetzt loslegen</button>
+        {/* In Figma ist dieser Button Glas, nicht rot gefuellt */}
+        <button className="btn" onClick={onStart}>Jetzt loslegen</button>
         <button className="btn ghost" onClick={onLogin}>Einloggen</button>
       </div>
     </Screen>
@@ -78,18 +75,9 @@ export function Onboarding({ active, onBack, onDone }: ScreenProps & { onBack: (
       <div className="ob-swipe" onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
         <div className={`feature-visual fade-step${fading ? ' out' : ''}`}>
           {step === 0 && (
-            <div className="iso-card iso-sim">
-              <div className="row1">
-                NOURA <VodaMark size="sm" />
-              </div>
-              <div className="row2">
-                <div>
-                  <div className="t1">DIE MOBILFUNK APP</div>
-                  <div className="t2">MIT DER SCHNELLSPUR ZUR DIGITALEN FREIHEIT</div>
-                </div>
-                <EsimIcon />
-              </div>
-            </div>
+            /* 3D-SIM-Karte als Bild aus Figma — perspektivische Ansicht,
+               in CSS nicht exakt nachbaubar. */
+            <img src={onboardCard} className="iso-visual" alt="NOURA eSIM-Karte" />
           )}
           {step === 1 && (
             <div className="iso-card iso-cal">
@@ -111,13 +99,11 @@ export function Onboarding({ active, onBack, onDone }: ScreenProps & { onBack: (
         </div>
       </div>
 
+      {/* Figma hat hier kein "Ueberspringen" — nur den Zurueck-Pfeil. */}
       <div className="top-nav">
         <button className="icon-plain" aria-label="Zurück" onClick={prevStep}>
           <ArrowLeft />
         </button>
-        {!lastStep && (
-          <button className="skip-btn" onClick={onDone}>Überspringen</button>
-        )}
       </div>
 
       <div className="ob-bottom">
@@ -240,7 +226,8 @@ export function SelectPlan({
         </div>
       </div>
       <div className="plan-cta">
-        <button className="btn primary" onClick={onChoose}>Plan auswählen</button>
+        {/* Figma: Glas-Button, nicht rot gefuellt */}
+        <button className="btn" onClick={onChoose}>Plan auswählen</button>
       </div>
     </Screen>
   )
@@ -308,27 +295,27 @@ export function Home({
     <Screen active={active}>
       <div className="home-header">
         <h1>Hey Marcel 👋🏼</h1>
-        <button className="avatar" aria-label="Profil öffnen" onClick={onOpenProfile} />
+        <button className="avatar-btn" aria-label="Profil öffnen" onClick={onOpenProfile}>
+          <img src={avatarMarcel} className="avatar" alt="" />
+        </button>
       </div>
       <div className="home-scroll">
-        <SimCard plan={plan} chipText="Aktiv" onClick={onOpenPlan} />
+        <SimCard plan={plan} chipText="Aktiv" onClick={onOpenPlan} showMark={false} />
         <button className={`section-toggle${usageOpen ? '' : ' closed'}`} onClick={() => setUsageOpen(!usageOpen)}>
           Dein Verbrauch
           <ChevronDown />
         </button>
         <div className={`usage${usageOpen ? '' : ' hidden'}`}>
           <div className="card col-l">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8">
+            {/* Icons in Akzentrot (Figma), nicht weiss */}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <circle cx="12" cy="12" r="9" />
               <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21M12 3c-2.5 2.6-3.8 5.7-3.8 9s1.3 6.4 3.8 9" />
             </svg>
             <div className="ring-wrap">
+              {/* Figma: nur ein heller Kreisumriss, kein Fortschrittsbogen */}
               <svg width="126" height="126" viewBox="0 0 126 126">
-                <circle cx="63" cy="63" r="57" fill="none" stroke="rgba(255,255,255,.12)" strokeWidth="8" />
-                <circle
-                  cx="63" cy="63" r="57" fill="none" stroke="#e15055" strokeWidth="8" strokeLinecap="round"
-                  strokeDasharray="358" strokeDashoffset="105" transform="rotate(-90 63 63)"
-                />
+                <circle cx="63" cy="63" r="62" fill="none" stroke="rgba(255,255,255,.2)" strokeWidth="1.5" />
               </svg>
               <span className="inf">∞</span>
             </div>
@@ -339,7 +326,7 @@ export function Home({
           </div>
           <div className="col-r">
             <div className="card">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
               <div>
@@ -348,7 +335,7 @@ export function Home({
               </div>
             </div>
             <div className="card">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z" />
               </svg>
               <div>
