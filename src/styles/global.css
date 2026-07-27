@@ -14,8 +14,28 @@
   --muted: var(--muted-foreground);
   --white: var(--foreground);
   --r-btn: 24px;
-  --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font: 'General Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-wordmark: 'Poppins', var(--font);
+
+  /* ---- Figma-Tokens (ausgelesen aus Node 1330:1774, 2026-07-27) ----
+     Verbindliche Werte. Details + Haeufigkeiten: .claude/skills/noura-design/ */
+  --noura-text: #ffffff;
+  --noura-text-muted: rgba(255, 255, 255, 0.5);
+  --noura-glass: rgba(255, 255, 255, 0.1);
+  --noura-glass-strong: rgba(255, 255, 255, 0.2);
+  --noura-border: rgba(255, 255, 255, 1);
+  --noura-accent: #e15055;
+  --noura-vodafone: #e60000;       /* nur im Logo-Kontext */
+  --noura-canvas: #232452;
+  --noura-card-fill: rgba(29, 29, 29, 0.75);
+  --noura-scrim: rgba(0, 0, 0, 0.5);
+
+  --noura-radius-card: 24px;       /* Signatur-Radius (57x in Figma) */
+  --noura-radius-tile: 16px;
+  --noura-radius-chip: 5px;
+  --noura-radius-pill: 1000px;
+  --noura-blur-glass: 24px;
+  --noura-blur-bar: 40px;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #root { height: 100%; }
@@ -40,13 +60,15 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
   .phone { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0; box-shadow: none; }
 }
 
-/* ---------- Background gradient (guidelines: four blurred blobs) ---------- */
-.bg-grad { position: absolute; inset: 0; background: var(--bg); overflow: hidden; pointer-events: none; }
-.bg-grad .blob { position: absolute; border-radius: 50%; filter: blur(150px); }
-.bg-grad .blob-blue { width: 70%; height: 70%; top: -20%; left: -15%; background: var(--blob-blue); opacity: 0.4; }
-.bg-grad .blob-coral { width: 60%; height: 65%; top: 0; right: -15%; background: var(--primary); opacity: 0.3; }
-.bg-grad .blob-purple { width: 65%; height: 60%; bottom: 10%; right: -5%; background: var(--accent); opacity: 0.35; }
-.bg-grad .blob-navy { width: 50%; height: 45%; bottom: -10%; left: 5%; background: var(--blob-navy); opacity: 0.5; }
+/* ---------- Aurora-Hintergrund ----------
+   Verlaufsbild direkt aus Figma (Node 1330:1780) statt vier CSS-Flaechen mit
+   150px Weichzeichner. Grund: exakt statt naeherungsweise, und auf dem iPhone
+   deutlich fluessiger — Safari rendert grosse Blur-Filter traege.
+   16 KB WebP. */
+.bg-grad {
+  position: absolute; inset: 0; pointer-events: none;
+  background: var(--noura-canvas) url('../assets/img/aurora-bg.webp') center / cover no-repeat;
+}
 .bg-noise {
   position: absolute; inset: 0; opacity: 0.05; pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");

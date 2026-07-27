@@ -1,5 +1,30 @@
-/* NOURA fonts — see guidelines/setup.md
-   "General Sans" (original design font) is not on Google Fonts;
-   Plus Jakarta Sans is the prescribed substitute. Poppins Bold is
-   reserved for the NOURA wordmark. */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Poppins:wght@700&display=swap');
+/* NOURA fonts — General Sans, lokal eingebettet.
+   Die Originalschrift des Figma-Designs (308 Verwendungen dort). Lokal statt
+   vom Fontshare-Server, damit die iOS-App ohne Internet sofort korrekt
+   rendert und beim Start kein Schriftwechsel sichtbar wird.
+   Poppins Bold bleibt extern — sie wird nur fuer die Wortmarke gebraucht. */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap');
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('../assets/fonts/GeneralSans-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('../assets/fonts/GeneralSans-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'General Sans';
+  src: url('../assets/fonts/GeneralSans-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

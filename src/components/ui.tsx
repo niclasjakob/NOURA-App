@@ -1,15 +1,13 @@
 import type { Plan } from '../data/plans'
 
-/* ---------- Background (guidelines: canvas + four blurred blobs) ---------- */
+/* ---------- Aurora-Hintergrund ----------
+   Verlaufsbild aus Figma (siehe global.css). Die frueheren vier
+   weichgezeichneten CSS-Flaechen entfallen — das Bild ist exakt und auf
+   dem Geraet schneller. */
 export function BackgroundGradient() {
   return (
     <>
-      <div className="bg-grad">
-        <div className="blob blob-blue" />
-        <div className="blob blob-coral" />
-        <div className="blob blob-purple" />
-        <div className="blob blob-navy" />
-      </div>
+      <div className="bg-grad" />
       <div className="bg-noise" />
     </>
   )
