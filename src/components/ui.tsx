@@ -55,15 +55,17 @@ export function VodaMark({ size = '' }: { size?: '' | 'sm' | 'md' }) {
   )
 }
 
-/* ---------- eSIM chip icon ---------- */
-export function EsimIcon({ large = false }: { large?: boolean }) {
+/* ---------- eSIM-Chip-Symbol ----------
+   Figma 1330:1790: 38x38, Chipflaeche in Akzentrot, umlaufend je vier
+   Kontaktpunkte. Wird nur auf der SIM-Karte verwendet. */
+export function EsimIcon() {
   const dots = (
     <>
       <i /> <i /> <i /> <i />
     </>
   )
   return (
-    <div className={`esim-icon${large ? ' lg' : ''}`}>
+    <div className="esim-icon">
       <div className="dots top">{dots}</div>
       <div className="dots bottom">{dots}</div>
       <div className="dots left">{dots}</div>

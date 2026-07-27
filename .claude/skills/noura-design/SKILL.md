@@ -197,22 +197,52 @@ background: #232452 url('/src/assets/img/aurora-bg.webp') center/cover no-repeat
 
 ---
 
-## Abweichungen Code ↔ Figma
+## Erledigte Abweichungen (Stand 2026-07-27)
 
-Der bestehende Code (Stand `main`, Commit `22d9a78`) weicht an diesen
-Stellen ab. **Beim Umbau eines Screens gegen diese Liste prüfen.**
+Alle ursprünglich gefundenen Abweichungen sind behoben. Die Liste bleibt als
+Referenz, was jeweils die Fehlerquelle war:
 
-| # | Stelle | Code aktuell | Figma | Schwere |
-|---|---|---|---|---|
-| 1 | Schriftart | Plus Jakarta Sans | **General Sans** | hoch — größter sichtbarer Unterschied |
-| 2 | SIM-Karte | Glaskarte, Standardradius | **Dunkel, abgeschnittene Ecke** | hoch |
-| 3 | Verbrauchs-Icons | weiß | **Akzentrot `#e15055`** | mittel |
-| 4 | Profilbild | CSS-Kreis, leer | **Echtes Foto** | mittel |
-| 5 | Intro-Logo | Text "NOURA" in Poppins | **Wortmarke + "Connected by Vodafone"-Lockup** | mittel |
-| 6 | Onboarding-Karte | flache CSS-Karte | **3D-perspektivische SIM-Karte** | mittel |
-| 7 | Hintergrund | 4 CSS-Blobs | **Verlaufsbild** | mittel (Leistung) |
-| 8 | Verbrauchsring | roter Fortschrittsbogen | **heller Ring, ∞ in Akzentfarbe** | niedrig |
-| 9 | Token-System | zwei konkurrierende Sätze | ein Satz | niedrig (Wartbarkeit) |
+| # | Stelle | Vorher | Jetzt (= Figma) |
+|---|---|---|---|
+| 1 | Schriftart | Plus Jakarta Sans | General Sans, lokal eingebettet |
+| 2 | SIM-Karte | Glaskarte, drei Farbverläufe | einheitlich dunkel, abgeschnittene Ecke |
+| 3 | Verbrauchs-Icons | weiß | Akzentrot `#e15055` |
+| 4 | Profilbild | leerer CSS-Kreis | echtes Foto |
+| 5 | Intro-Logo | Poppins-Text + CSS-Kreis | General Sans + echtes Lockup-Bild |
+| 6 | Onboarding-Karte | CSS-Perspektive | 3D-Karte als Bild |
+| 7 | Hintergrund | 4 CSS-Flächen, 150px Blur | Verlaufsbild (16 KB) |
+| 8 | Verbrauchsring | roter Fortschrittsbogen | heller Ring, ∞ in Akzentfarbe |
+| 9 | Buttons | rot gefüllt, Glanzverläufe | Glas @20%, schlicht |
+| 10 | Aktivierung | pulsierende Kreise | 3D-Karte + Statustext |
+| 11 | Profil-Karten | "Mein Profil"/"Rechnungen" | "Dein Plan"/"Deine Karte" |
+| 12 | Vodafone-Zeichen | CSS-Kreis mit Pseudoelement | echter Pfad (20×20) |
+
+### Zwei wiederkehrende Fallen
+
+**Rot ist nie eine Buttonfläche.** In Figma erscheint `#e15055` nur als
+Chip-Hintergrund, Icon-Farbe, aktiver Tab und Warnlink. Jeder Button —
+auch der Haupt-CTA — ist Glas `#ffffff@20%`. Wer einen roten Button sieht,
+hat eine Abweichung gefunden.
+
+**Der Code erfindet Elemente, die Figma nicht hat.** Bereits entfernt:
+"Überspringen" im Onboarding, "Los geht's" als Textbutton, das
+Vodafone-Zeichen auf der Home-SIM-Karte. Im Zweifel per Textsuche über die
+Knotendaten prüfen, bevor etwas gebaut wird.
+
+## Geräte-Realität vs. Figma-Maße
+
+Figma zeichnet für **393×852** (iPhone 15). Echte Geräte weichen ab — das
+iPhone 16 Pro hat **402×874 Punkte**. Feste Pixelpositionen aus Figma
+verrutschen dort.
+
+**Regel:** Vertikale Abstände aus Figma direkt übernehmen, horizontale
+Positionierung relativ lösen (`left: 50%` + `translateX(-50%)` oder
+`left/right` gleichzeitig). Breiten als `max-width` absichern.
+
+**Safe-Area nicht vergessen.** Alles am unteren Rand braucht
+`calc(<Figma-Wert> + env(safe-area-inset-bottom, 0px))`, sonst liegt es auf
+dem iPhone unter der Home-Leiste. Betrifft: `.intro-nav`, `.ob-bottom`,
+`.plan-cta`, `.navbar`, `.fab-stack`, `.chat-input`.
 
 ### Geklärt: CREATE-Preis ist 40 €
 
@@ -242,9 +272,22 @@ war bereits korrekt. Falls Niclas widerspricht: hier und in
 3. **Tokens verwenden**, keine Zahlenwerte direkt ins CSS schreiben.
 4. **Gegen die Abweichungsliste prüfen** — die dort genannten Punkte sind
    die häufigsten Fehlerquellen.
-5. **Auf dem Gerät prüfen:** `npm run ios` baut, synchronisiert und öffnet
-   Xcode. Der Simulator zeigt Layout-Fehler, die im Browser unsichtbar sind
-   (Safe-Area, Weichzeichner-Leistung, Scroll-Verhalten).
+5. **Auf dem Gerät prüfen** — der Simulator zeigt Fehler, die im Browser
+   unsichtbar bleiben (Safe-Area, Weichzeichner-Leistung, echte Statusleiste):
+
+```bash
+npm run build && npx cap sync ios
+cd ios/App && xcodebuild -scheme App -sdk iphonesimulator -configuration Debug \
+  -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+  -derivedDataPath /tmp/noura-build build
+
+SIM=$(xcrun simctl list devices booted | grep -o '[0-9A-F-]\{36\}' | head -1)
+xcrun simctl install $SIM /tmp/noura-build/Build/Products/Debug-iphonesimulator/App.app
+xcrun simctl launch $SIM com.noura.app
+xcrun simctl io $SIM screenshot /tmp/shot.png    # Sichtprüfung
+```
+
+`npm run ios` öffnet stattdessen Xcode für den Lauf auf echter Hardware.
 
 ## Grenzen
 

@@ -122,9 +122,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
 /* ---------- Intro ----------
    Figma 1330:1947: Wortmarke General Sans Bold 40px in Akzentrot bei y=399,
    daneben das "Connected by Vodafone"-Lockup als Bild (98x32 bei y=410). */
+/* Mittig statt bei festem x=67: Figma zeichnet fuer 393px Breite, echte
+   Geraete sind breiter (iPhone 16 Pro: 402pt). Zentriert sitzt die Marke
+   auf jedem Geraet richtig. */
 .intro-center {
-  position: absolute; top: 399px; left: 67px;
-  display: flex; align-items: center; gap: 8px;
+  position: absolute; top: 399px; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
 }
 .intro-logo {
   font-family: var(--font); font-weight: 700; font-size: 40px; line-height: 54px;
@@ -137,22 +140,20 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
 .voda-mark.sm { width: 13px; height: 13px; }
 .voda-mark.md { width: 20px; height: 20px; }
 /* Figma: erster Button y=666, zweiter y=743 (Abstand 16px), Rand 24px,
-   unten 48px bis zur Screen-Kante. */
-.intro-nav { position: absolute; bottom: 48px; left: 24px; right: 24px; display: flex; flex-direction: column; gap: 16px; }
+   unten 48px bis zur Screen-Kante. Auf dem iPhone kommt die Hoehe der
+   Home-Leiste dazu, sonst liegt der untere Button darunter. */
+.intro-nav {
+  position: absolute; bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+  left: 24px; right: 24px; display: flex; flex-direction: column; gap: 16px;
+}
 
 /* ---------- Onboarding ---------- */
-.skip-btn {
-  margin-left: auto; background: none; border: none; cursor: pointer;
-  padding: 20px 24px; font-weight: 600; font-size: 14px; color: var(--muted);
-  transition: color 0.2s ease;
-}
-.skip-btn:hover { color: #fff; }
 .ob-swipe { position: absolute; inset: 0; touch-action: pan-y; }
 /* Figma 1330:1958 "Feature Card": Visual 334x193 bei (30,276),
    Text ab y=552, Bottom-Nav mit Pagination y=770 und Weiter-Button 64x64. */
 .feature-visual {
-  position: absolute; top: 276px; left: 30px;
-  width: 334px; height: 193px;
+  position: absolute; top: 276px; left: 50%; transform: translateX(-50%);
+  width: 334px; max-width: calc(100% - 48px); height: 193px;
   display: flex; align-items: center; justify-content: center;
 }
 /* Die perspektivische SIM-Karte kommt als Bild aus Figma — eine 3D-Ansicht
@@ -173,16 +174,18 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
 .feature-text h2 { font-weight: 700; font-size: 24px; line-height: 34px; }
 .feature-text h2 .hl { color: var(--noura-accent); display: block; }
 .feature-text p { font-weight: 600; font-size: 14px; line-height: 19px; color: var(--noura-text-muted); }
-.ob-bottom { position: absolute; bottom: 34px; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
+.ob-bottom { position: absolute; bottom: calc(34px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
 .pagination { display: flex; gap: 4px; }
 .pagination button { background: none; border: none; cursor: pointer; padding: 12px 0; display: flex; }
 .pagination i { height: 4px; width: 8px; border-radius: var(--noura-radius-chip); background: var(--noura-glass-strong); transition: all 0.35s ease; display: block; }
 .pagination button.on i { width: 20px; background: var(--noura-accent); }
 /* Weiter-Button: 64x64 rund, Glas @20% */
 .btn.icon-btn { width: 64px; height: 64px; padding: 0; border-radius: var(--noura-radius-pill); }
-.cta-next { width: auto; padding: 0 28px; }
 .fade-step { transition: opacity 0.35s ease, transform 0.35s ease; }
 .fade-step.out { opacity: 0; transform: translateY(10px); }
+/* Das Visual ist per translateX zentriert — die Ausblend-Verschiebung muss
+   das beibehalten, sonst springt es beim Wechsel zur Seite. */
+.feature-visual.fade-step.out { transform: translateX(-50%) translateY(10px); }
 
 /* ---------- eSIM-Karte ----------
    Figma 1330:1789: 345x173, einheitlich dunkel (#1d1d1d@75%) fuer alle Plaene
@@ -225,12 +228,6 @@ button.sim-card { cursor: pointer; }
 .esim-icon .dots.bottom { bottom: 0; left: 8px; }
 .esim-icon .dots.left { left: 0; top: 8px; flex-direction: column; }
 .esim-icon .dots.right { right: 0; top: 8px; flex-direction: column; }
-.esim-icon.lg { width: 74px; height: 74px; }
-.esim-icon.lg .dots { gap: 6px; }
-.esim-icon.lg .dots i { width: 5px; height: 5px; border-radius: 1.5px; }
-.esim-icon.lg .dots.top, .esim-icon.lg .dots.bottom { left: 16px; }
-.esim-icon.lg .dots.left, .esim-icon.lg .dots.right { top: 16px; }
-.esim-icon.lg .inner { font-size: 15px; }
 
 /* ---------- Select plan ---------- */
 .plan-header { position: absolute; top: 130px; left: 0; right: 0; padding: 0 24px 12px; z-index: 10; }
@@ -255,7 +252,7 @@ button.sim-card { cursor: pointer; }
 /* Figma: schlichter weisser Punkt, kein Ring */
 .feat .ic { width: 24px; height: 24px; flex-shrink: 0; color: var(--noura-text); display: flex; align-items: center; justify-content: center; }
 .feat .ic svg { display: block; }
-.plan-cta { position: absolute; bottom: 0; left: 0; right: 0; padding: 24px 24px 48px; z-index: 10; background: linear-gradient(to top, rgba(20, 15, 35, 0.75) 40%, transparent); }
+.plan-cta { position: absolute; bottom: 0; left: 0; right: 0; padding: 24px 24px calc(48px + env(safe-area-inset-bottom, 0px)); z-index: 10; background: linear-gradient(to top, rgba(20, 15, 35, 0.75) 40%, transparent); }
 
 /* ---------- Activation ---------- */
 /* Figma 1330:1775: 3D-SIM-Karte mittig, Statustext darunter.
@@ -304,8 +301,8 @@ button.sim-card { cursor: pointer; }
 .ring-wrap .inf { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 24px; line-height: 32px; color: var(--noura-accent); }
 
 /* ---------- Navbar / FABs ---------- */
-.navbar { position: absolute; bottom: 0; left: 0; right: 0; padding: 48px 24px; display: flex; justify-content: flex-end; z-index: 20; }
-.fab-stack { position: absolute; right: 24px; bottom: 120px; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; z-index: 19; }
+.navbar { position: absolute; bottom: 0; left: 0; right: 0; padding: 48px 24px calc(48px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: flex-end; z-index: 20; }
+.fab-stack { position: absolute; right: 24px; bottom: calc(120px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: flex-end; gap: 12px; z-index: 19; }
 .fab-stack .btn { width: auto; opacity: 0; transform: translateY(14px); pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; }
 .fab-stack.open .btn { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .fab-stack .btn:nth-child(1) { transition-delay: 0.06s; }
@@ -375,7 +372,7 @@ button.sim-card { cursor: pointer; }
 .quick-replies .btn { width: auto; font-size: 16px; }
 /* Figma 1330:2685: Eingabefeld 257x64 Glas @20% r24, Sendeknopf 64x64
    Glas @20% voll rund — nicht rot. */
-.chat-input { display: flex; gap: 24px; padding: 12px 24px 28px; flex-shrink: 0; }
+.chat-input { display: flex; gap: 24px; padding: 12px 24px calc(28px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; }
 .chat-input input {
   flex: 1; background: var(--noura-glass-strong);
   backdrop-filter: blur(var(--noura-blur-glass)); -webkit-backdrop-filter: blur(var(--noura-blur-glass));
