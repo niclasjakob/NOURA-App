@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.noura.app',
+  appId: 'com.niclasjakob.noura',
   appName: 'NOURA',
   webDir: 'dist'
 };

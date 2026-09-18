@@ -47,3 +47,30 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
 }
+
+/* Ab iOS 26 erzwingt das SDK die UIScene-Adoption: ohne Scene-Manifest bricht
+   der Start mit EXC_BREAKPOINT in
+   __UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption ab.
+
+   Das Fenster baut UIKit selbst aus Main.storyboard (UISceneStoryboardFile im
+   Info.plist), deshalb bleibt willConnectTo leer. Die Klasse existiert nur,
+   um die beiden Rueckwege durchzureichen, die unter Scenes nicht mehr am
+   AppDelegate ankommen — sonst verlieren Plugins ihre URL-Callbacks. */
+class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+
+    var window: UIWindow?
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        guard let context = URLContexts.first else { return }
+        var options: [UIApplication.OpenURLOptionsKey: Any] = [.openInPlace: context.options.openInPlace]
+        if let source = context.options.sourceApplication {
+            options[.sourceApplication] = source
+        }
+        _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, open: context.url, options: options)
+    }
+
+    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        _ = ApplicationDelegateProxy.shared.application(UIApplication.shared, continue: userActivity,
+                                                        restorationHandler: { _ in })
+    }
+}
