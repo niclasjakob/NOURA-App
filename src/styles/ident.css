@@ -1,0 +1,171 @@
+/* ============================================================
+   NOURA — Die Identitaetspruefung
+
+   Buehne zu components/ident-stage.tsx. Aufbau wie bei der eSIM:
+   der GRUNDZUSTAND jeder Regel ist das fertig gepruefte Dokument, die
+   frueheren Takte nehmen weg. Animiert wird nur transform und opacity
+   (fill ausgenommen, wo eine Zeile hell aufblitzt) — die Regel aus
+   onboarding.css gilt hier genauso.
+   ============================================================ */
+
+.ident {
+  position: relative; width: 320px; height: 260px; flex-shrink: 0;
+  pointer-events: none;
+}
+
+.id-glow {
+  position: absolute; left: 50%; top: 50%;
+  width: 340px; height: 340px; margin: -170px 0 0 -170px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(225, 80, 85, 0.3), transparent 62%);
+  opacity: 0.45; transform: scale(0.82);
+  transition: opacity 1.15s var(--ease-out), transform 1.3s var(--ease-out);
+}
+[data-ibeat='check'] .id-glow { opacity: 0.6; transform: scale(0.94); }
+[data-ibeat='confirm'] .id-glow { opacity: 1; transform: scale(1.14); }
+
+/* Zentriert ueber negative Raender, damit transform fuer die Lage im
+   Takt frei bleibt. */
+.id-plate {
+  position: absolute; left: 50%; top: 50%;
+  width: 300px; height: 234px; margin: -117px 0 0 -150px;
+  transform-origin: 50% 50%;
+  transition: opacity 0.7s var(--ease-out), transform 0.85s var(--ease-out);
+}
+.id-plate svg { width: 100%; height: 100%; display: block; overflow: visible; }
+/* Das Dokument liegt leicht gekippt auf der Flaeche — aber es schwebt
+   nicht: der Screen zeigt eine Pruefung, keine Vorfuehrung. */
+.id-plate { transform: perspective(1100px) rotateX(9deg) rotateZ(-2deg); }
+
+/* ---------- Grundzustand: das gepruefte Dokument ---------- */
+.id-body { fill: var(--noura-card-fill); }
+.id-edge { fill: none; stroke: rgba(255, 255, 255, 0.1); stroke-width: 1; }
+.id-portrait rect { fill: rgba(255, 255, 255, 0.06); }
+.id-head, .id-body-glyph { fill: rgba(255, 255, 255, 0.3); }
+.id-line { fill: rgba(255, 255, 255, 0.34); }
+.id-chip rect { fill: rgba(255, 255, 255, 0.07); stroke: rgba(255, 255, 255, 0.22); stroke-width: 1; }
+.id-chip line { stroke: rgba(255, 255, 255, 0.22); stroke-width: 1; }
+.id-mrz rect { fill: rgba(255, 255, 255, 0.18); }
+
+/* Werkzeuge: nur sichtbar, solange sie arbeiten. */
+.id-scan { opacity: 0; transform-box: view-box; transform-origin: 0 0; }
+.id-flash { fill: #fff; opacity: 0; }
+.id-nfc, .id-frame, .id-call { opacity: 0; }
+.id-nfc circle {
+  fill: none; stroke: var(--noura-accent); stroke-width: 1.6;
+  transform-box: view-box; transform-origin: 260px 134px;
+}
+.id-frame path { fill: none; stroke: var(--noura-accent); stroke-width: 2.4; stroke-linecap: round; }
+.id-call-win { fill: rgba(255, 255, 255, 0.1); stroke: rgba(255, 255, 255, 0.24); stroke-width: 1.2; }
+.id-call-head, .id-call-body { fill: rgba(255, 255, 255, 0.55); }
+.id-call-wire { fill: none; stroke: rgba(225, 80, 85, 0.5); stroke-width: 1.4; stroke-dasharray: 4 5; }
+.id-call-dot { fill: #fff; opacity: 0; transform-box: view-box; transform-origin: 0 0; }
+
+.id-burst { position: absolute; inset: 0; display: grid; place-items: center; }
+
+/* ============================================================
+   Takt 1 — gelesen
+
+   Die Datenzeilen sind hier noch blass: gelesen ist noch nicht
+   geprueft. Sichtbar ist nur, WIE gelesen wird — und das haengt am
+   Verfahren, das der Kunde vorher gewaehlt hat. Genau deshalb steht
+   es im Bild: seine Entscheidung soll eine Folge haben.
+   ============================================================ */
+[data-ibeat='read'] .id-line { fill: rgba(255, 255, 255, 0.12); }
+
+/* Online-Ausweis — der Chip wird funkend ausgelesen */
+[data-ibeat='read'][data-method='eid'] .id-nfc { opacity: 1; }
+.ident.run[data-ibeat='read'][data-method='eid'] .id-nfc circle {
+  animation: idWave 2.75s var(--ease-out) infinite; animation-delay: calc(var(--i) * 0.6s);
+}
+@keyframes idWave {
+  0% { opacity: 0; transform: scale(0.24); }
+  25% { opacity: 0.8; }
+  100% { opacity: 0; transform: scale(1.35); }
+}
+
+/* Foto-Ident — die Sucherwinkel ziehen sich zusammen, dann loest es aus */
+[data-ibeat='read'][data-method='photo'] .id-frame { opacity: 1; }
+.ident.run[data-ibeat='read'][data-method='photo'] .id-frame {
+  animation: idFrame 2.3s var(--ease-out) infinite;
+  transform-box: view-box; transform-origin: 150px 94px;
+}
+@keyframes idFrame {
+  0% { opacity: 0; transform: scale(1.22); }
+  30%, 62% { opacity: 1; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.ident.run[data-ibeat='read'][data-method='photo'] .id-flash {
+  animation: idFlash 2.3s var(--ease-out) infinite;
+}
+@keyframes idFlash { 0%, 62% { opacity: 0; } 68% { opacity: 0.5; } 100% { opacity: 0; } }
+
+/* Video-Chat — jemand schaut sich das Dokument an */
+[data-ibeat='read'][data-method='video'] .id-call { opacity: 1; }
+.ident.run[data-ibeat='read'][data-method='video'] .id-call-win {
+  animation: idPulse 3.2s var(--ease-out) infinite;
+  transform-box: view-box; transform-origin: 150px -34px;
+}
+@keyframes idPulse { 0%, 100% { opacity: 0.75; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
+/* Der Punkt laeuft die Leitung entlang. Die Bahn ist eine Gerade auf
+   eine sanfte Kurve — auf 90px Weg faellt das nicht auf, und
+   offset-path traegt auf dem iPhone nicht zuverlaessig. */
+.ident.run[data-ibeat='read'][data-method='video'] .id-call-dot {
+  animation: idSend 2.15s var(--ease-out) infinite;
+}
+@keyframes idSend {
+  0% { opacity: 0; transform: translate(0, 0); }
+  18% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-90px, 62px); }
+}
+
+/* ============================================================
+   Takt 2 — geprueft
+
+   Ein Balken faehrt ueber das Dokument, und jede Zeile wird hell,
+   wenn er sie erreicht. Der Unterschied zum Einblenden ist derselbe
+   wie beim Lasern der eSIM: man sieht, dass etwas GETAN wird.
+   ============================================================ */
+.ident.run[data-ibeat='check'] .id-scan { opacity: 1; animation: idScan 2.15s var(--ease-out) infinite; }
+@keyframes idScan { from { transform: translateY(0); } to { transform: translateY(253px); } }
+
+[data-ibeat='check'] .id-line { fill: rgba(255, 255, 255, 0.12); }
+.ident.run[data-ibeat='check'] .id-line {
+  animation: idVerify 0.7s var(--ease-out) forwards; animation-delay: calc(0.6s + var(--i) * 0.28s);
+}
+@keyframes idVerify {
+  0% { fill: rgba(255, 255, 255, 0.12); }
+  35% { fill: #fff; }
+  100% { fill: rgba(255, 255, 255, 0.34); }
+}
+/* Das Portrait wird mitgeprueft — ohne Abgleich mit dem Gesicht waere
+   die Pruefung keine. */
+.ident.run[data-ibeat='check'] .id-portrait rect { animation: idFace 1s var(--ease-out) 0.22s backwards; }
+@keyframes idFace {
+  0% { stroke: rgba(225, 80, 85, 0); }
+  40% { stroke: var(--noura-accent); }
+  100% { stroke: rgba(225, 80, 85, 0); }
+}
+.id-portrait rect { stroke-width: 1.6; }
+
+/* ============================================================
+   Takt 3 — bestaetigt
+   Das Dokument tritt zurueck und gibt dem Haken die Flaeche.
+   ============================================================ */
+[data-ibeat='confirm'] .id-plate { opacity: 0.32; transform: perspective(1100px) scale(0.93); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ident.run .id-nfc circle, .ident.run .id-frame, .ident.run .id-flash,
+  .ident.run .id-call-win, .ident.run .id-call-dot,
+  .ident.run .id-scan, .ident.run .id-line, .ident.run .id-portrait rect {
+    animation: none !important;
+  }
+  .id-plate, .id-glow { transition: none; }
+  .id-scan, .id-flash { opacity: 0 !important; }
+  /* Die Endzustaende muessen trotzdem stimmen. */
+  [data-ibeat='check'] .id-line { fill: rgba(255, 255, 255, 0.34); }
+  [data-ibeat='read'][data-method='eid'] .id-nfc,
+  [data-ibeat='read'][data-method='photo'] .id-frame,
+  [data-ibeat='read'][data-method='video'] .id-call { opacity: 1; }
+}

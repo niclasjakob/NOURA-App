@@ -5,54 +5,256 @@
    ============================================================ */
 @import './fonts.css';
 @import './theme.css';
+@import './onboarding.css';
+@import './beats.css';
+@import './ident.css';
+@import './esim-forge.css';
+/* app.css NICHT hier: @import gehoert an den Dateianfang und laendet die
+   Regeln damit VOR den eigenen — bei gleicher Spezifitaet gewinnt dann
+   global.css, und jede Korrektur in app.css lief ins Leere (u.a. das
+   Spaltenlayout der Tarifauswahl). Es wird in main.tsx nach global.css
+   geladen, damit die Verfeinerungsschicht auch verfeinert. */
 
 :root {
-  /* Legacy aliases — kept so existing rules read from the design system */
-  --bg: var(--background);
-  --glass: var(--card);                 /* glass L1 — cards, tiles */
-  --glass-strong: rgba(255, 255, 255, 0.2); /* glass L3 — buttons, FABs */
-  --muted: var(--muted-foreground);
-  --white: var(--foreground);
-  --r-btn: 24px;
+  /* Entfallen am 2026-09-17: --bg, --glass, --glass-strong, --muted,
+     --white, --r-btn, --font-wordmark. Alle sieben hatten keinen
+     Verwender mehr, und --glass zeigte auf --card (8 %) statt auf
+     --noura-glass (10 %) — zwei Flaechen fuer dieselbe Rolle. */
   --font: 'General Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-wordmark: 'Poppins', var(--font);
 
   /* ---- Figma-Tokens (ausgelesen aus Node 1330:1774, 2026-07-27) ----
      Verbindliche Werte. Details + Haeufigkeiten: .claude/skills/noura-design/ */
   --noura-text: #ffffff;
-  --noura-text-muted: rgba(255, 255, 255, 0.5);
-  --noura-glass: rgba(255, 255, 255, 0.1);
-  --noura-glass-strong: rgba(255, 255, 255, 0.2);
-  --noura-border: rgba(255, 255, 255, 1);
+  /* 0.5 ergab auf der Glaskarte nur 4,00:1 und lag damit unter den 4,5:1,
+     die `accessibility.md > Vision` fuer Text bis 17 pt verlangt. 0.65
+     ergibt 5,59:1 auf der Karte und 6,97:1 auf dem Canvas; der Abstand
+     zum weissen Text (10,72:1) traegt die Stufe weiter. */
+  --noura-text-muted: rgba(255, 255, 255, 0.65);
+  /* Nur fuer Zeichen, die niemand lesen muss (Spuren, Ziffernblatt-
+     Striche). Nie fuer Text — 2,7:1 auf der Karte. */
+  --noura-text-faint: rgba(255, 255, 255, 0.4);
+
+  /* ---- Flaechenstufen ----
+     Die Leiter ersetzt 29 einzeln gesetzte Weisswerte. Stufe 2 und 3
+     stehen so in Figma; `raised` und `active` fuellen die Luecken, die
+     der Code vorher mit .12/.14/.15/.16/.18 und .22/.24/.25/.26/.28
+     ueberbrueckt hat. Illustrationen (ident.css, esim-forge.css) haben
+     eigene Werte und gehoeren bewusst nicht auf diese Leiter. */
+  --noura-glass: rgba(255, 255, 255, 0.1);          /* Stufe 2 — Inhaltskarte */
+  --noura-glass-raised: rgba(255, 255, 255, 0.14);  /* verschachtelt in einer Karte */
+  --noura-glass-strong: rgba(255, 255, 255, 0.2);   /* Stufe 3 — Bedienelement */
+  --noura-glass-active: rgba(255, 255, 255, 0.28);  /* gewaehltes Bedienelement */
+  --noura-line: rgba(255, 255, 255, 0.16);          /* Trennlinien, Fortschrittsspuren */
+  /* --noura-border (Figma #ffffff, 104x) ist entfallen: er war
+     deklariert und hatte keinen einzigen Verwender. Karten sind
+     randlos, die Kante der Bedienelemente ist ein Verlauf statt einer
+     Volltonfarbe (siehe .btn::before). Figma-Wert im Skill. */
   --noura-accent: #e15055;
   --noura-vodafone: #e60000;       /* nur im Logo-Kontext */
   --noura-canvas: #232452;
   --noura-card-fill: rgba(29, 29, 29, 0.75);
+  /* Die zwei Kartenkoerper. CONNECT tragt das tiefe Blau der ruhigen
+     Aurora-Ecke (--noura-navy/#1a1a40, Weiss darauf 16.6:1); das
+     mittlere Aurora-Blau bleibt dem Verlauf vorbehalten, es ist als
+     Flaeche nicht vorgesehen. CREATE ist schwarz. */
+  --sim-connect: #1e2352;
+  --sim-connect-deep: #12142f;
+  --sim-create: #121212;
+  --sim-create-deep: #000000;
+  --sim-body: var(--sim-connect);
+  --sim-body-deep: var(--sim-connect-deep);
   --noura-scrim: rgba(0, 0, 0, 0.5);
 
   --noura-radius-card: 24px;       /* Signatur-Radius (57x in Figma) */
   --noura-radius-tile: 16px;
   --noura-radius-chip: 5px;
   --noura-radius-pill: 1000px;
-  --noura-blur-glass: 24px;
+  /* Drei Stufen statt sechs Einzelwerten (6/7/10/12/16/24). Die Stufe
+     folgt der Flaeche: Inhalt 7, Bedienelement 12, Leiste und Sheet 40.
+     --noura-blur-glass (24px) ist entfallen — er lag auf vier
+     Bedienelementen und damit auf der falschen Stufe. */
+  --noura-blur-card: 7px;
+  --noura-blur-control: 12px;
   --noura-blur-bar: 40px;
+
+  /* ---- Liquid Glass (iOS 26) ----
+     Grundwerte aus der Figma-Buttonkomponente 301:1461 ("der tatsaechlich
+     in allen 12 Screens verwendete Button", Node 1330:1974 als Instanz):
+     Fuellung surface/translucent-strong = #ffffff@20%, gedrueckt
+     surface/translucent-pressed = #ffffff@15%, Hintergrund-Weichzeichner
+     12px, Radius radius/md = 24px (Icon-Variante radius/pill).
+
+     Apples Material braucht darueber hinaus zwei Schichten, die Figma
+     nicht zeichnet: Saettigung im gebeugten Hintergrund, damit Farbe
+     durchschlaegt statt zu vergrauen, und ein heller Kantenreflex, der
+     die Scheibe dick wirken laesst. Die kommen bewusst dazu.
+
+     Achtung — gedrueckt wird die Flaeche dunkler, nicht heller. Das ist
+     Figmas Festlegung und die Umkehrung des naheliegenden Reflexes. */
+  --lg-tint: var(--noura-glass-strong);              /* #ffffff@20% */
+  --lg-tint-pressed: rgba(255, 255, 255, 0.15);      /* surface/translucent-pressed */
+  --lg-blur: 12px;                                   /* Figma-Wert, nicht die 24px der Karten */
+  --lg-refract: blur(var(--lg-blur)) saturate(180%) brightness(1.06);
+  --lg-inner: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -8px 20px -12px rgba(255, 255, 255, 0.35);
+  --lg-lift: 0 10px 26px -12px rgba(0, 0, 0, 0.45), 0 2px 6px -3px rgba(0, 0, 0, 0.3);
+
+  /* ---- Abstand der unteren Leisten ----
+     Figma zeichnet 852px hohe Screens — die Zone der Home-Leiste ist darin
+     schon enthalten, die Leiste sitzt 48px ueber der Kante. Wer darauf die
+     volle Safe-Area addiert, zaehlt diese Zone doppelt und schiebt die
+     Leiste rund 34px zu hoch. Deshalb: Safe-Area plus kleiner Rest, mit
+     einem Mindestwert fuer Browser ohne Inset. */
+  --bar-bottom: max(24px, calc(14px + env(safe-area-inset-bottom, 0px)));
+
+  /* ---- Druckzustaende ----
+     Die Regel hat zwei Haelften, je nachdem, was unter dem Finger liegt.
+
+     Gefuellte Flaechen werden beim Druecken DUNKLER — Knopf 20 %→15 %,
+     Karte 10 %→6 %, SIM-Karte 75 %→88 % Deckkraft. Das ist Figmas
+     Festlegung und die Umkehrung des naheliegenden Reflexes.
+
+     Durchsichtige Zeilen auf einer Glasflaeche haben nichts zum
+     Abdunkeln. Dort ist ein heller Anflug das richtige Zeichen — so
+     macht es iOS in Listen, und so stand es hier auch schon, nur mit
+     drei verschiedenen Werten (.08, .14, .15). Jetzt mit einem.
+
+     Was gar keine Flaeche hat — ein blosses Symbol, ein Reiter —
+     wird gedimmt statt hinterlegt. */
+  --press-wash: rgba(255, 255, 255, 0.12);
+  --press-dim: 0.55;
+
+  /* ---- Platz unter der Tarifliste ----
+     Hier stand `padding-bottom: 240px` — eine geratene Zahl, das
+     Gegenstueck zum `height: 200` auf Home. Jetzt aus den Teilen
+     gerechnet, aus denen der CTA-Block tatsaechlich besteht:
+     40px Kopfraum (.plan-cta), 61px Knopf, 10px Abstand, drei Zeilen
+     Kleingedrucktes und 24px Luft — dazu die Leiste selbst.
+     Der Vorteil gegenueber 240: der Wert waechst mit der
+     Textgroesse mit, die feste Zahl tat das nicht. */
+  --plan-cta-space: calc(
+    var(--bar-bottom) + 40px + 61px + 10px + 4.05 * var(--fs-caption) + 24px
+  );
+
+  /* ---- Schriftgroessen ----
+     In rem, damit sie der iOS-Textgroesse folgen (siehe unten).
+     Die Faktoren sind so gerechnet, dass bei Standardeinstellung
+     (17px Wurzel) exakt die Figma-Pixelwerte herauskommen:
+     0.706 x 17 = 12, 0.824 x 17 = 14, 0.941 x 17 = 16 usw. */
+  --fs-caption: 0.706rem;   /* 12px */
+  --fs-label: 0.824rem;     /* 14px — haeufigste Rolle, 123x in Figma */
+  --fs-body: 0.941rem;      /* 16px */
+  --fs-title: 1.176rem;     /* 20px */
+  --fs-screen: 1.412rem;    /* 24px */
+  --fs-hero: 2.353rem;      /* 40px — Wortmarke */
+
+  /* Mindestgroesse fuer Tippziele nach den iOS-Vorgaben */
+  --tap: 44px;
+
+  /* ---- Bewegung ----
+     Fuenf Dauern, drei Kurven, eine Feder. Vorher: 75 verschiedene
+     Dauern, 12 Kurven und kein einziges Token — jede neue Animation
+     erfand ihr Timing neu, und niemand konnte sagen, warum eine
+     Ueberblendung 0,45s und die naechste 0,55s lief.
+
+     Passt ein Wert auf keine Sprosse, ist das eine Gestaltungsfrage,
+     keine Timingfrage. */
+  --dur-tap: 120ms;      /* Druckreaktion — muss sich wie Kontakt anfuehlen */
+  --dur-quick: 200ms;    /* Zustandswechsel an Ort und Stelle: Schalter, Chip, Reiter */
+  --dur-move: 320ms;     /* Ein Element reist: Sheet-Rastung, Karussell */
+  --dur-screen: 460ms;   /* Ein Screen loest den anderen ab. Auch die Ruhezeit der Feder. */
+  --dur-beat: 900ms;     /* Ein Schlag einer Signatur-Abfolge. Die Schmiede, sonst nichts. */
+
+  /* Reise und Eintritt. Starkes Abbremsen — der iOS-Griff: schnell
+     entschieden, lang ausklingend. */
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Nur Abgaenge. Was geht, beschleunigt weg; nichts kommt mit ease-in an. */
+  --ease-in: cubic-bezier(0.4, 0, 0.9, 0.2);
+  /* Der eine Ueberschwinger. Ein echter gedaempfter Schwinger
+     (Antwort 0,42s, Daempfung 0,72, 25 Stuetzstellen ueber 460ms),
+     keine Bezier-Nachahmung davon: kreuzt das Ziel bei 230ms,
+     schwingt 3,8 % darueber hinaus, steht bei 460ms.
+     Ersetzt die sechs Varianten von cubic-bezier(0.2, 0.9, 0.3, 1.0x)
+     im alten Code, von denen sich zwei nur in der letzten Ziffer
+     unterschieden. Vor Safari 17.4 faellt linear() auf `linear`
+     zurueck — vertretbar, weil nichts im System den Ueberschwinger
+     zum Verstehen braucht. */
+  --spring: linear(
+    0, 0.0358, 0.1239, 0.2409, 0.369, 0.4961, 0.6138, 0.7176, 0.8051,
+    0.8761, 0.9314, 0.9725, 1.0016, 1.0207, 1.032, 1.0373, 1.0383,
+    1.0365, 1.0328, 1.0281, 1.0232, 1.0184, 1.0139, 1.0101, 1
+  );
 }
+
+/* ---------- Bewegung reduziert ----------
+   Eine Regel statt acht Listen. Bis zum 2026-09-18 pflegten sechs
+   Dateien acht `prefers-reduced-motion`-Bloecke, in denen jede
+   Animation einzeln aufgezaehlt stand. Jede neue Animation musste von
+   Hand in eine dieser Listen eingetragen werden — oder sie lief
+   stillschweigend weiter. Das war eine Falle, und sie wurde regelmaessig
+   ausgeloest.
+
+   Weil im Haus ohnehin nur transform und opacity animiert werden,
+   traegt eine Regel alles.
+
+   Dauer, nicht `animation: none`: eine Animation in 1ms liefert ihren
+   Endzustand ab, `none` wirft ihn weg. Genau deshalb standen in
+   ident.css und app.css Endwerte doppelt — einmal in den Keyframes,
+   einmal im Reduziert-Block. Was bleibt, sind die wenigen Stellen, die
+   einen ANDEREN Zustand brauchen als den, auf dem die Animation endet
+   (ein Laserstrahl, der gar nicht stehenbleiben soll) — die stehen
+   weiter bei ihrem Bild.
+
+   Die Takte der Schmiede und der Identitaetspruefung haengen an
+   JS-Timern, nicht an CSS-Ketten: sie laufen also weiter in ihrem
+   Tempo durch, nur ohne Bewegung in den einzelnen Bildern. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- Dynamic Type ----------
+   `font: -apple-system-body` traegt auf iOS die Textgroessen-Einstellung
+   des Nutzers in die Wurzel — der meistgenutzte Bedienungshilfen-Schalter
+   des Systems ueberhaupt. Alle Groessen darunter stehen in rem und wachsen
+   deshalb mit. Ausserhalb von Safari greift der Kurzschreibweise-Wert
+   nicht, dort bleibt es bei den 17px des Grundwerts. */
+:root { font-size: 17px; }
+@supports (font: -apple-system-body) {
+  :root { font: -apple-system-body; }
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #root { height: 100%; }
 body {
   font-family: var(--font);
+  /* Muss gesetzt bleiben: die Kurzschreibweise oben setzt Familie und
+     Zeilenhoehe auf der Wurzel zurueck. */
+  font-size: var(--fs-body);
+  line-height: 1.35;
   background: #0d0e1f;
-  color: var(--white);
+  color: var(--noura-text);
   overflow: hidden;
 }
 button, input { font-family: var(--font); }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
+/* Nur fuer Screenreader — traegt Meldungen, die visuell schon als
+   Toast erscheinen. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+.screens { position: absolute; inset: 0; }
+
 /* ---------- Phone frame ---------- */
 .stage { display: flex; align-items: center; justify-content: center; width: 100%; height: 100vh; }
 .phone {
   position: relative; width: 393px; height: 852px;
-  border-radius: 54px; overflow: hidden; background: var(--bg);
+  border-radius: 54px; overflow: hidden; background: var(--noura-canvas);
   box-shadow: 0 0 0 12px #191a2e, 0 0 0 14px #2c2d4a, 0 40px 100px rgba(0, 0, 0, 0.6);
   flex-shrink: 0;
 }
@@ -80,42 +282,124 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 28px 0 40px; pointer-events: none;
 }
-.statusbar .time { font-weight: 600; font-size: 16px; letter-spacing: 0.2px; }
+.statusbar .time { font-weight: 600; font-size: var(--fs-body); letter-spacing: 0.2px; }
 .statusbar .icons { display: flex; align-items: center; gap: 7px; }
 .statusbar svg { display: block; }
 
-/* ---------- Screens ---------- */
+/* ---------- Screens ----------
+   Screens kommen aus der Richtung, in die man geht. Vorher blendete
+   der ganze Ablauf mit 0,65s `ease` ueber — das liest sich als "etwas
+   hat sich geaendert", nicht als "Du bist weitergegangen". Das
+   Onboarding machte es intern schon richtig; Bestellung, Ident und
+   eSIM nicht.
+
+   24px sind bewusst wenig: der Screen schiebt sich nicht herein, er
+   setzt sich. Die Strecke traegt die Richtung, die Deckkraft den
+   Wechsel. App.tsx setzt data-dir aus der Position im Ablauf. */
+.screens { --screen-enter: 24px; --screen-exit: -24px; }
+.screens[data-dir='back'] { --screen-enter: -24px; --screen-exit: 24px; }
+
 .screen {
   position: absolute; inset: 0;
   opacity: 0; pointer-events: none; visibility: hidden;
-  transition: opacity 0.45s ease, visibility 0s linear 0.45s;
+  transform: translate3d(var(--screen-enter), 0, 0);
+  transition:
+    opacity var(--dur-screen) var(--ease-out),
+    transform var(--dur-screen) var(--ease-out),
+    visibility 0s linear var(--dur-screen);
 }
-.screen.active { opacity: 1; pointer-events: auto; visibility: visible; transition: opacity 0.45s ease; }
+.screen.active {
+  opacity: 1; pointer-events: auto; visibility: visible;
+  transform: translate3d(0, 0, 0);
+  transition:
+    opacity var(--dur-screen) var(--ease-out),
+    transform var(--dur-screen) var(--ease-out);
+}
+/* Der abtretende Screen geht in die Gegenrichtung — sonst zoege er
+   dorthin zurueck, woher der neue kommt, und beide traefen sich in
+   der Mitte. */
+.screen.leaving { --screen-enter: var(--screen-exit); }
 
-/* ---------- Buttons (liquid glass) ---------- */
-/* Buttons nach Figma: Glasfuellung #ffffff@20%, Radius 24px, Hoehe 61px,
-   Label General Sans Semibold 16px. Ohne Glanzverlaeufe und Schlagschatten —
-   die hat die Vorlage nicht. */
+/* ---------- Buttons (Liquid Glass) ---------- */
+/* Geometrie und Fuellung nach Figma 301:1461: Radius 24px, Hoehe 61px,
+   Innenabstand 20px, Label General Sans Semibold 16px/1.3, #ffffff@20%.
+   Das Material darueber ist Apples Liquid Glass: gebeugter Hintergrund,
+   Kantenreflex (::before), flacher Glanz von oben (::after). */
 .btn {
   position: relative;
   display: flex; align-items: center; justify-content: center; gap: 8px;
-  height: 61px; padding: 20px; border-radius: var(--noura-radius-card); cursor: pointer;
-  font-weight: 600; font-size: 16px; line-height: 21px; color: var(--noura-text);
-  background: var(--noura-glass-strong);
-  backdrop-filter: blur(var(--noura-blur-glass)); -webkit-backdrop-filter: blur(var(--noura-blur-glass));
-  border: none;
-  width: 100%; transition: transform 0.15s ease, background 0.2s ease; user-select: none;
+  min-height: 61px; padding: 16px 20px; border-radius: var(--noura-radius-card); cursor: pointer;
+  font-weight: 600; font-size: var(--fs-body); line-height: 1.312; color: var(--noura-text);
+  background: var(--lg-tint);
+  backdrop-filter: var(--lg-refract); -webkit-backdrop-filter: var(--lg-refract);
+  box-shadow: var(--lg-inner), var(--lg-lift);
+  border: none; isolation: isolate;
+  width: 100%;
+  /* Druck und Loesen sind nicht symmetrisch: der Druck sitzt sofort
+     (dur-tap), damit der Knopf am Finger haengt, das Loesen faellt auf
+     der Feder zurueck. Dieselbe Dauer fuer beides — so stand es hier
+     mit 0,15s `ease` — laesst den Knopf wie Software wirken statt wie
+     ein Ding. */
+  transition:
+    transform var(--dur-screen) var(--spring),
+    background var(--dur-screen) var(--spring),
+    box-shadow var(--dur-screen) var(--spring);
+  user-select: none;
 }
-.btn:active { transform: scale(0.97); }
-.btn.primary {
-  background: var(--noura-accent);
+/* Die Wartegeste des Systems: eine Haarlinie faehrt die Unterkante ab.
+   Sie steht hier, weil sie zwei Verwender hat — den wartenden Knopf
+   (app.css) und den laufenden Schritt der Aktivierung
+   (onboarding.css). Ein Spinner waere an beiden Stellen die
+   generische Antwort gewesen. */
+@keyframes hairlineSweep {
+  0% { transform: translateX(-100%) scaleX(0.45); }
+  50% { transform: translateX(0) scaleX(1); }
+  100% { transform: translateX(100%) scaleX(0.45); }
+}
+
+/* Kantenreflex: ein 1px breiter Rand als Verlauf, oben links hell, unten
+   rechts schwaecher — das laesst die Flaeche wie eine Scheibe mit Dicke
+   lesen statt wie eine aufgemalte Farbe. */
+.btn::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: linear-gradient(150deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(255, 255, 255, 0.18) 32%,
+    rgba(255, 255, 255, 0.06) 58%,
+    rgba(255, 255, 255, 0.42) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  pointer-events: none; z-index: -1;
+}
+/* Glanz: nur im oberen Drittel, sehr flach. Mehr wirkt nach Web-2.0-Knopf. */
+.btn::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 42%);
+  z-index: -1;
+}
+/* Gedrueckt: Fuellung auf 15% nach Figma (State=Pressed) und die Abhebung
+   faellt zusammen — der Knopf legt sich an die Flaeche darunter. */
+.btn:active {
+  transition:
+    transform var(--dur-tap) var(--ease-out),
+    background var(--dur-tap) var(--ease-out),
+    box-shadow var(--dur-tap) var(--ease-out);
+  transform: scale(0.97);
+  background: var(--lg-tint-pressed);
+  box-shadow: var(--lg-inner), 0 4px 12px -8px rgba(0, 0, 0, 0.4);
+}
+/* .btn.primary ist am 2026-09-17 entfallen: kein Verwender im Code, und
+   die Regel lautet "Rot ist nie eine Buttonflaeche" — jeder Button,
+   auch der Haupt-CTA, ist Glas @20 %. Als tote Klasse war sie eine
+   Falle: wer sie spaeter setzt, bekommt lautlos eine Abweichung. */
+.btn.ghost {
+  background: transparent; box-shadow: none;
   backdrop-filter: none; -webkit-backdrop-filter: none;
 }
-.btn.primary:active { background: var(--primary-active); }
-.btn.ghost {
-  background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
-}
-.btn.icon-btn { width: auto; border-radius: 100px; }
+.btn.ghost::before, .btn.ghost::after { display: none; }
+.btn.ghost:active { background: var(--press-wash); box-shadow: none; }
+/* .btn.icon-btn steht in onboarding.css — dort mit fester Groesse */
 .icon-plain { background: transparent; border: none; cursor: pointer; padding: 20px; display: flex; align-items: center; color: #fff; }
 .top-nav { position: absolute; top: 54px; left: 0; right: 0; display: flex; align-items: center; padding-top: 12px; z-index: 10; }
 
@@ -125,77 +409,53 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
 /* Mittig statt bei festem x=67: Figma zeichnet fuer 393px Breite, echte
    Geraete sind breiter (iPhone 16 Pro: 402pt). Zentriert sitzt die Marke
    auf jedem Geraet richtig. */
+/* Zeichen ueber Wortmarke, mittig. Der Block ist 184px hoch (116 Zeichen +
+   14 Abstand + 54 Zeile); frueher waren es 54px ab y=399. Damit die Marke
+   optisch dort bleibt, wo sie war, steht top auf 334: 426 (alte Mitte)
+   minus die halbe neue Hoehe.
+   116 und nicht 96: das Zeichen steht in Weiss, die Wortmarke in Koralle —
+   bei gleicher Hoehe traegt die Koralle mehr Gewicht und das Zeichen wirkt
+   wie eine Beigabe. */
 .intro-center {
-  position: absolute; top: 399px; left: 0; right: 0;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
+  position: absolute; top: 334px; left: 0; right: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
 }
+.intro-mark { width: 116px; height: 116px; display: block; }
 .intro-logo {
-  font-family: var(--font); font-weight: 700; font-size: 40px; line-height: 54px;
+  font-family: var(--font); font-weight: 700; font-size: var(--fs-hero); line-height: 1.35;
   color: var(--noura-accent); letter-spacing: 0;
   text-shadow: 1px 1px 8px rgba(217, 104, 108, 0.2);
 }
-.intro-lockup { width: 98px; height: 32px; object-fit: contain; align-self: flex-end; margin-bottom: 11px; }
-/* Vodafone-Zeichen als echter Figma-Pfad (20x20), Farbe via currentColor. */
-.voda-mark { width: 20px; height: 20px; flex-shrink: 0; display: inline-block; color: var(--noura-accent); }
-.voda-mark.sm { width: 13px; height: 13px; }
-.voda-mark.md { width: 20px; height: 20px; }
 /* Figma: erster Button y=666, zweiter y=743 (Abstand 16px), Rand 24px,
-   unten 48px bis zur Screen-Kante. Auf dem iPhone kommt die Hoehe der
-   Home-Leiste dazu, sonst liegt der untere Button darunter. */
+   unten 48px bis zur Screen-Kante — siehe --bar-bottom. */
 .intro-nav {
-  position: absolute; bottom: calc(48px + env(safe-area-inset-bottom, 0px));
+  position: absolute; bottom: var(--bar-bottom);
   left: 24px; right: 24px; display: flex; flex-direction: column; gap: 16px;
 }
 
-/* ---------- Onboarding ---------- */
-.ob-swipe { position: absolute; inset: 0; touch-action: pan-y; }
-/* Figma 1330:1958 "Feature Card": Visual 334x193 bei (30,276),
-   Text ab y=552, Bottom-Nav mit Pagination y=770 und Weiter-Button 64x64. */
-.feature-visual {
-  position: absolute; top: 276px; left: 50%; transform: translateX(-50%);
-  width: 334px; max-width: calc(100% - 48px); height: 193px;
-  display: flex; align-items: center; justify-content: center;
-}
-/* Die perspektivische SIM-Karte kommt als Bild aus Figma — eine 3D-Ansicht
-   laesst sich in CSS nicht exakt nachbauen. */
-.iso-visual { width: 100%; height: 100%; object-fit: contain; }
-.iso-card {
-  width: 100%; height: 100%; border-radius: 9px; position: relative;
-  background: var(--noura-glass);
-  backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
-  display: flex; align-items: center; justify-content: center; overflow: hidden;
-}
-.iso-cal { flex-direction: column; }
-.iso-cal .cal-head { height: 34px; width: 100%; background: var(--noura-accent); display: flex; align-items: center; justify-content: center; gap: 5px; }
-.iso-cal .cal-head i { width: 5px; height: 12px; background: rgba(255, 255, 255, 0.7); border-radius: 3px; display: block; }
-.iso-cal .cal-body { flex: 1; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 52px; color: var(--noura-text); }
-.iso-5g span { font-weight: 700; font-size: 58px; color: var(--noura-accent); }
-.feature-text { position: absolute; left: 0; right: 0; top: 498px; padding: 0 24px; display: flex; flex-direction: column; gap: 8px; }
-.feature-text h2 { font-weight: 700; font-size: 24px; line-height: 34px; }
-.feature-text h2 .hl { color: var(--noura-accent); display: block; }
-.feature-text p { font-weight: 600; font-size: 14px; line-height: 19px; color: var(--noura-text-muted); }
-.ob-bottom { position: absolute; bottom: calc(34px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; }
-.pagination { display: flex; gap: 4px; }
-.pagination button { background: none; border: none; cursor: pointer; padding: 12px 0; display: flex; }
-.pagination i { height: 4px; width: 8px; border-radius: var(--noura-radius-chip); background: var(--noura-glass-strong); transition: all 0.35s ease; display: block; }
-.pagination button.on i { width: 20px; background: var(--noura-accent); }
-/* Weiter-Button: 64x64 rund, Glas @20% */
-.btn.icon-btn { width: 64px; height: 64px; padding: 0; border-radius: var(--noura-radius-pill); }
-.fade-step { transition: opacity 0.35s ease, transform 0.35s ease; }
-.fade-step.out { opacity: 0; transform: translateY(10px); }
-/* Das Visual ist per translateX zentriert — die Ausblend-Verschiebung muss
-   das beibehalten, sonst springt es beim Wechsel zur Seite. */
-.feature-visual.fade-step.out { transform: translateX(-50%) translateY(10px); }
+/* Onboarding, Intro-Auftritt und Aktivierung stehen in onboarding.css */
 
 /* ---------- eSIM-Karte ----------
    Figma 1330:1789: 345x173, einheitlich dunkel (#1d1d1d@75%) fuer alle Plaene
    — keine plan-spezifischen Farbverlaeufe. Die obere rechte Ecke ist
    abgeschnitten (SIM-Karten-Silhouette), Pfad exakt aus Figma. */
 .sim-card {
-  position: relative; width: 100%; height: 173px;
+  position: relative; width: 100%; min-height: 173px;
   padding: 24px; display: flex; flex-direction: column; justify-content: space-between;
   text-align: left; color: var(--noura-text);
-  background: var(--noura-card-fill);
+  /* Material der Tier-1-Flaeche aus dem Design System: Koerperverlauf
+     auf der Diagonalen, ein Lichtsaum ueber den oberen 72px, dazu die
+     1px-Kante in .sim-card::before.
+
+     Deckend, nicht durchscheinend: die Vorlage nennt die Karte
+     ausdruecklich "opaque and dark, never glass". Mit den 0.75 aus
+     --noura-card-fill waere Schwarz kein Schwarz, sondern eine
+     abgedunkelte Aurora — und der Farbunterschied der beiden Tarife
+     verschwaende in dem, was zufaellig hinter der Karte liegt. */
+  background-color: var(--sim-body-deep);
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0) 72px),
+    linear-gradient(135deg, var(--sim-body), var(--sim-body-deep));
   border: none;
   /* SVG-Maske statt clip-path in festen Pixeln: skaliert mit der Kartenbreite,
      damit die abgeschnittene Ecke auf jeder Geraetebreite am Rand sitzt.
@@ -205,18 +465,76 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
 }
 :root {
   --sim-shape: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 345 173' preserveAspectRatio='none'%3E%3Cpath d='M0 16C0 7.16344 7.16344 0 16 0H289.102C292.799 0 296.381 1.27972 299.24 3.62172L320.497 21.0314L339.793 38.6615C343.11 41.6928 345 45.9796 345 50.4735V157C345 165.837 337.837 173 329 173H16C7.16345 173 0 165.837 0 157V16Z' fill='%23000'/%3E%3C/svg%3E");
+  --sim-edge: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 345 173' preserveAspectRatio='none'%3E%3Cpath d='M0 16C0 7.16344 7.16344 0 16 0H289.102C292.799 0 296.381 1.27972 299.24 3.62172L320.497 21.0314L339.793 38.6615C343.11 41.6928 345 45.9796 345 50.4735V157C345 165.837 337.837 173 329 173H16C7.16345 173 0 165.837 0 157V16Z' fill='none' stroke='%23ffffff' stroke-width='2'/%3E%3C/svg%3E");
 }
+/* Kante auf der Silhouette. Ein inset-Schatten koennte sie nicht
+   zeichnen: die Maske schneidet die abgeschnittene Ecke schraeg, ein
+   Rechteckschatten liefe dort ins Leere. Der gestrichene Pfad folgt
+   ihr. Die Deckkraft steht am Element, nicht im Bild — so teilen sich
+   beide Tarife eine Datei. */
+.sim-card::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: var(--sim-edge) center / 100% 100% no-repeat;
+  opacity: 0.10;
+}
+
+/* ---------- Die zwei Kartengesichter ----------
+   Beide Tarife tragen dieselbe Silhouette, dasselbe Raster und
+   denselben Aufdruck: es ist ein Objekt, kein Kartenpaar. Der
+   Unterschied steckt im Material — genau da, wo er im Produkt steckt.
+   Keine zweite Farbfamilie und keine zweite Bildsprache: das System
+   kennt fuer diese Karte den dunklen Koerper und den Akzent, und der
+   Akzent bleibt Chip und Licht, nie Flaeche.
+
+   CONNECT ist die ruhige Karte: tiefes Blau in einer Tonlage, ein
+   Lichtsaum, eine Kante bei 10 % — der Grundzustand oben.
+
+   CREATE ist die polierte: schwarz statt blau, und die Flaeche bleibt
+   leer. Hier lag bis zum 2026-09-18 eine Guilloche im 7px-Raster —
+   auf Schwarz war sie kein Korn mehr, sondern ein Liniengitter, das
+   die Flaeche zerlegte. Poliertes Material hat keine Struktur, es hat
+   eine Spiegelung: ein einzelner, weicher Glanzstreifen laeuft
+   diagonal ueber die obere Haelfte, dazu das Akzentlicht in der
+   abgeschnittenen Ecke — dem Erkennungszeichen der Silhouette — und
+   eine hellere Kante. Auf Schwarz traegt die Kante die Silhouette;
+   ohne sie verlaere sich die geschnittene Ecke auf dunklem Grund. Weisser Text steht weiterhin auf dem
+   dunklen Koerper; das Licht liegt oben rechts, Tarifname, Preis und
+   Unterzeile stehen links. */
+.sim-card.create {
+  --sim-body: var(--sim-create);
+  --sim-body-deep: var(--sim-create-deep);
+  background-image:
+    /* Die Spiegelung: eine breite, weiche Kante, keine harte Schliere.
+       Der zweite, schwaechere Stopp ist ihr Abklang — ohne ihn endet
+       der Streifen wie abgeschnitten statt wie Licht. */
+    linear-gradient(118deg,
+      rgba(255, 255, 255, 0) 14%,
+      rgba(255, 255, 255, 0.085) 30%,
+      rgba(255, 255, 255, 0.02) 42%,
+      rgba(255, 255, 255, 0) 56%),
+    radial-gradient(120% 90% at 88% 2%, rgba(225, 80, 85, 0.18), rgba(225, 80, 85, 0) 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0) 72px),
+    linear-gradient(135deg, var(--sim-body), var(--sim-body-deep));
+}
+.sim-card.create::before { opacity: 0.16; }
+/* Der Chip sitzt auf CREATE auf dem Akzentlicht statt daneben — auf
+   Voll-Akzentrot waere er darin verschwunden. */
+.sim-card.create .chip { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18); }
+
 button.sim-card { cursor: pointer; }
 .sim-card .head { display: flex; align-items: center; gap: 8px; }
-.sim-card .head .name { font-weight: 700; font-size: 20px; line-height: 27px; letter-spacing: 0; }
+.sim-card .head .name { font-weight: 700; font-size: var(--fs-title); line-height: 1.35; letter-spacing: 0; }
+/* Der Chip ist die einzige Flaeche im System, die der Akzent fuellen
+   darf — und er ist eine Pille. `radius-card` (24) heisst im
+   Flaechensystem "bedienbar"; ein Etikett ist es nicht. */
 .chip {
-  background: var(--noura-accent); border-radius: var(--noura-radius-card);
-  padding: 0 8px; height: 17px; display: inline-flex; align-items: center;
-  font-weight: 500; font-size: 12px; line-height: 16px;
+  background: var(--noura-accent); border-radius: var(--noura-radius-pill);
+  padding: 1px 8px; min-height: 17px; display: inline-flex; align-items: center;
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
 }
 .sim-card .foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
-.sim-card .price { font-weight: 700; font-size: 16px; line-height: 22px; }
-.sim-card .sub { font-weight: 500; font-size: 12px; line-height: 16px; color: var(--noura-text-muted); margin-top: 0; }
+.sim-card .price { font-weight: 700; font-size: var(--fs-body); line-height: 1.375; }
+.sim-card .sub { font-weight: 500; font-size: var(--fs-caption); line-height: 1.333; color: var(--noura-text-muted); margin-top: 0; }
 
 /* eSIM chip icon */
 .esim-icon { position: relative; width: 38px; height: 38px; flex-shrink: 0; }
@@ -231,42 +549,74 @@ button.sim-card { cursor: pointer; }
 
 /* ---------- Select plan ---------- */
 .plan-header { position: absolute; top: 130px; left: 0; right: 0; padding: 0 24px 12px; z-index: 10; }
-.plan-header h2 { font-weight: 700; font-size: 20px; }
-.plan-header p { font-weight: 600; font-size: 14px; line-height: 20px; color: var(--noura-text-muted); margin-top: 4px; }
+.plan-header h1 { font-weight: 700; font-size: var(--fs-title); }
+.plan-header p { font-weight: 600; font-size: var(--fs-label); line-height: 1.429; color: var(--noura-text-muted); margin-top: 4px; }
 /* Figma: Tab-Leiste 277x35 bei y=225, aktive Pille in Akzentrot r24. */
-.tabs { display: flex; gap: 4px; margin-top: 33px; position: relative; }
-.tabs .pill { position: absolute; top: 0; height: 35px; border-radius: var(--noura-radius-card); background: var(--noura-accent); transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s cubic-bezier(0.4, 0, 0.2, 1); z-index: 0; }
-.tabs button { position: relative; z-index: 1; background: none; border: none; cursor: pointer; height: 35px; padding: 8px 16px; border-radius: var(--noura-radius-card); font-weight: 600; font-size: 14px; line-height: 19px; color: var(--noura-text-muted); transition: color 0.3s ease; }
-.tabs button.on { color: #fff; }
+/* Ein Segment, kein Knopf. Die Pille lag bis zum 2026-09-18 in
+   Akzentrot — und damit trug der Reiter dieselbe Flaeche wie das
+   CREATE-Chip, obwohl das eine ein Etikett ist und das andere eine
+   Wahl. Akzent fuellt im ganzen System nur den Chip; alles Bedienbare
+   ist Glas. Die Spur traegt `glass`, die Wahl `glass-active`.
+
+   Mindesthoehe 44px nach den iOS-Vorgaben: die Pille bleibt mit 35px
+   optisch flach, das Tippziel darunter ist es nicht. */
+.tabs {
+  display: flex; gap: 4px; margin-top: 33px; position: relative;
+  background: var(--noura-glass); border-radius: var(--noura-radius-pill); padding: 3px;
+}
+/* Die Pille reist, die Beschriftungen bleiben stehen — also bewegt sich
+   die Pille auf dur-move und der Feder, waehrend die Beschriftungen auf
+   dur-quick ueberblenden. Gleiche Zeiten fuer beides lassen das ganze
+   Element wie ein Neuzeichnen wirken statt wie eine Bewegung. */
+/* top/bottom 0 statt eines eigenen Einzugs: `left` und `offsetLeft`
+   messen beide ab der Innenkante der Spur, also deckt die Pille genau
+   den Knopf — der 3px-Einzug der Spur liegt dann rundum gleich. */
+.tabs .pill {
+  position: absolute; top: 0; bottom: 0; border-radius: var(--noura-radius-pill);
+  background: var(--noura-glass-active);
+  transition: left var(--dur-move) var(--spring), width var(--dur-move) var(--spring);
+  z-index: 0;
+}
+.tabs button {
+  position: relative; z-index: 1; background: none; border: none; cursor: pointer;
+  min-height: var(--tap); padding: 8px 16px; border-radius: var(--noura-radius-pill);
+  font-weight: 600; font-size: var(--fs-label); line-height: 1.357;
+  color: var(--noura-text-muted);
+  transition: color var(--dur-quick) var(--ease-out), opacity var(--dur-tap) var(--ease-out);
+}
+.tabs button.on { color: var(--noura-text); }
 .plan-track-wrap { position: absolute; top: 276px; bottom: 0; left: 0; right: 0; overflow: hidden; }
-.plan-track { display: flex; height: 100%; transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1); touch-action: pan-y; }
+.plan-track { display: flex; height: 100%; transition: transform var(--dur-move) var(--ease-out); touch-action: pan-y; }
 .plan-track.dragging { transition: none; }
 .plan-slide { width: 393px; flex-shrink: 0; padding: 24px; overflow-y: auto; scrollbar-width: none; }
 .plan-slide::-webkit-scrollbar { display: none; }
 @media (max-width: 480px) { .plan-slide { width: 100vw; } }
-.features-block { margin-top: 56px; padding-bottom: 220px; }
-.features-block h3 { font-weight: 700; font-size: 20px; }
-.features-block .desc { font-weight: 600; font-size: 14px; color: var(--muted); line-height: 1.4; margin-top: 4px; }
+.features-block { margin-top: 56px; padding-bottom: var(--plan-cta-space); }
+.features-block h2 { font-weight: 700; font-size: var(--fs-title); }
+.features-block .desc { font-weight: 600; font-size: var(--fs-label); color: var(--noura-text-muted); line-height: 1.4; margin-top: 4px; }
 .feat-list { display: flex; flex-direction: column; gap: 24px; margin-top: 24px; }
-.feat { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 14px; line-height: 19px; }
+.feat { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: var(--fs-label); line-height: 1.357; }
 /* Figma: schlichter weisser Punkt, kein Ring */
 .feat .ic { width: 24px; height: 24px; flex-shrink: 0; color: var(--noura-text); display: flex; align-items: center; justify-content: center; }
 .feat .ic svg { display: block; }
-.plan-cta { position: absolute; bottom: 0; left: 0; right: 0; padding: 24px 24px calc(48px + env(safe-area-inset-bottom, 0px)); z-index: 10; background: linear-gradient(to top, rgba(20, 15, 35, 0.75) 40%, transparent); }
-
-/* ---------- Activation ---------- */
-/* Figma 1330:1775: 3D-SIM-Karte mittig, Statustext darunter.
-   Die Karte atmet leicht, damit der Wartezustand sichtbar bleibt. */
-.act-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
-.act-card { width: 334px; height: 193px; object-fit: contain; animation: actBreathe 2.6s ease-in-out infinite; }
-@keyframes actBreathe { 0%, 100% { transform: scale(1); opacity: 0.92; } 50% { transform: scale(1.03); opacity: 1; } }
-.act-msg { font-weight: 600; font-size: 16px; line-height: 21px; color: var(--noura-text-muted); min-height: 22px; transition: opacity 0.3s ease; }
-.act-msg.fading { opacity: 0; }
-@media (prefers-reduced-motion: reduce) { .act-card { animation: none; opacity: 1; } }
+.plan-cta { position: absolute; bottom: 0; left: 0; right: 0; padding: 24px 24px var(--bar-bottom); z-index: 10; background: linear-gradient(to top, rgba(20, 15, 35, 0.94) 62%, transparent); backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card)); -webkit-mask-image: linear-gradient(to top, #000 62%, transparent); mask-image: linear-gradient(to top, #000 62%, transparent); }
 
 /* ---------- Home ---------- */
-.home-header { position: absolute; top: 54px; left: 0; right: 0; padding: 24px 24px 12px; display: flex; align-items: center; gap: 10px; z-index: 10; }
-.home-header h1 { font-weight: 700; font-size: 20px; flex: 1; }
+.home-header { position: absolute; top: 54px; left: 0; right: 0; padding: 24px 24px 12px; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
+.home-head-row { display: flex; align-items: center; gap: 10px; }
+/* Wortmarke auf Home (2026-09-17 beauftragt, in Figma nicht vorhanden).
+   Ohne das Vodafone-Lockup — das bleibt dem Intro-Screen vorbehalten.
+   16px statt der 40px des Intro: hier ist sie Absender, nicht Auftritt. */
+.home-brand {
+  font-weight: 700; font-size: var(--fs-body); line-height: 21px;
+  letter-spacing: 0.08em; color: var(--noura-accent);
+  text-shadow: 1px 1px 8px rgba(217, 104, 108, 0.2);
+}
+/* Screen-Titel (Figma 700/24), nicht Card-Titel. Die Kopfhoehe haengt am
+   54px hohen Profilbild plus der Wortmarkenzeile (21px) und ihrem Abstand
+   (6px) — deshalb steht der Versatz der Scrollflaeche auf 171px, nicht
+   mehr auf 144px. Wer die Zeile entfernt, zieht dort 27px ab. */
+.home-header h1 { font-weight: 700; font-size: var(--fs-screen); flex: 1; }
 .avatar-btn { width: 54px; height: 54px; padding: 0; border: none; background: none; cursor: pointer; flex-shrink: 0; border-radius: var(--noura-radius-pill); overflow: hidden; display: block; }
 /* Figma 1330:1860: echtes Profilfoto, 54x54, voll rund. */
 .avatar {
@@ -274,81 +624,199 @@ button.sim-card { cursor: pointer; }
   cursor: pointer; border: none; flex-shrink: 0; padding: 0;
   overflow: hidden; display: inline-block; object-fit: cover;
 }
-.home-scroll { position: absolute; top: 144px; bottom: 0; left: 0; right: 0; overflow-y: auto; padding: 24px; scrollbar-width: none; }
-.home-scroll::-webkit-scrollbar { display: none; }
-.section-toggle { display: flex; align-items: center; gap: 8px; background: none; border: none; cursor: pointer; color: #fff; font-weight: 600; font-size: 20px; padding: 0; margin: 48px 0 24px; }
-.section-toggle svg { transition: transform 0.3s ease; }
-.section-toggle.closed svg { transform: rotate(-90deg); }
-.usage { display: flex; gap: 12px; overflow: hidden; transition: max-height 0.45s ease, opacity 0.35s ease; max-height: 320px; }
-.usage.hidden { max-height: 0; opacity: 0; }
-/* Figma 1330:1831: Kacheln 166x312 bzw. 166x150, Luecke 12px, Glas @10%,
-   Radius 16px, Innenabstand 20px. Icons in Akzentrot. */
-.usage .card {
-  background: var(--noura-glass);
-  backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
-  border-radius: var(--noura-radius-tile); padding: 20px;
-  display: flex; flex-direction: column; justify-content: space-between;
-  border: none;
+/* Ein Abstand traegt die Spalte: 24px zwischen den Bloecken, 12px
+   innerhalb (siehe .usage-panel-in). Vorher standen hier sechs Werte,
+   davon zwei als Einzel-Margin an .magic und .section-toggle.
+
+   Der Abstand nach unten kommt aus denselben Tokens, an denen der
+   "Mehr"-Knopf haengt: Leistenabstand + 61px Knopfhoehe + 24px Luft.
+   Vorher stand dafuer ein <div style={{height:200}} /> im TSX — eine
+   geratene Zahl, die bei anderer Safe-Area nicht mitwandert. */
+.home-scroll {
+  position: absolute; top: 171px; bottom: 0; left: 0; right: 0;
+  overflow-y: auto; scrollbar-width: none;
+  display: flex; flex-direction: column; gap: 24px;
+  padding: 24px 24px calc(var(--bar-bottom) + 61px + 24px);
 }
+/* In einer scrollenden Flex-Spalte wuerden die Karten sonst
+   zusammengedrueckt, statt die Spalte laenger zu machen. */
+.home-scroll > * { flex-shrink: 0; }
+.home-scroll::-webkit-scrollbar { display: none; }
+/* ---------- Magic Code ----------
+   Vorher: Verlaufskarte in Pink/Violett mit Avataren, Chips,
+   Zugriffsbalken und rosa Knopf — vier Farben und fuenf Aussagen,
+   die im Tokensatz nicht vorkommen. Jetzt eine Glaskarte wie alle
+   anderen, mit genau einer Aussage.
+
+   "Wie alle anderen" gilt seit der Vereinheitlichung woertlich: die
+   Karte traegt .card und erbt Material, Radius und Rand daher. Vorher
+   war sie die einzige Flaeche auf Home mit Rand, mit Radius 24 und mit
+   Weichzeichner 24 — also die staerkste Flaeche des Screens fuer den
+   Werbeplatz, waehrend das Produkt daneben flach lag. Geblieben ist
+   hier nur, was die Karte wirklich von anderen unterscheidet: sie ist
+   ein Knopf, sie schneidet die Wolke ab, sie hat eine Mindesthoehe.
+
+   Rot bleibt auch hier keine Flaeche: Der Akzent erscheint nur als
+   weicher Schein hinter dem Code — er markiert die Stelle, an der
+   sich etwas bewegt, und atmet im Takt der Neuformierung (5,2 s).
+   Bau der Wolke siehe src/components/magic-code.tsx. */
+.magic {
+  position: relative; width: 100%;
+  padding: 0; overflow: hidden; min-height: 112px; text-align: left;
+  color: var(--noura-text); cursor: pointer; isolation: isolate;
+  transition: transform var(--dur-screen) var(--spring), background var(--dur-screen) var(--spring);
+}
+/* Gedrueckt wird die Flaeche dunkler, nicht heller — dieselbe Regel
+   wie bei .btn (Figma: 20 % → 15 %, hier 10 % → 6 %). */
+.magic:active {
+  transition: transform var(--dur-tap) var(--ease-out), background var(--dur-tap) var(--ease-out);
+  transform: scale(0.985); background: var(--press-wash);
+}
+.magic::before {
+  content: ''; position: absolute; left: 50%; top: 40%; z-index: 0;
+  width: 180px; height: 104px; pointer-events: none;
+  background: radial-gradient(50% 50% at 50% 50%,
+    rgba(225, 80, 85, 0.3), rgba(225, 80, 85, 0) 72%);
+  animation: magic-glow 5.2s var(--ease-out) infinite;
+}
+@keyframes magic-glow {
+  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.9); }
+  50%      { opacity: 1;   transform: translate(-50%, -50%) scale(1.08); }
+}
+
+/* Die Wolke. Eigenes Koordinatensystem (345x112 Figma-Punkte), damit
+   die Fragmente per transform statt per Layout wandern. */
+.magic-cloud { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+.magic-cloud text {
+  font-family: var(--font); font-weight: 600; font-size: 10px;
+  letter-spacing: 1.2px; fill: #fff;
+  transition: transform 1.5s var(--ease-out), opacity 1.5s var(--ease-out);
+}
+/* Einatmen ist kuerzer und haerter als das Ausatmen. */
+.magic-cloud.gathering text {
+  transition-duration: var(--dur-screen); transition-timing-function: var(--ease-in);
+}
+.magic-drift {
+  transform-box: view-box; transform-origin: 172.5px 56px;
+  animation: magic-drift 22s var(--ease-out) infinite;
+}
+@keyframes magic-drift {
+  0%, 100% { transform: rotate(-1.2deg) scale(1); }
+  50%      { transform: rotate(1.2deg) scale(1.05); }
+}
+
+.magic-body {
+  position: relative; z-index: 1; display: flex; flex-direction: column;
+  align-items: center; gap: 6px; padding: 20px 20px 18px;
+}
+.magic-code { display: flex; gap: 6px; }
+/* Feste Stellenbreite: sonst zappelt die Zeile, waehrend die Ziffern
+   durchs Alphabet laufen. */
+.magic-code i {
+  font-style: normal; font-weight: 700; font-size: 1.6rem; line-height: 1.2;
+  min-width: 0.74em; text-align: center;
+  text-shadow: 0 2px 16px rgba(225, 80, 85, 0.6);
+}
+.magic.rolling .magic-code i { text-shadow: 0 2px 26px rgba(225, 80, 85, 0.9); }
+.magic-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-weight: 600; font-size: var(--fs-label); line-height: 1.35;
+}
+.magic-label svg { width: 16px; height: 16px; transition: transform var(--dur-quick) var(--ease-out); }
+.magic:active .magic-label svg { transform: translateX(3px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .magic::before, .magic-drift { animation: none; }
+  .magic-cloud text { transition: none; }
+}
+/* Ohne eigene Margin: den Abstand traegt der gap der Scrollspalte. */
+.section-toggle { display: flex; align-items: center; gap: 8px; background: none; border: none; cursor: pointer; color: #fff; font-weight: 600; font-size: var(--fs-title); padding: 0; margin: 0; }
+.section-toggle svg { transition: transform var(--dur-quick) var(--ease-out); }
+.section-toggle.closed svg { transform: rotate(-90deg); }
+/* .usage / .usage-panel stehen in app.css — die alte 320px-Deckelung
+   ist entfallen, sie haette die Kacheln bei groesserer Schrift gekappt. */
+/* Figma 1330:1831: Kacheln 166x312 bzw. 166x150, Luecke 12px. Material
+   und Innenabstand kommen aus .card (app.css) — hier steht nur noch,
+   was die Kacheln von jeder anderen Karte unterscheidet. */
+.usage .card { justify-content: space-between; }
 .usage .card svg { color: var(--noura-accent); }
-.usage .col-l { flex: 1; height: 312px; }
+.usage .col-l { flex: 1; min-height: 312px; }
 .usage .col-r { flex: 1; display: flex; flex-direction: column; gap: 12px; }
-.usage .col-r .card { height: 150px; }
-.usage .label { font-weight: 500; font-size: 14px; line-height: 19px; color: var(--noura-text-muted); }
-.usage .val { font-weight: 600; font-size: 20px; line-height: 27px; margin-top: 4px; }
+.usage .col-r .card { min-height: 150px; }
+/* Bildunterschrift auf Karten. Muss global stehen: unter .usage
+   gescoped erreichte die Regel weder CycleCard und ForecastCard noch
+   die drei Stellen in den Sheets — dort rendert dieselbe Klasse sonst
+   in 16px Weiss, in einem Schnitt (400), den General Sans lokal gar
+   nicht mitbringt. */
+.label { font-weight: 500; font-size: var(--fs-label); line-height: 1.357; color: var(--noura-text-muted); }
+/* 24px statt 20px — von Niclas am 2026-09-04 entschieden. Bewusst
+   ueber der Figma-Vorlage (dort Card-Titel 700/20), wie seinerzeit die
+   Liquid-Glass-Entscheidung: auf einem Screen, dessen Aufgabe das
+   Anzeigen von Verbrauch ist, gehoert die Zahl zum Lautesten. 20px
+   traegt seitdem nur noch Ueberschriften. */
+.usage .val { font-weight: 600; font-size: var(--fs-screen); line-height: 1.35; margin-top: 4px; }
 /* Figma: leerer heller Kreisumriss, kein Fortschrittsbogen. ∞ in Akzentrot. */
 .ring-wrap { position: relative; width: 126px; height: 126px; align-self: center; }
-.ring-wrap .inf { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 24px; line-height: 32px; color: var(--noura-accent); }
+.ring-wrap .inf { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: var(--fs-screen); line-height: 1.333; color: var(--noura-accent); }
 
 /* ---------- Navbar / FABs ---------- */
-.navbar { position: absolute; bottom: 0; left: 0; right: 0; padding: 48px 24px calc(48px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: flex-end; z-index: 20; }
-.fab-stack { position: absolute; right: 24px; bottom: calc(120px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: flex-end; gap: 12px; z-index: 19; }
-.fab-stack .btn { width: auto; opacity: 0; transform: translateY(14px); pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; }
+.navbar { position: absolute; bottom: 0; left: 0; right: 0; padding: 48px 24px var(--bar-bottom); display: flex; justify-content: flex-end; z-index: 20; }
+/* 61px Knopfhoehe + 12px Abstand ueber der Leiste — der Stapel haengt am
+   selben Mass wie der "Mehr"-Knopf und verrutscht nicht gegen ihn. */
+.fab-stack { position: absolute; right: 24px; bottom: calc(var(--bar-bottom) + 73px); display: flex; flex-direction: column; align-items: flex-end; gap: 12px; z-index: 19; }
+.fab-stack .btn { width: auto; opacity: 0; transform: translateY(14px); pointer-events: none; transition: opacity var(--dur-move) var(--ease-out), transform var(--dur-move) var(--ease-out); }
 .fab-stack.open .btn { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .fab-stack .btn:nth-child(1) { transition-delay: 0.06s; }
 .mehr-btn { width: auto; }
-.mehr-btn svg { transition: transform 0.3s ease; }
+.mehr-btn svg { transition: transform var(--dur-quick) var(--ease-out); }
 .mehr-btn.open svg { transform: rotate(45deg); }
 
 /* ---------- Bottom sheets ---------- */
 /* Figma: Sheets 393x782, Glas @10%, Backdrop-Blur 40px, Radius 24px,
    Griff 29x4 oben. */
-.sheet-backdrop { position: absolute; inset: 0; background: var(--noura-scrim); z-index: 48; opacity: 0; pointer-events: none; transition: opacity 0.35s ease; }
+.sheet-backdrop { position: absolute; inset: 0; background: var(--noura-scrim); z-index: 48; opacity: 0; pointer-events: none; transition: opacity var(--dur-move) var(--ease-in); }
+.sheet-backdrop.on { transition-timing-function: var(--ease-out); }
 .sheet-backdrop.on { opacity: 1; pointer-events: auto; }
 .sheet {
   position: absolute; left: 0; right: 0; bottom: 0; height: 782px; max-height: 94%; z-index: 50;
   background: var(--noura-glass);
   backdrop-filter: blur(var(--noura-blur-bar)); -webkit-backdrop-filter: blur(var(--noura-blur-bar));
   border-radius: var(--noura-radius-card) var(--noura-radius-card) 0 0; border: none;
-  transform: translateY(105%); transition: transform 0.45s cubic-bezier(0.32, 0.72, 0.25, 1);
+  /* Was geht, beschleunigt weg; was kommt, bremst ab. Vorher lief
+     beides auf derselben Kurve — das Sheet verliess den Screen so
+     zoegerlich, wie es hereinkam. */
+  transform: translateY(105%); transition: transform var(--dur-move) var(--ease-in);
   display: flex; flex-direction: column; overflow: hidden;
 }
-.sheet.on { transform: translateY(0); }
-.sheet .handle { width: 29px; height: 4px; border-radius: 3px; background: var(--noura-glass); margin: 4px auto 0; flex-shrink: 0; }
+.sheet.on { transform: translateY(0); transition-timing-function: var(--ease-out); }
+/* Der Griff ist eine Marke auf Glas, keine Flaeche: bei 10 % auf einer
+   10-%-Flaeche war er praktisch unsichtbar. `line` ist der Token fuer
+   genau diese Rolle. */
+.sheet .handle { width: 36px; height: 4px; border-radius: var(--noura-radius-pill); background: var(--noura-line); margin: 8px auto 0; flex-shrink: 0; }
 .sheet-body { flex: 1; overflow-y: auto; padding: 24px; scrollbar-width: none; }
 .sheet-body::-webkit-scrollbar { display: none; }
 
 /* Profile sheet */
 .acct-head { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
 .acct-head .tx { flex: 1; }
-.acct-head h2 { font-weight: 700; font-size: 20px; }
-.acct-head p { font-weight: 500; font-size: 14px; color: var(--muted); margin-top: 2px; }
+.acct-head h2 { font-weight: 700; font-size: var(--fs-title); }
+.acct-head p { font-weight: 500; font-size: var(--fs-label); color: var(--noura-text-muted); margin-top: 2px; }
 /* Figma 1330:2696: zwei Karten 345x100, Glas @10%, r16.
    Aufbau: Karten-Symbol oben, darunter Label (grau) und Wert (weiss). */
 .quick-cards { display: flex; gap: 12px; }
 .quick-cards .qc {
-  flex: 1; height: 100px; border-radius: var(--noura-radius-tile); background: var(--noura-glass);
-  backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
+  flex: 1; min-height: 100px; border-radius: var(--noura-radius-tile); background: var(--noura-glass);
+  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card));
   border: none;
   display: flex; flex-direction: column; justify-content: space-between; padding: 20px;
   cursor: pointer; color: var(--noura-text); text-align: left;
 }
 .qc-icon { display: block; line-height: 0; }
-.qc-label { font-weight: 600; font-size: 14px; line-height: 19px; }
-.qc-value { font-weight: 500; font-size: 14px; line-height: 19px; color: var(--noura-text-muted); }
+.qc-label { font-weight: 600; font-size: var(--fs-label); line-height: 1.357; }
+.qc-value { font-weight: 500; font-size: var(--fs-label); line-height: 1.357; color: var(--noura-text-muted); }
 .list-section { margin-top: 32px; }
-.list-section h3 { font-weight: 700; font-size: 20px; line-height: 27px; margin-bottom: 24px; }
-.list-row { display: flex; align-items: center; gap: 24px; padding: 0; background: none; border: none; color: var(--noura-text); font-weight: 600; font-size: 14px; line-height: 19px; cursor: pointer; width: 100%; margin-bottom: 24px; }
+.list-section h3 { font-weight: 700; font-size: var(--fs-title); line-height: 1.35; margin-bottom: 24px; }
+.list-row { display: flex; align-items: center; gap: 24px; padding: 0; background: none; border: none; color: var(--noura-text); font-weight: 600; font-size: var(--fs-label); line-height: 1.357; cursor: pointer; width: 100%; min-height: var(--tap); margin-bottom: 4px; text-align: left; }
 /* Kreis kommt aus dem SVG selbst, kein CSS-Rand mehr */
 .list-row .ic { width: 20px; height: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--noura-text); line-height: 0; }
 .list-row.danger { color: var(--noura-accent); }
@@ -360,48 +828,55 @@ button.sim-card { cursor: pointer; }
    Eigene Nachrichten unterscheiden sich nur durch die Ausrichtung. */
 .bubble {
   max-width: 75%; padding: 20px; border-radius: var(--noura-radius-card);
-  font-weight: 600; font-size: 16px; line-height: 21px; white-space: pre-line;
+  font-weight: 600; font-size: var(--fs-body); line-height: 1.312; white-space: pre-line;
   background: var(--noura-glass-strong);
-  backdrop-filter: blur(var(--noura-blur-glass)); -webkit-backdrop-filter: blur(var(--noura-blur-glass));
+  backdrop-filter: blur(var(--noura-blur-control)); -webkit-backdrop-filter: blur(var(--noura-blur-control));
   border: none; align-self: flex-start;
-  animation: bubbleIn 0.3s ease;
+  animation: bubbleIn var(--dur-quick) var(--ease-out);
 }
 .bubble.me { align-self: flex-end; }
 @keyframes bubbleIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .quick-replies { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; margin-top: auto; padding-top: 24px; }
-.quick-replies .btn { width: auto; font-size: 16px; }
+.quick-replies .btn { width: auto; font-size: var(--fs-body); }
 /* Figma 1330:2685: Eingabefeld 257x64 Glas @20% r24, Sendeknopf 64x64
    Glas @20% voll rund — nicht rot. */
 .chat-input { display: flex; gap: 24px; padding: 12px 24px calc(28px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; }
 .chat-input input {
   flex: 1; background: var(--noura-glass-strong);
-  backdrop-filter: blur(var(--noura-blur-glass)); -webkit-backdrop-filter: blur(var(--noura-blur-glass));
+  backdrop-filter: blur(var(--noura-blur-control)); -webkit-backdrop-filter: blur(var(--noura-blur-control));
   border: none; border-radius: var(--noura-radius-card);
-  padding: 0 20px; color: var(--noura-text); font-weight: 600; font-size: 14px; line-height: 19px; height: 64px; outline: none;
+  padding: 0 20px; color: var(--noura-text); font-weight: 600; font-size: var(--fs-label); line-height: 1.357; min-height: 64px; outline: none;
 }
 .chat-input input::placeholder { color: var(--noura-glass-strong); }
 .chat-input .send {
   width: 64px; height: 64px; border-radius: var(--noura-radius-pill); cursor: pointer;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   background: var(--noura-glass-strong);
-  backdrop-filter: blur(var(--noura-blur-glass)); -webkit-backdrop-filter: blur(var(--noura-blur-glass));
+  backdrop-filter: blur(var(--noura-blur-control)); -webkit-backdrop-filter: blur(var(--noura-blur-control));
   border: none;
-  transition: transform 0.15s ease;
+  transition: transform var(--dur-screen) var(--spring);
 }
-.chat-input .send:active { transform: scale(0.94); }
+.chat-input .send:active { transition: transform var(--dur-tap) var(--ease-out); transform: scale(0.94); }
 
 /* Plan sheet */
-.plan-sheet-head h2 { font-weight: 700; font-size: 20px; }
-.plan-sheet-head p { font-weight: 600; font-size: 14px; color: var(--muted); margin: 4px 0 24px; }
+.plan-sheet-head h2 { font-weight: 700; font-size: var(--fs-title); }
+.plan-sheet-head p { font-weight: 600; font-size: var(--fs-label); color: var(--noura-text-muted); margin: 4px 0 24px; }
 .plan-sheet-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 32px; padding-bottom: 12px; }
-.link-danger { background: none; border: none; color: var(--muted); font-weight: 600; font-size: 15px; cursor: pointer; padding: 16px; }
-.link-danger:hover { color: var(--primary); }
+.link-danger { background: none; border: none; color: var(--noura-text-muted); font-weight: 600; font-size: var(--fs-label); cursor: pointer; padding: 16px; }
+/* :hover gibt es auf dem Zielgeraet nicht — der Finger hat keinen
+   Schwebezustand. */
+.link-danger:active { color: var(--noura-accent); }
 
 /* Toast */
 .toast {
   position: absolute; left: 50%; bottom: 140px; transform: translate(-50%, 20px); z-index: 80;
-  background: rgba(255, 255, 255, 0.16); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 18px; padding: 14px 22px;
-  font-weight: 600; font-size: 14px; opacity: 0; pointer-events: none; transition: all 0.35s ease; white-space: nowrap;
+  background: var(--noura-glass-strong); backdrop-filter: blur(var(--noura-blur-control)); -webkit-backdrop-filter: blur(var(--noura-blur-control));
+  border: 1px solid var(--noura-line); border-radius: var(--noura-radius-pill); padding: 14px 22px;
+  /* `all` animierte auch Farbe, Rand und Schatten mit — im Haus gilt,
+     dass nur transform und opacity laufen. Radius 18px stand auf keiner
+     Sprosse; die einzeilige Meldung ist eine Pille. */
+  font-weight: 600; font-size: var(--fs-label); opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-move) var(--ease-in), transform var(--dur-move) var(--ease-in);
+  white-space: nowrap;
 }
-.toast.on { opacity: 1; transform: translate(-50%, 0); }
+.toast.on { opacity: 1; transform: translate(-50%, 0); transition-timing-function: var(--ease-out); }

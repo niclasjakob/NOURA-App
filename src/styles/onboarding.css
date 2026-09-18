@@ -1,0 +1,366 @@
+/* ============================================================
+   NOURA — Onboarding-Flow
+   Intro · Feature-Schritte · Aktivierung
+
+   Regeln, die hier ueberall gelten:
+   · Animiert wird nur transform und opacity. Kein filter:blur auf grossen
+     Flaechen — Safari auf dem iPhone rendert das traege (siehe Aurora-
+     Entscheidung in global.css).
+   · Eintrittsanimationen nutzen animation-fill-mode: backwards, nicht
+     forwards. Sonst friert der Endzustand die transform-Eigenschaft ein und
+     .btn:active verliert seine Druckreaktion.
+   · Weichheit entsteht durch Radial-Verlaeufe, nicht durch Weichzeichner.
+   ============================================================ */
+
+/* ---------- Driftende Farbwolken ----------
+   Liegen ueber dem statischen Aurora-Bild und halten den Hintergrund in
+   Bewegung. Alle drei Farben sind immer vorhanden; der Ton wechselt ueber
+   die Deckkraft, dadurch blendet der Schrittwechsel die Stimmung weich um
+   statt hart umzuschalten. */
+.aurora-flow {
+  position: absolute; inset: 0; overflow: hidden;
+  pointer-events: none; z-index: 0; mix-blend-mode: screen;
+}
+.af {
+  position: absolute; display: block;
+  width: 460px; height: 460px; border-radius: 50%;
+  opacity: 0.4; transition: opacity 1.1s var(--ease-out);
+}
+.af-1 { top: -170px; left: -160px; background: radial-gradient(circle, rgba(225, 80, 85, 0.55), transparent 66%); animation: afDrift1 26s var(--ease-out) infinite; }
+.af-2 { top: 38%; right: -200px; background: radial-gradient(circle, rgba(109, 69, 154, 0.55), transparent 66%); animation: afDrift2 33s var(--ease-out) infinite; }
+.af-3 { bottom: -210px; left: -110px; background: radial-gradient(circle, rgba(77, 125, 172, 0.5), transparent 66%); animation: afDrift3 39s var(--ease-out) infinite; }
+
+.tone-coral .af-1 { opacity: 0.75; }
+.tone-coral .af-2 { opacity: 0.4; }
+.tone-coral .af-3 { opacity: 0.28; }
+.tone-violet .af-1 { opacity: 0.3; }
+.tone-violet .af-2 { opacity: 0.75; }
+.tone-violet .af-3 { opacity: 0.4; }
+.tone-blue .af-1 { opacity: 0.24; }
+.tone-blue .af-2 { opacity: 0.42; }
+.tone-blue .af-3 { opacity: 0.78; }
+
+@keyframes afDrift1 { 0%, 100% { transform: none; } 50% { transform: translate(70px, 90px) scale(1.18); } }
+@keyframes afDrift2 { 0%, 100% { transform: none; } 50% { transform: translate(-90px, -70px) scale(1.22); } }
+@keyframes afDrift3 { 0%, 100% { transform: none; } 50% { transform: translate(80px, -60px) scale(1.14); } }
+
+/* ---------- Die 3D-Karte ----------
+   Das Figma-Bild traegt einen Alphakanal, deshalb koennen Glanz und
+   Scanbalken exakt auf die Kartenflaeche maskiert werden statt auf ein
+   Rechteck darum. */
+.card3d {
+  position: relative; width: 300px; height: 175px;
+  display: flex; align-items: center; justify-content: center;
+  animation: cardFloat 6.5s var(--ease-out) infinite;
+}
+.card3d img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.card3d-glow {
+  position: absolute; inset: -22% -14%; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 55%, rgba(225, 80, 85, 0.35), transparent 62%);
+  animation: glowPulse 5s var(--ease-out) infinite;
+}
+.card3d-sheen, .card3d-scan {
+  position: absolute; inset: 0; pointer-events: none;
+  -webkit-mask: url('../assets/img/onboard-simcard.webp') center / contain no-repeat;
+  mask: url('../assets/img/onboard-simcard.webp') center / contain no-repeat;
+}
+.card3d-sheen::after {
+  content: ''; position: absolute; top: -40%; bottom: -40%; left: -80%; width: 55%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+  animation: sheenSweep 5.2s var(--ease-out) infinite;
+}
+/* Der Balken laeuft um 19 Grad gedreht — parallel zur kurzen Kante der
+   perspektivischen Karte. Waagerecht wuerde er quer zur Karte schneiden. */
+.card3d-scan::after {
+  content: ''; position: absolute; top: 0; left: -40%; right: -40%; height: 30%;
+  background: linear-gradient(180deg, transparent, rgba(225, 80, 85, 0.45), rgba(255, 255, 255, 0.7), rgba(225, 80, 85, 0.45), transparent);
+  animation: scanSweep 1.8s linear infinite;
+}
+@keyframes cardFloat {
+  0%, 100% { transform: translateY(-7px) rotate(-0.7deg); }
+  50% { transform: translateY(7px) rotate(0.7deg); }
+}
+@keyframes sheenSweep {
+  0%, 12% { transform: translateX(0) skewX(-16deg); }
+  62%, 100% { transform: translateX(560%) skewX(-16deg); }
+}
+@keyframes scanSweep {
+  0% { transform: rotate(-19deg) translateY(-210%); }
+  100% { transform: rotate(-19deg) translateY(350%); }
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Buehne der Schritt-Visuals ---------- */
+.viz { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+.viz-glow {
+  position: absolute; width: 340px; height: 340px; border-radius: 50%;
+  pointer-events: none; animation: glowPulse 5.4s var(--ease-out) infinite;
+}
+.glow-coral { background: radial-gradient(circle, rgba(225, 80, 85, 0.3), transparent 62%); }
+.glow-violet { background: radial-gradient(circle, rgba(109, 69, 154, 0.36), transparent 62%); }
+.glow-blue { background: radial-gradient(circle, rgba(77, 125, 172, 0.36), transparent 62%); }
+
+/* Schritt 1 — die kreisenden Glaspunkte */
+.orbit { position: absolute; width: 296px; height: 296px; animation: spin 26s linear infinite; pointer-events: none; }
+.orb {
+  position: absolute; width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12); border: 1.5px solid rgba(255, 255, 255, 0.32);
+  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card));
+}
+.orb.o1 { top: 4%; left: 10%; }
+.orb.o2 { bottom: 6%; right: 8%; width: 22px; height: 22px; }
+.orb.o3 { top: 44%; right: -6px; width: 14px; height: 14px; background: rgba(225, 80, 85, 0.55); border-color: rgba(225, 80, 85, 0.7); }
+
+/* Schritt 2 — Kalenderblatt mit Zyklusring */
+.cycle-ring { position: absolute; width: 300px; height: 300px; animation: spin 30s linear infinite; pointer-events: none; }
+.cal-card {
+  position: relative; width: 210px; border-radius: 18px; overflow: hidden;
+  background: var(--noura-glass); border: 1.5px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(var(--noura-blur-control)); -webkit-backdrop-filter: blur(var(--noura-blur-control));
+  animation: calFloat 7s var(--ease-out) infinite;
+}
+/* Neigung steckt in den Keyframes — sonst wuerde die Schwebeanimation die
+   Perspektive ueberschreiben. */
+@keyframes calFloat {
+  0%, 100% { transform: perspective(760px) rotateX(11deg) rotateZ(-3.5deg) translateY(-5px); }
+  50% { transform: perspective(760px) rotateX(11deg) rotateZ(-3.5deg) translateY(5px); }
+}
+.cal-top {
+  height: 34px; background: var(--noura-accent); display: flex; align-items: center; gap: 5px;
+  padding: 0 12px; font-weight: 600; font-size: 0.647rem; line-height: 1.364; color: #fff;
+}
+.cal-top i { width: 5px; height: 12px; border-radius: 3px; background: rgba(255, 255, 255, 0.75); display: block; }
+.cal-top span { margin-left: auto; opacity: 0.9; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 12px 12px 4px; }
+.cal-grid .day {
+  display: flex; align-items: center; justify-content: center; height: 18px;
+  border-radius: 6px; font-weight: 600; font-size: 0.529rem; line-height: 1.333;
+  color: var(--noura-text-muted);
+}
+.cal-card.run .day.on {
+  background: var(--noura-accent); color: #fff; font-weight: 700;
+  animation: dayPulse 2.4s var(--ease-out) infinite;
+}
+.cal-foot { padding: 6px 12px 12px; font-weight: 600; font-size: 0.588rem; line-height: 1.4; color: var(--noura-text-muted); }
+@keyframes dayPulse {
+  0% { box-shadow: 0 0 0 0 rgba(225, 80, 85, 0.55); }
+  70%, 100% { box-shadow: 0 0 0 13px rgba(225, 80, 85, 0); }
+}
+
+/* Schritt 3 — Tacho
+   Bogen, Skalenstriche und Zeiger sind ein SVG; bewegt wird nur der
+   rotate-Wert des Zeigers und die Strichlaenge des Bogens. */
+.g5 { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.gauge { position: relative; width: 240px; }
+.gauge svg { display: block; width: 100%; height: auto; }
+.gauge-track { fill: none; stroke: rgba(255, 255, 255, 0.14); stroke-width: 10; stroke-linecap: round; }
+.gauge-fill {
+  fill: none; stroke: var(--noura-accent); stroke-width: 10; stroke-linecap: round;
+  filter: drop-shadow(0 0 8px rgba(225, 80, 85, 0.5));
+}
+.gauge-needle line { stroke: #fff; stroke-width: 3; }
+.gauge-cap { fill: rgba(20, 16, 34, 0.72); stroke: rgba(255, 255, 255, 0.26); stroke-width: 1.5; }
+.gauge-mark {
+  font-family: var(--font); font-weight: 700; font-size: 23px;
+  fill: var(--noura-accent); letter-spacing: 0.02em;
+}
+.g5-speed { display: flex; align-items: baseline; gap: 6px; }
+.g5-speed b { font-weight: 700; font-size: 1.529rem; line-height: 1.231; font-variant-numeric: tabular-nums; }
+.g5-speed em { font-style: normal; font-weight: 600; font-size: var(--fs-caption); line-height: 1.333; color: var(--noura-text-muted); }
+
+/* ---------- Intro-Auftritt ----------
+   Drei Stufen: Wortmarke Buchstabe fuer Buchstabe, Lockup, Buttons. Die
+   SIM-Karte steht hier bewusst nicht — Figma 1330:1947 zeigt sie nicht. */
+.intro-stage { position: absolute; inset: 0; z-index: 1; }
+
+.intro-logo span { display: inline-block; }
+.intro-stage.on .intro-logo span {
+  animation: letterIn 0.75s var(--ease-out) backwards;
+  /* Startet frueher als zuvor: die Karte lief hier als erste Stufe, ohne sie
+     stuende der Screen eine halbe Sekunde leer da. */
+  animation-delay: calc(0.2s + var(--i) * 70ms);
+}
+/* Nur transform und opacity. `filter: blur(6px)` stand hier auf fuenf
+   gleichzeitig laufenden Buchstaben — auf dem iPhone ist ein grosser
+   Filter pro Frame teuer, und die Hausregel verbietet ihn genau
+   deshalb. Die Weichheit traegt jetzt der Versatz. */
+@keyframes letterIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.84); }
+  to { opacity: 1; transform: none; }
+}
+/* Das Zeichen kommt zuerst, die Buchstaben laufen darunter ein. */
+.intro-stage.on .intro-mark { animation: fadeUp 0.7s var(--ease-out) 0.08s backwards; }
+.intro-stage.on .intro-nav .btn { animation: fadeUp 0.6s var(--ease-out) backwards; }
+.intro-stage.on .intro-nav .btn:nth-child(1) { animation-delay: 0.82s; }
+.intro-stage.on .intro-nav .btn:nth-child(2) { animation-delay: 0.94s; }
+/* Die Vorfuehr-Abkuerzung kommt als letzte — sie soll die Marke nicht
+   ueberholen. Eigene Regel, weil sie kein .btn ist. */
+.intro-stage.on .demo-skip { animation: fadeUp 0.6s var(--ease-out) 1.06s backwards; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Onboarding ----------
+   --dragN traegt die Wischstrecke als einheitenlose Zahl. Damit lassen sich
+   daraus sowohl px als auch deg rechnen: Text, Visual und Karte bewegen sich
+   unterschiedlich stark, das erzeugt Tiefe. */
+.ob-swipe { position: absolute; inset: 0; touch-action: pan-y; z-index: 1; }
+.ob-stage {
+  position: absolute; inset: 0; perspective: 1100px;
+  transform: translateX(calc(var(--dragN, 0) * 0.3px));
+  transition: transform 0.5s var(--ease-out);
+}
+.ob-stage.dragging { transition: none; }
+.ob-stage.leaving[data-dir='1'] { animation: obOutLeft 0.24s var(--ease-in) forwards; }
+.ob-stage.leaving[data-dir='-1'] { animation: obOutRight 0.24s var(--ease-in) forwards; }
+@keyframes obOutLeft { to { opacity: 0; transform: translateX(-46px) scale(0.96); } }
+@keyframes obOutRight { to { opacity: 0; transform: translateX(46px) scale(0.96); } }
+
+.ob-visual {
+  position: absolute; left: 0; right: 0; top: 192px; height: 268px;
+  display: flex; align-items: center; justify-content: center;
+  transform: translateX(calc(var(--dragN, 0) * 0.17px)) rotateY(calc(var(--dragN, 0) * -0.022deg));
+}
+.ob-text {
+  position: absolute; left: 0; right: 0; top: 496px; padding: 0 24px;
+  display: flex; flex-direction: column; gap: 8px;
+  transform: translateX(calc(var(--dragN, 0) * 0.06px));
+}
+.ob-tag {
+  font-weight: 700; font-size: var(--fs-caption); line-height: 1.333;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--noura-accent);
+}
+.ob-text h1 { font-weight: 700; font-size: 1.647rem; line-height: 1.286; }
+.ob-text p { font-weight: 600; font-size: var(--fs-label); line-height: 1.5; color: var(--noura-text-muted); max-width: 330px; }
+
+/* Der Schrittwechsel remountet Visual und Text (key), dadurch laufen diese
+   Eintritte jedes Mal neu an. Richtung kommt aus data-dir. */
+.ob-stage[data-dir='1'] .ob-visual { animation: visIn 0.55s var(--ease-out) 0.05s backwards; }
+.ob-stage[data-dir='-1'] .ob-visual { animation: visInRev 0.55s var(--ease-out) 0.05s backwards; }
+@keyframes visIn { from { opacity: 0; transform: translateX(56px) scale(0.9) rotateY(-12deg); } }
+@keyframes visInRev { from { opacity: 0; transform: translateX(-56px) scale(0.9) rotateY(12deg); } }
+
+.ob-text > * { animation: lineIn 0.55s var(--ease-out) backwards; animation-delay: calc(var(--i) * 85ms + 130ms); }
+@keyframes lineIn { from { opacity: 0; transform: translateY(16px); } }
+
+.ob-bottom {
+  position: absolute; bottom: calc(34px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 12;
+}
+.pagination { display: flex; gap: 4px; }
+.pagination button { background: none; border: none; cursor: pointer; padding: 12px 0; display: flex; }
+.pagination i { height: 4px; width: 8px; border-radius: var(--noura-radius-chip); background: var(--noura-glass-strong); transition: width var(--dur-quick) var(--ease-out), background var(--dur-quick) var(--ease-out); display: block; }
+.pagination button.on i { width: 22px; background: var(--noura-accent); }
+
+/* Weiter-Button: 64x64 Glas, darum der Fortschritt durchs Onboarding */
+.ob-next { position: relative; width: 64px; height: 64px; }
+.btn.icon-btn { width: 64px; height: 64px; padding: 0; border-radius: var(--noura-radius-pill); }
+.next-ring { position: absolute; inset: 0; width: 64px; height: 64px; pointer-events: none; z-index: 2; }
+.next-ring circle + circle { transition: stroke-dashoffset var(--dur-screen) var(--ease-out); }
+.btn.icon-btn.final { animation: finalPulse 2.4s var(--ease-out) infinite; }
+/* Der Puls legt sich auf die Grundschatten des Glases, statt sie zu
+   ersetzen — sonst verliert der Knopf waehrend der Animation Kante und
+   Abhebung. */
+@keyframes finalPulse {
+  0%, 100% { box-shadow: var(--lg-inner), var(--lg-lift), 0 0 0 0 rgba(225, 80, 85, 0.4); }
+  60% { box-shadow: var(--lg-inner), var(--lg-lift), 0 0 0 16px rgba(225, 80, 85, 0); }
+}
+
+/* ---------- Aktivierung ----------
+   Figma 1330:1775 zeigt Karte plus Statustext. Hier zusaetzlich: Scanbalken
+   auf der Karte, abhakende Schrittliste, Fortschrittsbalken und ein eigener
+   Schlussmoment mit Haken und Druckwelle. */
+.act-stage {
+  position: absolute; inset: 0; z-index: 1; padding: 0 32px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px;
+}
+.act-visual { position: relative; width: 300px; height: 190px; display: grid; place-items: center; }
+/* Karte und Haken teilen sich dieselbe Rasterzelle: die Karte weicht, der
+   Haken kommt. */
+.act-card { grid-area: 1 / 1; transition: opacity var(--dur-screen) var(--ease-in), transform var(--dur-screen) var(--ease-in); }
+.act-card.gone { opacity: 0; transform: scale(0.88); }
+.act-status { position: relative; width: 100%; min-height: 108px; display: flex; justify-content: center; }
+.act-steps { list-style: none; display: flex; flex-direction: column; gap: 14px; transition: opacity var(--dur-move) var(--ease-in), transform var(--dur-move) var(--ease-in); }
+.act-steps.out { opacity: 0; transform: translateY(-10px); }
+.act-steps li {
+  display: flex; align-items: center; gap: 12px;
+  font-weight: 600; font-size: 0.882rem; line-height: 1.333;
+  color: var(--noura-text-faint); transition: color var(--dur-quick) var(--ease-out);
+}
+.act-steps li.now { color: #fff; }
+.act-steps li.ok { color: var(--noura-text-muted); }
+.act-steps .mark {
+  width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%;
+  display: grid; place-items: center; color: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  transition: background var(--dur-quick) var(--ease-out), border-color var(--dur-quick) var(--ease-out), color var(--dur-quick) var(--ease-out);
+}
+.act-steps .mark svg { width: 14px; height: 14px; display: block; }
+/* Laufender Schritt. Bis zum 2026-09-18 stand hier ein rotierender
+   offener Ring — also ein Spinner, und ein Spinner ist die generische
+   Antwort auf "es passiert etwas". Stattdessen streicht eine Haarlinie
+   ueber die Unterkante der Marke, wie beim wartenden Knopf: dieselbe
+   Geste fuer denselben Zustand, an beiden Stellen im System. */
+.act-steps li.now .mark {
+  border-color: var(--noura-line); position: relative; overflow: hidden;
+}
+.act-steps li.now .mark::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px;
+  background: var(--noura-accent); transform-origin: left;
+  animation: hairlineSweep var(--dur-beat) var(--ease-out) infinite;
+}
+.act-steps li.ok .mark { color: #fff; background: var(--noura-accent); border-color: var(--noura-accent); animation: markPop var(--dur-move) var(--spring); }
+@keyframes markPop { 0% { transform: scale(0.4); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+
+.act-finale {
+  position: absolute; left: 0; right: 0; top: 4px; text-align: center;
+  font-weight: 700; font-size: 1.294rem; line-height: 1.364; pointer-events: none;
+  opacity: 0; transform: translateY(12px) scale(0.94);
+  transition: opacity var(--dur-screen) var(--ease-out) var(--dur-tap), transform var(--dur-screen) var(--spring) var(--dur-tap);
+}
+.act-finale.on { opacity: 1; transform: none; }
+
+.act-bar { width: 190px; height: 3px; border-radius: 2px; background: var(--noura-line); overflow: hidden; transition: opacity var(--dur-screen) var(--ease-in) var(--dur-move); }
+/* Am Ende hat der Balken seine Aufgabe erfuellt — er tritt ab, damit der
+   Schlusssatz allein steht. */
+.act-bar.done { opacity: 0; }
+.act-bar i { display: block; width: 100%; height: 100%; background: var(--noura-accent); transform-origin: left; transform: scaleX(0); transition: transform var(--dur-screen) var(--ease-out); }
+
+/* Schlussmoment */
+.burst { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.burst .ripple {
+  position: absolute; width: 110px; height: 110px; border-radius: 50%;
+  border: 2px solid rgba(225, 80, 85, 0.6); opacity: 0;
+  animation: ripple 1.5s var(--ease-out) forwards;
+}
+.burst .r2 { animation-delay: 0.28s; }
+@keyframes ripple { 0% { transform: scale(0.45); opacity: 0.85; } 100% { transform: scale(2.8); opacity: 0; } }
+.burst-check {
+  width: 64px; height: 64px; position: relative;
+  filter: drop-shadow(0 0 18px rgba(225, 80, 85, 0.55));
+  animation: burstIn var(--dur-move) var(--spring) backwards;
+}
+@keyframes burstIn { from { opacity: 0; transform: scale(0.5); } }
+.burst-circle { stroke-dasharray: 189; stroke-dashoffset: 189; animation: draw var(--dur-screen) var(--ease-out) var(--dur-tap) forwards; }
+.burst-path { stroke-dasharray: 42; stroke-dashoffset: 42; animation: draw var(--dur-move) var(--ease-out) var(--dur-screen) forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* ---------- Bewegung reduziert ----------
+   Alles Dauerlaufende steht still, die Zustaende bleiben lesbar. */
+@media (prefers-reduced-motion: reduce) {
+  .af, .card3d, .card3d-glow, .card3d-sheen::after, .card3d-scan::after,
+  .viz-glow, .orbit, .cycle-ring, .cal-card, .cal-card.run .day.on,
+  .btn.icon-btn.final, .act-steps li.now .mark,
+  .burst .ripple, .burst-check, .burst-circle, .burst-path,
+  .intro-stage.on .intro-logo span,
+  .intro-stage.on .intro-mark, .intro-stage.on .intro-nav .btn, .intro-stage.on .demo-skip,
+  .ob-visual, .ob-text > * {
+    animation: none !important;
+  }
+  .cal-card { transform: perspective(760px) rotateX(11deg) rotateZ(-3.5deg); }
+  .act-card { transition: none; }
+  .card3d-scan, .card3d-sheen { display: none; }
+  .burst-circle, .burst-path { stroke-dashoffset: 0; }
+}

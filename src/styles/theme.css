@@ -15,15 +15,20 @@
   --primary-foreground: #ffffff;
   --primary-active: #c43e43;      /* pressed / hover state on primary */
   --primary-glow: rgba(225, 80, 85, 0.2); /* wordmark text shadow, focus ring */
-  --secondary: rgba(255, 255, 255, 0.15); /* glass L2 */
+  /* Abgeleitet statt doppelt gepflegt (2026-09-17). Vorher standen hier
+     eigene Werte fuer dieselben Rollen: --card 8 % gegen --noura-glass
+     10 %, --secondary 15 % gegen --noura-glass-strong 20 %. Zwei Karten
+     derselben Rolle trugen damit zwei verschiedene Flaechen. Die
+     --noura-* Tokens in global.css sind die Figma-Werte und fuehren. */
+  --secondary: var(--noura-glass-strong);
   --secondary-foreground: #ffffff;
-  --muted: rgba(255, 255, 255, 0.06);
-  --muted-foreground: rgba(255, 255, 255, 0.5);
+  --muted: var(--noura-glass);
+  --muted-foreground: var(--noura-text-muted);
   --accent: #6d459a;              /* purple blob */
   --accent-foreground: #ffffff;
-  --card: rgba(255, 255, 255, 0.08); /* glass L1 */
+  --card: var(--noura-glass);
   --card-foreground: #ffffff;
-  --border: rgba(255, 255, 255, 0.1);
+  --border: var(--noura-line);
   --radius: 1rem;                 /* 16px base — cards */
 
   /* Gradient blob colors */

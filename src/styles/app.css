@@ -1,0 +1,1052 @@
+/* ============================================================
+   NOURA — Verbrauch, Reisen, Bestellung, Bedienbarkeit
+
+   Ergaenzt global.css um die Bereiche, die es im Figma-Stand nicht
+   gibt. Alles nutzt dieselben Tokens und dieselben Bausteine —
+   Glas @10 % fuer Flaechen, @20 % fuer Bedienelemente, Radius 16 fuer
+   Inhalt und 24 fuer Bedienelemente, Akzentrot nur fuer Chips, Symbole
+   und aktive Zustaende. Rot ist auch hier nie eine Buttonflaeche.
+
+   Hier stand "Radius 24 aussen / 16 innen". Das war falsch herum: die
+   aeusserste Karte auf Home ist die SIM-Karte, und deren Figma-Pfad
+   beginnt mit M0 16C0 7.16 — Radius 16. Rand und Radius 24 sind das
+   Zeichen fuer "bedienbar", nicht fuer "Karte".
+   ============================================================ */
+
+/* ============================================================
+   1 — Bedienbarkeit
+   ============================================================ */
+
+/* Tippziele auf 44px bringen, ohne die Optik zu aendern: eine
+   unsichtbare Flaeche legt sich mittig ueber das kleine Element. */
+.tabs button, .pagination button { position: relative; }
+.tabs button::after, .pagination button::after {
+  content: ''; position: absolute; left: -2px; right: -2px;
+  top: 50%; transform: translateY(-50%); min-height: var(--tap);
+}
+
+/* Griffbereich des Sheets — jetzt wirklich zum Ziehen da. */
+.sheet-grip {
+  flex-shrink: 0; padding: 8px 0 4px; cursor: grab;
+  touch-action: none; display: flex; justify-content: center;
+}
+.sheet-grip:active { cursor: grabbing; }
+.sheet .handle { margin: 0 auto; }
+
+/* Sichtbarer Schliessen-Knopf. Vorher liess sich ein Sheet nur
+   ueber den Hintergrund schliessen — der bei fast voller Hoehe
+   kaum zu treffen war. */
+/* Gleiches Material wie .btn — der Knopf schwebt frei ueber dem Sheet und
+   braucht darum dieselbe Kante, sonst liest er als Fleck. */
+.sheet-close {
+  position: absolute; top: 12px; right: 16px; z-index: 2;
+  width: var(--tap); height: var(--tap); border-radius: var(--noura-radius-pill);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--lg-tint); border: none; cursor: pointer;
+  color: var(--noura-text); isolation: isolate;
+  backdrop-filter: var(--lg-refract); -webkit-backdrop-filter: var(--lg-refract);
+  box-shadow: var(--lg-inner), var(--lg-lift);
+  transition: transform var(--dur-screen) var(--spring), background var(--dur-screen) var(--spring);
+}
+.sheet-close::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: linear-gradient(150deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(255, 255, 255, 0.18) 32%,
+    rgba(255, 255, 255, 0.06) 58%,
+    rgba(255, 255, 255, 0.42) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  pointer-events: none; z-index: -1;
+}
+.sheet-close:active {
+  transition: transform var(--dur-tap) var(--ease-out), background var(--dur-tap) var(--ease-out);
+  transform: scale(0.92); background: var(--lg-tint-pressed);
+}
+.sheet-body { padding-top: 8px; }
+
+/* Deaktivierte Schaltflaechen bleiben lesbar, wirken aber klar
+   nicht bedienbar. */
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:disabled:active { transform: none; }
+
+/* Wartend ist nicht deaktiviert. Ein laufender Knopf behaelt seine
+   Flaeche und zeigt eine Haarlinie, die seine Unterkante abfaehrt —
+   kein Spinner, und nicht dieselbe Abblendung wie ein Knopf, den man
+   gar nicht druecken kann. Dieselbe Geste traegt der laufende Schritt
+   in der Aktivierung (onboarding.css). */
+.btn[aria-busy='true'] { opacity: 1; cursor: progress; overflow: hidden; }
+/* Uebernimmt das ::after des Knopfes (den flachen Glanz) fuer die Dauer
+   des Wartens. `top: auto` ist noetig, weil die Grundregel `inset: 0`
+   setzt — mit gesetztem top UND bottom bliebe die Hoehe wirkungslos. */
+.btn[aria-busy='true']::after {
+  top: auto; left: 0; right: 0; bottom: 0; height: 1.5px;
+  border-radius: 0; background: var(--noura-text); z-index: 1;
+  transform-origin: left;
+  animation: hairlineSweep var(--dur-beat) var(--ease-out) infinite;
+}
+
+/* ---- Beruehrung ----
+   Jede tippbare Flaeche antwortet, und zwar nach ihrer Stufe. Vorher
+   reagierten nur .btn und .magic; die SIM-Karte war ein <button> ohne
+   jede Rueckmeldung, Profilbild und Abschnittstitel ebenso.
+
+   Die Regel ist ueberall dieselbe: gedrueckt wird dunkler, nie heller.
+   Beim dunklen Material der SIM-Karte heisst dunkler nicht weniger
+   Weiss, sondern mehr Deckkraft — 75 % auf 88 %. */
+button.sim-card { transition: transform var(--dur-screen) var(--spring), filter var(--dur-screen) var(--spring); }
+/* Gedrueckt wird abgedunkelt, nicht uebermalt: die Karte traegt ihr
+   Material in background-image (Verlauf, Guilloche, Akzentlicht in der
+   Ecke), eine background-Farbe darauf loeschte das Gesicht des
+   Tarifs. */
+button.sim-card:active {
+  transition: transform var(--dur-tap) var(--ease-out), filter var(--dur-tap) var(--ease-out);
+  transform: scale(0.985); filter: brightness(0.88);
+}
+.avatar-btn { transition: transform var(--dur-screen) var(--spring); }
+.avatar-btn:active { transition: transform var(--dur-tap) var(--ease-out); transform: scale(0.94); }
+.section-toggle { transition: opacity var(--dur-tap) var(--ease-out); }
+.section-toggle:active { opacity: 0.6; }
+
+/* Sechs Bedienelemente, die tippbar waren und nichts getan haben.
+   Zeilen mit eigener Box bekommen den Anflug, blosse Symbole und
+   Reiter werden gedimmt — siehe --press-wash / --press-dim. */
+.opt-btn, .disclosure-btn { transition: background var(--dur-tap) var(--ease-out); }
+/* Eine Option, die gerade nicht geht, darf auch nicht reagieren. */
+.opt:not(.off) .opt-btn:active,
+.disclosure-btn:active { background: var(--press-wash); }
+
+.list-row, .icon-plain { transition: opacity var(--dur-tap) var(--ease-out); }
+.list-row:active, .icon-plain:active { opacity: var(--press-dim); }
+
+/* Der Reiter faerbt sich ohnehin um, wenn er aktiv wird — beim
+   Druecken reicht das Dimmen, sonst kaempfen zwei Effekte.
+
+   Die Uebergangsangabe fuer .tabs button steht bewusst NICHT hier,
+   sondern in global.css bei der Grundregel: global.css wird nach
+   app.css gelesen und traegt dieselbe Spezifitaet, eine zweite
+   `transition` an dieser Stelle wuerde dort still ueberschrieben. */
+.pagination button { transition: opacity var(--dur-tap) var(--ease-out); }
+.tabs button:active, .pagination button:active { opacity: var(--press-dim); }
+
+/* Bewegung reduziert — onboarding.css faengt die Daueranimationen ab,
+   hier kommen die Uebergaenge dazu: Screenwechsel, Sheets, Karussell,
+   Aufklappen. */
+@media (prefers-reduced-motion: reduce) {
+  .screen, .sheet, .sheet-backdrop, .plan-track, .tabs .pill,
+  .usage-panel, .toast, .fab-stack .btn, .bubble, .section-toggle svg,
+  .cycle-bar i, .act-bar i, .opt,
+  button.sim-card, .avatar-btn, .section-toggle, .magic,
+  .opt-btn, .disclosure-btn, .list-row, .icon-plain,
+  .tabs button, .pagination button,
+  .spark-line, .spark-area, .allow-arc {
+    transition-duration: 0.01ms !important;
+  }
+  .bubble, .opt-extra, .opt.on .opt-mark, .field.invalid input, .field-err {
+    animation: none !important;
+  }
+  /* Die Endzustaende muessen trotzdem stimmen — ohne Uebergang, aber
+     vollstaendig. */
+  .spark-line { stroke-dashoffset: 0; }
+  .spark-area { opacity: 1; }
+}
+
+/* ============================================================
+   2 — Verbrauch mit Zeitbezug
+   ============================================================ */
+
+/* Ersetzt die alte .usage-Klappe. Statt max-height laeuft das
+   Zuklappen ueber grid-template-rows 1fr -> 0fr: das animiert die
+   tatsaechliche Hoehe. Mit max-height muesste man einen Wert raten,
+   der groesser ist als der Inhalt — und die halbe Laufzeit passiert
+   dann nichts Sichtbares, weil der Wert erst von 1400 auf die echten
+   ~700 fallen muss. */
+.usage-panel {
+  display: grid; grid-template-rows: 1fr;
+  transition: grid-template-rows var(--dur-move) var(--ease-out), opacity var(--dur-quick) var(--ease-out);
+}
+.usage-panel.hidden { grid-template-rows: 0fr; opacity: 0; }
+.usage-panel-in {
+  display: flex; flex-direction: column; gap: 12px;
+  overflow: hidden; min-height: 0;
+}
+.usage { display: flex; gap: 12px; }
+
+/* ---- Abrechnungszeitraum ---- */
+.cycle-card { gap: 12px; }
+.cycle-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.cycle-day { font-weight: 600; font-size: var(--fs-label); line-height: 1.357; }
+.cycle-bar, .event-bar {
+  height: 6px; border-radius: 3px; background: var(--noura-line);
+  overflow: hidden; margin: 12px 0;
+}
+.cycle-bar i, .event-bar i {
+  display: block; width: 100%; height: 100%; border-radius: 3px;
+  background: var(--noura-accent); transform-origin: left;
+  transition: transform var(--dur-screen) var(--ease-out);
+}
+.cycle-foot {
+  display: flex; flex-direction: column; gap: 2px;
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
+  color: var(--noura-text-muted);
+}
+
+/* ---- Prognose ---- */
+.forecast-card { gap: 8px; }
+.fc-head { display: flex; align-items: flex-start; justify-content: space-between; }
+.fc-val {
+  display: flex; align-items: center; gap: 8px; margin-top: 4px;
+  font-weight: 600; font-size: var(--fs-screen); line-height: 1.35;
+}
+/* Der Trend ist ein Chip, keine Buttonflaeche — Akzentrot nur, wenn
+   der Verbrauch steigt. */
+.trend {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
+  padding: 1px 8px; border-radius: var(--noura-radius-pill);
+}
+.trend.up { background: var(--noura-accent); }
+.trend.down { background: var(--noura-glass-strong); }
+/* ---- Tagesverlauf ----
+   Die Linie zeichnet sich beim Betreten des Screens von links nach
+   rechts, die Flaeche blendet danach auf. Damit liest sich der Verlauf
+   als Zeitachse statt als fertiges Bild. */
+.spark { width: 100%; height: 44px; margin: 4px 0; display: block; }
+.spark-line {
+  stroke-dasharray: 1; stroke-dashoffset: 1;
+  transition: stroke-dashoffset var(--dur-beat) var(--ease-out);
+}
+.spark.run .spark-line { stroke-dashoffset: 0; }
+.spark-area { opacity: 0; transition: opacity var(--dur-screen) var(--ease-out) var(--dur-screen); }
+.spark.run .spark-area { opacity: 1; }
+.fc-note {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
+  color: var(--noura-text-muted);
+}
+.fc-assure {
+  display: flex; align-items: center; gap: 8px; margin-top: 12px;
+  font-weight: 600; font-size: var(--fs-label); line-height: 1.357;
+}
+.fc-assure .dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: var(--noura-accent);
+}
+
+/* Das "Mehr"-Menue traegt jetzt drei Eintraege. Sie fahren von unten
+   nach oben versetzt ein, damit die Liste als Bewegung aus dem Knopf
+   heraus liest statt als Block, der erscheint. */
+.fab-stack .btn:nth-child(1) { transition-delay: var(--dur-tap); }
+.fab-stack .btn:nth-child(2) { transition-delay: 60ms; }
+.fab-stack .btn:nth-child(3) { transition-delay: 0s; }
+.fab-stack:not(.open) .btn { transition-delay: 0s; }
+
+/* ============================================================
+   3 — Reisen / Roaming
+   ============================================================ */
+/* ---- Kontingent-Ring ----
+   Anders als der ∞-Ring auf der Home-Kachel zeigt dieser einen
+   echten Fuellstand — in der Weltzone gibt es eine echte Grenze. */
+.allow-ring { position: relative; width: 126px; height: 126px; margin: 0 auto 12px; }
+.allow-ring svg { width: 100%; height: 100%; display: block; }
+/* Faehrt beim Oeffnen des Sheets auf den Wert. Derselbe Uebergang
+   traegt danach das Zubuchen: der Bogen wandert sichtbar zurueck,
+   statt auf den neuen Stand zu springen. */
+.allow-arc { transition: stroke-dashoffset var(--dur-beat) var(--ease-out), stroke var(--dur-move) var(--ease-out); }
+.allow-mid {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+}
+.allow-mid b { font-weight: 700; font-size: var(--fs-screen); line-height: 1.35; }
+.allow-mid em {
+  font-style: normal; font-weight: 500; font-size: var(--fs-caption);
+  line-height: 1.333; color: var(--noura-text-muted);
+}
+
+.roam-info { gap: 12px; }
+.roam-info.center { text-align: center; }
+.roam-lead { font-weight: 600; font-size: var(--fs-label); line-height: 1.45; }
+.roam-fine {
+  margin-top: 8px; font-weight: 500; font-size: var(--fs-caption);
+  line-height: 1.45; color: var(--noura-text-muted);
+}
+.roam-rules { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.roam-rules li {
+  font-weight: 500; font-size: var(--fs-label); line-height: 1.45;
+  color: var(--noura-text-muted); padding-left: 16px; position: relative;
+}
+.roam-rules li::before {
+  content: ''; position: absolute; left: 0; top: 8px;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--noura-accent);
+}
+.roam-rules b { color: var(--noura-text); font-weight: 600; }
+.roam-stat { display: flex; align-items: baseline; justify-content: space-between; margin-top: 12px; }
+/* 24px wie auf Home — Entscheidung vom 2026-09-04, siehe Skill.
+   Bis dahin stand hier 20px und wich damit von Home ab. */
+.roam-stat .val { font-weight: 600; font-size: var(--fs-screen); line-height: 1.35; }
+
+/* ---- Zusatzpakete ---- */
+.addons { display: flex; gap: 8px; }
+.addons .addon {
+  flex: 1; display: flex; flex-direction: column; gap: 2px;
+  padding: 16px 12px; cursor: pointer; text-align: left;
+  min-height: var(--tap);
+  background: var(--noura-glass-strong); border: none;
+  border-radius: var(--noura-radius-tile); color: var(--noura-text);
+  backdrop-filter: blur(var(--noura-blur-control)); -webkit-backdrop-filter: blur(var(--noura-blur-control));
+  transition: transform var(--dur-screen) var(--spring);
+}
+.addons .addon:active { transition: transform var(--dur-tap) var(--ease-out); transform: scale(0.96); }
+.addon-gb { font-weight: 700; font-size: var(--fs-body); line-height: 1.312; }
+.addon-price { font-weight: 600; font-size: var(--fs-label); line-height: 1.357; }
+.addon-note {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
+  color: var(--noura-text-muted);
+}
+
+/* ---- Vorfuehr-Schalter ---- */
+.demo-sec { opacity: 0.75; }
+.demo-note {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.4;
+  color: var(--noura-text-muted); margin: -12px 0 12px;
+}
+/* Dasselbe Segment wie die Tarif-Reiter, also dieselbe Flaeche: Spur
+   auf `glass`, Wahl auf `glass-active`. Akzentrot fuellte hier bis zum
+   2026-09-18 den gewaehlten Knopf — eine zweite Stelle, an der eine
+   Wahl wie ein Etikett aussah. */
+.demo-switch {
+  display: flex; gap: 4px; padding: 3px;
+  background: var(--noura-glass); border-radius: var(--noura-radius-pill);
+}
+.demo-switch button {
+  flex: 1; min-height: var(--tap); cursor: pointer; border: none;
+  border-radius: var(--noura-radius-pill); color: var(--noura-text-muted);
+  background: none; font-weight: 600; font-size: var(--fs-label);
+  transition: color var(--dur-quick) var(--ease-out), background var(--dur-quick) var(--ease-out);
+}
+.demo-switch button.on { background: var(--noura-glass-active); color: var(--noura-text); }
+
+/* ---- Vorfuehr-Abkuerzung (Intro / Onboarding) ----
+   Kein Button aus der Figma-Vorlage, sondern eine Vorfuehr-Hilfe. Deshalb
+   bewusst kein Glas und kein Akzentrot, sondern gedaempfter Text — sichtbar
+   genug zum Treffen, leise genug, um sich nicht als Design-Element auszugeben.
+   Die Trefferflaeche bleibt trotzdem bei --tap. */
+.demo-skip {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: var(--tap); padding: 0 12px; cursor: pointer;
+  background: none; border: none; border-radius: var(--noura-radius-pill);
+  color: var(--noura-text-muted);
+  font-family: var(--font); font-weight: 600; font-size: var(--fs-label); line-height: 1.429;
+  transition: color var(--dur-quick) var(--ease-out), background var(--dur-quick) var(--ease-out);
+}
+.demo-skip:active { color: var(--noura-text); background: var(--press-wash); }
+/* Im Onboarding sitzt sie rechts in der Kopfzeile, gegenueber dem Zurueck-Pfeil */
+.demo-skip.in-nav { margin-left: auto; margin-right: 12px; }
+
+/* ============================================================
+   4 — Bestellung und Identifizierung
+   ============================================================ */
+/* Spaltenlayout statt fester Pixelabstaende: Kopf und Fussleiste
+   nehmen sich, was sie brauchen, der Rest scrollt. Mit absoluten
+   top-Werten haetten Kopf und Inhalt sich ueberlagert, sobald die
+   Systemschrift groesser gestellt wird — und genau die soll die App
+   ja mitmachen. */
+.flow {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  /* Statusleiste + Abstand + Hoehe des Zurueck-Knopfs (20 + 24 + 20),
+     sonst liegt der Pfeil auf der Schrittanzeige. */
+  padding-top: calc(54px + 12px + 64px);
+}
+.flow-head { flex-shrink: 0; padding: 0 24px; }
+.flow-head h1 { font-weight: 700; font-size: var(--fs-title); line-height: 1.35; margin-top: 16px; }
+.flow-lead {
+  margin-top: 8px; font-weight: 500; font-size: var(--fs-label);
+  line-height: 1.45; color: var(--noura-text-muted);
+}
+
+/* ---- Schrittanzeige ----
+   Ohne sie weiss niemand, wie viel nach der Identifizierung noch
+   kommt — und genau dort brechen Anmeldungen ab. */
+.flow-steps { list-style: none; display: flex; align-items: center; gap: 4px; }
+.flow-steps li {
+  flex: 1; display: flex; flex-direction: column; gap: 6px;
+  font-weight: 500; font-size: 0.63rem; line-height: 1.3;
+  color: var(--noura-text-muted);
+}
+.flow-steps li i {
+  display: block; height: 3px; border-radius: 2px;
+  background: var(--noura-glass-strong);
+  transition: background var(--dur-quick) var(--ease-out);
+}
+.flow-steps li.done i { background: rgba(255, 255, 255, 0.55); }
+.flow-steps li.now i { background: var(--noura-accent); }
+.flow-steps li.now { color: var(--noura-text); font-weight: 600; }
+
+.flow-scroll {
+  flex: 1; min-height: 0;
+  overflow-y: auto; padding: 16px 24px 0; scrollbar-width: none;
+}
+.flow-scroll::-webkit-scrollbar { display: none; }
+.flow-sec { margin-top: 32px; }
+.flow-sec h2 { font-weight: 700; font-size: var(--fs-title); line-height: 1.35; margin-bottom: 12px; }
+.flow-cta {
+  flex-shrink: 0; z-index: 10;
+  padding: 16px 24px calc(24px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, rgba(20, 15, 35, 0.85) 45%, transparent);
+}
+
+/* Fehlermeldung am Feld — erscheint erst nach einem Absendeversuch.
+   Das Feld meldet sich einmal kurz, damit der Sprung dorthin nicht
+   uebersehen wird; danach steht es still. */
+.field.invalid input {
+  box-shadow: inset 0 0 0 1.5px var(--noura-accent);
+  animation: fieldNudge var(--dur-move) var(--ease-out);
+}
+@keyframes fieldNudge {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  60% { transform: translateX(3px); }
+}
+.field-err {
+  font-style: normal; font-weight: 500; font-size: var(--fs-caption);
+  line-height: 1.4; color: var(--noura-accent);
+  animation: optOpen var(--dur-quick) var(--ease-out);
+}
+
+/* ---- Zusammenfassung ---- */
+.sum-card { gap: 4px; }
+.sum-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sum-name { font-weight: 700; font-size: var(--fs-title); line-height: 1.35; }
+.sum-price { font-weight: 700; font-size: var(--fs-title); line-height: 1.35; }
+.sum-sub {
+  margin-top: 4px; font-weight: 500; font-size: var(--fs-caption);
+  line-height: 1.333; color: var(--noura-text-muted);
+}
+
+/* ---- Auswahlzeilen ----
+   Dieselbe Form fuer Rufnummer, Zahlungsart und Ident-Verfahren:
+   drei Entscheidungen, eine Bedienlogik. */
+.opt {
+  border-radius: var(--noura-radius-tile); margin-bottom: 8px;
+  background: var(--noura-glass); overflow: hidden;
+  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card));
+  transition: box-shadow var(--dur-quick) var(--ease-out);
+}
+.opt.on { box-shadow: inset 0 0 0 1.5px var(--noura-accent); }
+.opt-btn {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%;
+  padding: 16px; min-height: var(--tap); cursor: pointer;
+  background: none; border: none; color: var(--noura-text); text-align: left;
+}
+.opt-mark {
+  width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; margin-top: 1px;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.5);
+  transition: box-shadow var(--dur-quick) var(--ease-out), background var(--dur-quick) var(--ease-out);
+}
+.opt.on .opt-mark {
+  background: var(--noura-accent);
+  box-shadow: inset 0 0 0 1.5px var(--noura-accent), inset 0 0 0 4px var(--noura-card-fill);
+}
+.opt-tx { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.opt-title {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-weight: 600; font-size: var(--fs-label); line-height: 1.357;
+}
+.opt-meta {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.4;
+  color: var(--noura-text-muted);
+}
+.opt-aside {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
+  color: var(--noura-text-muted); flex-shrink: 0;
+}
+/* Die Zusatzfelder werden erst beim Auswaehlen eingehaengt — ohne
+   Auftritt wirkt das wie ein Sprung im Layout. */
+.opt-extra {
+  padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px;
+  animation: optOpen var(--dur-quick) var(--ease-out);
+}
+@keyframes optOpen {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
+}
+/* Der Auswahlpunkt wird gefuellt statt umgefaerbt. */
+.opt-mark { transform: scale(1); }
+.opt.on .opt-mark { animation: markFill var(--dur-move) var(--spring); }
+@keyframes markFill {
+  from { transform: scale(0.7); }
+  60% { transform: scale(1.12); }
+  to { transform: scale(1); }
+}
+
+/* ---- Eingabefelder ---- */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > span {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
+  color: var(--noura-text-muted);
+}
+.field input {
+  min-height: var(--tap); padding: 0 16px; outline: none;
+  background: var(--noura-glass-strong); border: none;
+  border-radius: var(--noura-radius-tile); color: var(--noura-text);
+  font-weight: 600; font-size: var(--fs-label); line-height: 1.357;
+}
+.field input::placeholder { color: var(--noura-text-muted); }
+.hint {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.45;
+  color: var(--noura-text-muted);
+}
+
+/* ---- Kostenaufstellung ----
+   Vollstaendig vor dem Bestellknopf — Ueberraschungen auf der ersten
+   Rechnung sind der teuerste Vertrauensverlust der Branche. */
+.cost-card { gap: 8px; }
+.cost-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  font-weight: 500; font-size: var(--fs-label); line-height: 1.357;
+  padding: 6px 0;
+}
+.cost-row .free { color: var(--noura-text-muted); }
+.cost-row.total {
+  font-weight: 700; font-size: var(--fs-body); line-height: 1.312;
+  border-top: 1px solid var(--noura-line); margin-top: 4px; padding-top: 14px;
+}
+.cost-note {
+  margin-top: 8px; font-weight: 500; font-size: var(--fs-caption);
+  line-height: 1.4; color: var(--noura-text-muted);
+}
+.legal {
+  margin-top: 24px; font-weight: 500; font-size: var(--fs-caption);
+  line-height: 1.5; color: var(--noura-text-muted);
+}
+.legal a { color: var(--noura-text); text-decoration: underline; }
+
+/* ---- Stufe 2: Flaeche ----
+   Grundform jeder Karte, die Daten zeigt. Hier stand vorher eine
+   Aufzaehlung von vierzehn Klassennamen. Eine neue Karte erbte dadurch
+   nichts, sondern brauchte einen Eintrag von Hand — und genau das ist
+   zweimal nicht passiert: die Verbrauchskacheln bekamen in global.css
+   eine eigene, fast gleiche Regel, der Magic Code eine dritte mit
+   anderen Werten. Als Basisklasse erbt jede Karte die Form, ohne dass
+   jemand daran denken muss.
+
+   Kein Rand, Radius 16, Weichzeichner 7 — Rand und Radius 24 gehoeren
+   der Stufe 3 (Bedienelemente) und sind dort das Zeichen fuer
+   "bedienbar". */
+.card {
+  background: var(--noura-glass);
+  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card));
+  border-radius: var(--noura-radius-tile); padding: 20px;
+  display: flex; flex-direction: column; border: none;
+}
+
+/* Der Dialog selbst bekommt beim Oeffnen den Fokus (siehe useDialog) —
+   dort ist ein Fokusring aber nur Rauschen, der Nutzer hat ihn nicht
+   angesteuert. Die Bedienelemente darin behalten ihren Ring. */
+.sheet:focus { outline: none; }
+
+
+/* ============================================================
+   5 — Magic Code: Konzeptseite
+
+   Sitzt hinter der Kachel auf Home. Dieselben Bausteine wie die
+   Reiseansicht — Glaskarte @10 %, Radius 16, Innenabstand 20 —
+   damit die Seite nicht wie ein Fremdkoerper wirkt. Rot bleibt
+   auch hier Symbol- und Chipfarbe, nie Flaeche.
+   ============================================================ */
+
+/* Eingabe zuerst: wer hierher tippt, hat meist einen Code vor
+   Augen, den er gerade irgendwo gesehen hat. */
+.magic-redeem { gap: 12px; }
+.magic-entry { display: flex; gap: 8px; align-items: stretch; }
+.magic-input {
+  flex: 1; min-width: 0; min-height: var(--tap);
+  padding: 0 12px; outline: none; border: none;
+  background: var(--noura-glass-strong);
+  border-radius: var(--noura-radius-tile); color: var(--noura-text);
+  font-family: var(--font); font-weight: 700; font-size: var(--fs-title);
+  /* Der Zwischenraum steht rechts jedes Zeichens — ohne den halben
+     Ausgleich links sitzt die Zeile sichtbar zu weit rechts. */
+  letter-spacing: 0.3em; text-indent: 0.3em; text-align: center;
+  text-transform: uppercase;
+}
+.magic-input::placeholder { color: var(--noura-text-muted); }
+.magic-entry .btn { width: auto; flex-shrink: 0; padding: 0 20px; min-height: var(--tap); }
+.magic-entry .btn:disabled { opacity: 0.4; cursor: default; }
+.magic-fine {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.45;
+  color: var(--noura-text-muted);
+}
+
+/* Drei Schritte. Die Ziffer traegt den Blick, nicht ein Symbol —
+   bei einer Abfolge ist die Reihenfolge die Information. */
+.magic-steps { list-style: none; display: flex; flex-direction: column; gap: 20px; }
+.magic-steps li { display: flex; gap: 14px; align-items: flex-start; }
+.magic-steps .n {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: var(--noura-radius-pill);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--noura-accent); color: var(--noura-text);
+  font-weight: 700; font-size: var(--fs-caption); line-height: 1;
+}
+.magic-steps b { font-weight: 700; font-size: var(--fs-label); line-height: 1.357; }
+.magic-steps p {
+  margin-top: 4px; font-weight: 500; font-size: var(--fs-label);
+  line-height: 1.45; color: var(--noura-text-muted);
+}
+
+/* Drei gleich breite Kacheln nebeneinander — bei drei kurzen
+   Angaben liest sich eine Reihe schneller als eine Liste. */
+.magic-perks { display: flex; gap: 8px; }
+.magic-perk { flex: 1; gap: 6px; padding: 16px 12px; text-align: center; align-items: center; }
+.magic-perk .ic { width: 24px; height: 24px; color: var(--noura-accent); }
+.magic-perk .ic svg { width: 100%; height: 100%; display: block; }
+.magic-perk b { font-weight: 700; font-size: var(--fs-caption); line-height: 1.35; }
+.magic-perk .note {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.35;
+  color: var(--noura-text-muted);
+}
+
+.magic-why { gap: 12px; }
+.magic-creator { gap: 8px; margin-top: 24px; align-items: flex-start; }
+.magic-creator .chip {
+  display: inline-flex; align-items: center; padding: 4px 10px;
+  border-radius: var(--noura-radius-pill); background: var(--noura-accent);
+  font-weight: 700; font-size: var(--fs-caption); line-height: 1.35;
+}
+.magic-creator b { font-weight: 700; font-size: var(--fs-body); line-height: 1.312; }
+.magic-creator p {
+  font-weight: 500; font-size: var(--fs-label); line-height: 1.45;
+  color: var(--noura-text-muted);
+}
+
+/* ---- Beispiel-Event ----
+   Der Community-Gedanke wird erst an einem Abend mit Datum, Ort und
+   40 Plaetzen greifbar. Die Karte laeuft deshalb wie eine Einladung
+   von oben nach unten: wer laedt ein, wozu, wann — und wie wenig
+   davon noch uebrig ist. */
+.magic-event { gap: 0; }
+.event-head { display: flex; align-items: center; gap: 12px; }
+/* Monogramm statt Foto: ein erfundener Creator bekommt kein Gesicht,
+   und der Prototyp bleibt ohne weiteres Bildmaterial aus. */
+.event-avatar {
+  flex-shrink: 0; width: 44px; height: 44px; border-radius: var(--noura-radius-pill);
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(140deg, var(--noura-accent), #6d459a);
+  font-weight: 700; font-size: var(--fs-label); line-height: 1; letter-spacing: 0.02em;
+}
+.event-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.event-who b { font-weight: 700; font-size: var(--fs-label); line-height: 1.357; }
+.event-who span {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
+  color: var(--noura-text-muted);
+}
+/* Der Punkt pulst — er ist der einzige Hinweis darauf, dass der Code
+   noch nicht gefallen ist, sondern gleich faellt. */
+.event-live {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: var(--noura-radius-pill);
+  background: var(--noura-glass-strong);
+  font-weight: 600; font-size: var(--fs-caption); line-height: 1.333;
+}
+.event-live i {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--noura-accent);
+  animation: eventPulse 1.8s var(--ease-out) infinite;
+}
+@keyframes eventPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(0.75); }
+}
+.event-title {
+  margin-top: 16px; font-weight: 700; font-size: var(--fs-title); line-height: 1.35;
+}
+.event-meta {
+  margin-top: 4px; display: flex; flex-direction: column; gap: 2px;
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.4;
+  color: var(--noura-text-muted);
+}
+.event-text {
+  margin-top: 12px; font-weight: 500; font-size: var(--fs-label); line-height: 1.45;
+}
+.event-spots {
+  margin-top: 16px; display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+}
+/* Frei, nicht vergeben: Knappheit ist die Aussage der Karte. */
+.event-left { font-weight: 700; font-size: var(--fs-label); line-height: 1.357; }
+.magic-event .btn { margin-top: 4px; }
+.magic-event .btn:disabled { opacity: 0.5; cursor: default; }
+
+/* ---- Weitere Drops ----
+   Der ausfuehrliche Drop zeigt einen Abend, diese Liste zeigt die Bandbreite:
+   Festival, Konzert, Meet-up. Deshalb kompakt und gleichfoermig — sie soll
+   sich ueberfliegen lassen, nicht mit der Einladung darueber konkurrieren. */
+.drop-list { display: flex; flex-direction: column; gap: 8px; }
+.drop-row { gap: 2px; align-items: flex-start; padding: 16px; }
+.drop-top { width: 100%; display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+/* Kategorie als Chip in Akzentrot — dieselbe Rolle wie das CREATE-Chip:
+   Etikett, nie Flaeche fuer eine Aktion. */
+.drop-kind {
+  display: inline-flex; align-items: center; padding: 3px 9px;
+  border-radius: var(--noura-radius-pill); background: var(--noura-accent);
+  font-weight: 700; font-size: var(--fs-caption); line-height: 1.35;
+}
+.drop-left {
+  margin-left: auto; font-weight: 700; font-size: var(--fs-caption); line-height: 1.35;
+  color: var(--noura-text-muted);
+}
+.drop-row b { font-weight: 700; font-size: var(--fs-label); line-height: 1.357; }
+.drop-detail, .drop-when {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.4;
+  color: var(--noura-text-muted);
+}
+.drop-when { margin-top: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .event-live i { animation: none; }
+}
+
+/* ============================================================
+   5 — Verfeinerungen am Kaufablauf
+   ============================================================ */
+
+/* ---- Tarifauswahl ----
+   Kopf und Karussell stehen jetzt in einer Spalte. Mit festen
+   top-Werten (130px / 276px) ueberlagerten sie sich, sobald die
+   Systemschrift groesser gestellt wird oder der Reiter zwei Zeilen
+   traegt — beides ist hier der Fall. */
+.plan-flow {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  padding-top: calc(54px + 12px + 64px);
+}
+.plan-header { position: static; padding: 0 24px 12px; flex-shrink: 0; z-index: 10; }
+.plan-track-wrap { position: static; flex: 1; min-height: 0; }
+
+/* Der Preis gehoert an den Reiter: sonst muss man zwischen den
+   Karten wischen, um zwei Zahlen zu vergleichen. */
+.tabs button { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 7px 14px; }
+.tabs .t-name { font-weight: 600; font-size: var(--fs-label); line-height: 1.357; }
+.tabs .t-price { font-weight: 500; font-size: var(--fs-caption); line-height: 1.25; opacity: 0.85; }
+
+/* Was die Datenrate im Alltag heisst — die Zahl allein sagt es nicht. */
+.plan-speed {
+  display: flex; align-items: baseline; gap: 10px; margin-top: 16px;
+  padding: 12px 16px; border-radius: var(--noura-radius-tile);
+  background: var(--noura-glass);
+  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card));
+}
+.plan-speed + .features-block { margin-top: 28px; }
+.plan-speed b { font-weight: 700; font-size: var(--fs-label); line-height: 1.357; color: var(--noura-accent); white-space: nowrap; }
+.plan-speed span { font-weight: 500; font-size: var(--fs-caption); line-height: 1.4; color: var(--noura-text-muted); }
+
+/* Der Scrim gehoert unter den Knopf, nicht auf ihn.
+   In global.css trug .plan-cta selbst die Maske — und eine Maske gilt
+   fuer das ganze Element samt Kindern. Der Knopf lag im ausgeblendeten
+   oberen Drittel und wurde dadurch halb durchsichtig: die Feature-Liste
+   schien mitten durch "CREATE auswaehlen" hindurch. Verlauf und Maske
+   liegen jetzt auf einem ::before, der Knopf bleibt unangetastet.
+   Deckend bis 80 %, damit die Kante oberhalb des Knopfes verlaeuft und
+   nicht mitten hindurch. */
+.plan-cta {
+  background: none;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  -webkit-mask-image: none; mask-image: none;
+  padding-top: 40px;
+}
+.plan-cta::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(to top, rgba(20, 15, 35, 0.94) 80%, transparent);
+  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card));
+  -webkit-mask-image: linear-gradient(to top, #000 80%, transparent);
+  mask-image: linear-gradient(to top, #000 80%, transparent);
+}
+
+.cta-fine {
+  margin-top: 10px; text-align: center;
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.35;
+  color: var(--noura-text-muted);
+}
+
+/* ---- Geraetecheck ----
+   Die teuerste Ruecklastschrift einer eSIM-Marke entsteht dadurch,
+   dass niemand vorher gefragt hat, ob das Geraet mitspielt. */
+.device-card { margin-top: 12px; }
+.device-top { display: flex; align-items: flex-start; gap: 12px; }
+.device-mark {
+  flex-shrink: 0; width: 24px; height: 24px; border-radius: var(--noura-radius-pill);
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, 0.9); color: #17351f;
+}
+.device-card.bad .device-mark { background: var(--noura-accent); color: #fff; }
+.device-mark svg { width: 16px; height: 16px; display: block; }
+.device-top b { font-weight: 700; font-size: var(--fs-label); line-height: 1.357; }
+.device-top p {
+  margin-top: 2px; font-weight: 500; font-size: var(--fs-caption);
+  line-height: 1.4; color: var(--noura-text-muted);
+}
+
+/* ---- Kontakt / Portierungszeitpunkt ---- */
+.contact-card { gap: 12px; margin-top: 0; }
+.port-when { margin-top: 4px; }
+.field-label {
+  display: block; margin-bottom: 6px;
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
+  color: var(--noura-text-muted);
+}
+.port-when .opt { background: var(--noura-glass); }
+.hint-loose { margin: 16px 4px 0; }
+
+/* Eine Option, die gerade nicht geht, bleibt sichtbar und erklaert
+   sich — verschwinden laesst den Nutzer beim naechsten Mal suchen. */
+.opt.off { opacity: 0.55; }
+.opt.off .opt-btn { cursor: default; }
+
+/* ---- Zustimmung ----
+   Genau eine im Ablauf. Die Trefferflaeche ist die ganze Zeile, nicht
+   das 20px-Kaestchen. */
+.consent { margin-top: 4px; }
+.consent label {
+  display: flex; align-items: flex-start; gap: 12px; cursor: pointer;
+  padding: 14px 16px; border-radius: var(--noura-radius-tile);
+  background: var(--noura-glass);
+  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card));
+  min-height: var(--tap);
+}
+.consent.invalid label { box-shadow: inset 0 0 0 1.5px var(--noura-accent); }
+.consent input { position: absolute; opacity: 0; width: 0; height: 0; }
+.consent-box {
+  flex-shrink: 0; width: 22px; height: 22px; margin-top: 1px;
+  border-radius: 6px; border: 1.5px solid rgba(255, 255, 255, 0.5);
+  display: flex; align-items: center; justify-content: center;
+  color: transparent;
+  transition:
+    background var(--dur-quick) var(--ease-out),
+    color var(--dur-quick) var(--ease-out),
+    border-color var(--dur-quick) var(--ease-out);
+}
+.consent input:checked + .consent-box {
+  background: var(--noura-accent); border-color: var(--noura-accent); color: #fff;
+}
+.consent input:focus-visible + .consent-box { outline: 2px solid var(--noura-text); outline-offset: 2px; }
+.consent-box svg { width: 16px; height: 16px; display: block; }
+.consent-tx { font-weight: 500; font-size: var(--fs-caption); line-height: 1.45; }
+.consent .field-err { display: block; margin: 6px 4px 0; }
+
+/* ---- Aufklappbarer Abschnitt ----
+   Traegt die Vertragszusammenfassung: sie muss vorliegen, aber sie
+   darf den Ablauf nicht zuschuetten. */
+.disclosure {
+  border-radius: var(--noura-radius-tile); background: var(--noura-glass);
+  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card)); overflow: hidden;
+}
+.disclosure-btn {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; min-height: var(--tap); padding: 14px 16px;
+  background: none; border: none; cursor: pointer; text-align: left;
+  color: var(--noura-text); font-weight: 600; font-size: var(--fs-label); line-height: 1.357;
+}
+.disclosure-btn svg { flex-shrink: 0; transition: transform var(--dur-quick) var(--ease-out); }
+.disclosure.on .disclosure-btn svg { transform: rotate(180deg); }
+.disclosure-body { padding: 0 16px 16px; animation: optOpen var(--dur-quick) var(--ease-out); }
+
+.contract-list { display: flex; flex-direction: column; gap: 14px; }
+.contract-list dt { font-weight: 600; font-size: var(--fs-caption); line-height: 1.333; color: var(--noura-text-muted); }
+.contract-list dd { margin-top: 3px; font-weight: 500; font-size: var(--fs-label); line-height: 1.45; }
+
+/* ---- eSIM-Einrichtung ----
+   Der Schritt passiert auf dem Geraet und braucht eine Handlung —
+   deshalb ein eigener Screen und nicht eine weitere Zeile in der
+   Aktivierungsanimation. */
+.esim-req { margin-top: 0; }
+.esim-toggle {
+  display: block; width: 100%; min-height: var(--tap); padding: 12px 0;
+  background: none; border: none; cursor: pointer; text-align: left;
+  color: var(--noura-text-muted); font-weight: 600; font-size: var(--fs-label);
+  line-height: 1.357; text-decoration: underline; text-underline-offset: 3px;
+}
+.esim-manual { gap: 12px; margin-top: 4px; }
+.esim-kv { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.esim-kv span { font-weight: 500; font-size: var(--fs-caption); color: var(--noura-text-muted); }
+.esim-kv b { font-weight: 700; font-size: var(--fs-label); font-variant-numeric: tabular-nums; letter-spacing: 0.4px; }
+/* .esim-burst ist entfallen: der Schluss-Screen zeigt statt eines
+   abstrakten Hakens die Karte, die gerade ins Netz gegangen ist
+   (.esim-done-stage in esim-forge.css). */
+/* .esim-wait ist entfallen: der Hinweis auf den kurzen Netzverlust
+   stand dauerhaft unter dem Fortschritt und galt nur fuer einen der
+   vier Takte. Er steht jetzt als Erklaerung am Takt "Netz wird
+   gesucht" — also genau dann, wenn die Balken verschwinden. */
+
+/* ============================================================
+   9 — Magic Code: Einloesung und Zugang
+
+   Der Ablauf endet nicht mehr in einem Toast, sondern in etwas, das
+   man vorzeigt. Die Formensprache bleibt: Glas @10 %, Radius 16, Rot
+   nur als Chip- und Symbolfarbe. Nur das Ticket bricht bewusst mit
+   einer Sache — es traegt eine gestrichelte Trennlinie, weil ein
+   Abriss die einzige Form ist, die jeder ohne Beschriftung liest.
+   ============================================================ */
+
+/* ---- Fehlermeldung an der Eingabe ----
+   Steht an der Stelle des Kleingedruckten, nicht darunter: die Karte
+   soll beim Fehlschlag nicht wachsen, sondern die Auskunft tauschen. */
+.magic-error {
+  font-weight: 600; font-size: var(--fs-caption); line-height: 1.45;
+  color: var(--noura-accent);
+}
+/* Der Rand ist hier ausnahmsweise Farbe statt Verlauf: das Feld muss
+   auch dann als fehlerhaft lesbar sein, wenn die Meldung darunter
+   schon weggescrollt ist. */
+.magic-input.bad { box-shadow: inset 0 0 0 1.5px var(--noura-accent); }
+
+/* ---- Vorfuehr-Codes ----
+   Wie der Standort-Umschalter im Profil: sichtbar gedaempft, damit
+   niemand sie fuer Produktinhalt haelt. */
+.code-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.code-list li { display: flex; align-items: center; gap: 12px; }
+.code-chip {
+  flex-shrink: 0; min-height: var(--tap); padding: 0 14px;
+  border: none; border-radius: var(--noura-radius-tile); cursor: pointer;
+  background: var(--noura-glass-strong); color: var(--noura-text);
+  font-family: var(--font); font-weight: 700; font-size: var(--fs-body);
+  letter-spacing: 0.18em; text-indent: 0.18em;
+  font-variant-numeric: tabular-nums;
+}
+.code-chip:active { background: var(--press-wash); }
+.code-what { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.code-what b { font-weight: 700; font-size: var(--fs-label); line-height: 1.357; }
+.code-what span {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.35;
+  color: var(--noura-text-muted); font-variant-numeric: tabular-nums;
+}
+
+/* ---- Zugaenge im Sheet ----
+   Dieselbe Zeile wie ein Drop, nur anklickbar: was man besitzt und was
+   noch im Umlauf ist, unterscheidet sich in der Sache, nicht in der
+   Form. */
+.pass-row { width: 100%; text-align: left; cursor: pointer; }
+.pass-row:active { background: var(--press-wash); }
+.pass-row .drop-left { color: var(--noura-text); }
+
+/* ---- Ticket ---- */
+.ticket { gap: 0; }
+.ticket-top { display: flex; align-items: center; gap: 8px; }
+.ticket-state {
+  margin-left: auto; font-weight: 700; font-size: var(--fs-caption); line-height: 1.35;
+  color: var(--noura-text-muted);
+}
+.ticket-title {
+  margin-top: 16px; font-weight: 700; font-size: var(--fs-title); line-height: 1.35;
+}
+.ticket-host {
+  margin-top: 2px; font-weight: 500; font-size: var(--fs-caption); line-height: 1.4;
+  color: var(--noura-text-muted);
+}
+/* Zwei Spalten waeren schmaler, aber "Enthalten" traegt einen ganzen
+   Satz — untereinander bricht nichts. */
+.ticket-meta { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+.ticket-meta dt {
+  font-weight: 600; font-size: var(--fs-caption); line-height: 1.333;
+  color: var(--noura-text-muted);
+}
+.ticket-meta dd { margin-top: 3px; font-weight: 500; font-size: var(--fs-label); line-height: 1.45; }
+
+/* Der Abriss. Keine ausgestanzten Kerben: die Karte liegt auf dem
+   Aurora-Verlauf und traegt einen Weichzeichner — eine Maske daraus zu
+   schneiden kostet in Safari genau den Hintergrund, den sie beugt. Die
+   gestrichelte Linie sagt dasselbe und kostet nichts. */
+.ticket-stub {
+  margin-top: 20px; padding-top: 20px;
+  border-top: 1.5px dashed var(--noura-glass-active);
+  display: flex; align-items: center; gap: 16px;
+}
+.ticket-entry { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ticket-entry b {
+  font-weight: 700; font-size: var(--fs-body); line-height: 1.312;
+  letter-spacing: 0.08em; font-variant-numeric: tabular-nums;
+}
+.ticket-fine {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.4;
+  color: var(--noura-text-muted);
+}
+/* Weisse Flaeche mit Rand, damit das Muster auch auf dem hellsten
+   Punkt des Verlaufs kontrastiert. */
+.scan { flex-shrink: 0; border-radius: 4px; display: block; }
+
+.pass-actions { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+
+/* ---- Zugang auf Home ----
+   Eine Zeile, kein zweites Ticket: die Einzelheiten stehen im Sheet,
+   hier zaehlt nur, dass der Platz da ist und wofuer. */
+.pass-card {
+  width: 100%; flex-direction: row; align-items: center; gap: 14px;
+  padding: 14px 16px; cursor: pointer; text-align: left;
+}
+.pass-card:active { background: var(--press-wash); }
+.pass-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pass-kind {
+  font-weight: 600; font-size: var(--fs-caption); line-height: 1.333;
+  color: var(--noura-accent);
+}
+.pass-tx b {
+  font-weight: 700; font-size: var(--fs-label); line-height: 1.357;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pass-when {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.35;
+  color: var(--noura-text-muted);
+}
+.pass-go { flex-shrink: 0; width: 18px; height: 18px; color: var(--noura-text-muted); }
+
+/* ============================================================
+   12 — Ankunft auf Home
+
+   Home war bisher einfach da. Wer sieben Takte lang zugesehen hat, wie
+   seine eSIM entsteht und ins Netz geht, landet danach auf einem
+   Stillleben — und der Ablauf endet mit einem Schnitt statt mit einer
+   Ankunft.
+
+   Die Reihenfolge des Auftritts ist die Reihenfolge der Wichtigkeit:
+   Begruessung, dann die Karte, dann was sie kann, zuletzt die Leiste.
+   Die Karte bekommt einen eigenen Auftritt — sie kommt etwas groesser
+   herein und wird abgelegt, wie ein Gegenstand, nicht wie eine Kachel.
+
+   Alle Eintritte tragen `backwards`, nicht `forwards`: ein
+   eingefrorener Endzustand haelt transform fest und nimmt den Karten
+   danach ihre Druckreaktion (siehe Kopf von onboarding.css).
+
+   Eine Ankunft, keine zweite Signatur. Bis zum 2026-09-18 lief hier
+   zusaetzlich ein Glanzstreifen ueber die SIM-Karte — 1,5s, eigener
+   Verlauf, eigene Kurve. Damit hatte die Reise zwei grosse Momente:
+   die Schmiede und, zwanzig Sekunden spaeter, Home. Es gibt genau
+   einen pro Reise, und das ist die Schmiede; Home empfaengt nur. Der
+   Auftritt ist deshalb ein einziger gestaffelter Aufstieg auf der
+   Bewegungsleiter, und nur die Karte behaelt ihre eigene Kurve — sie
+   ist der Gegenstand, nicht eine Kachel.
+   ============================================================ */
+.home.arriving {
+  /* Der Versatz zwischen zwei Eintritten. Vorher standen hier sieben
+     einzeln gesetzte Verzoegerungen zwischen 0,07s und 0,85s, deren
+     Abstaende (0,16 / 0,17 / 0,10 / 0,15 / 0,10 / 0,10) nichts
+     Erkennbares unterschieden. */
+  --stagger: 80ms;
+}
+.home.arriving .home-header,
+.home.arriving .home-scroll > *,
+.home.arriving .navbar {
+  animation: homeRise var(--dur-screen) var(--ease-out) backwards;
+}
+@keyframes homeRise { from { opacity: 0; transform: translateY(24px); } }
+
+.home.arriving .home-header { animation-delay: 0s; }
+.home.arriving .home-scroll > *:nth-child(1) { animation-delay: calc(1 * var(--stagger)); }
+.home.arriving .home-scroll > *:nth-child(2) { animation-delay: calc(2 * var(--stagger)); }
+.home.arriving .home-scroll > *:nth-child(3) { animation-delay: calc(3 * var(--stagger)); }
+.home.arriving .home-scroll > *:nth-child(4) { animation-delay: calc(4 * var(--stagger)); }
+.home.arriving .home-scroll > *:nth-child(5) { animation-delay: calc(5 * var(--stagger)); }
+.home.arriving .navbar { animation-delay: calc(6 * var(--stagger)); }
+
+/* Muss nach den nth-child-Regeln stehen: die Karte ist das erste Kind
+   und soll trotzdem ihren eigenen Auftritt behalten. Sie wird abgelegt,
+   also reist sie — dur-move auf der Feder, wie die Uebergabe zwischen
+   den Screens. */
+.home.arriving .sim-card {
+  animation: homeCard var(--dur-move) var(--spring) var(--stagger) backwards;
+}
+@keyframes homeCard { from { opacity: 0; transform: translateY(36px) scale(1.07); } }

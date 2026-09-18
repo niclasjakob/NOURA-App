@@ -1,0 +1,442 @@
+/* ============================================================
+   NOURA — Die Entstehung der eSIM
+
+   Buehne, Takt-Text und Taktmesser fuer components/esim-forge.tsx.
+   Acht Takte, ein Objekt — die Gestaltungsregeln sind dieselben wie
+   in onboarding.css: nur transform und opacity werden animiert,
+   Weichheit kommt aus Radial-Verlaeufen.
+
+   Der Aufbau folgt einer Regel: der GRUNDZUSTAND jeder Regel ist die
+   fertige Karte. Die frueheren Takte nehmen weg. Wer stattdessen von
+   leer nach voll baut, muss in jedem Takt den Endzustand aller
+   Elemente wiederholen — und vergisst genau eines.
+   ============================================================ */
+
+.forge {
+  position: relative; width: 320px; height: 260px; flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* ---------- Glut ----------
+   Ein einzelner Akzentverlauf, der ueber Deckkraft und Groesse atmet.
+   Die Stimmungsfarbe kommt aus der Aurora dahinter (tone-Prop der
+   Screens) — zwei Farbwechsel uebereinander wuerden sich beissen. */
+.fg-glow {
+  position: absolute; left: 50%; top: 50%;
+  width: 360px; height: 360px; margin: -180px 0 0 -180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(225, 80, 85, 0.34), transparent 62%);
+  opacity: 0.5; transform: scale(0.8);
+  transition: opacity 1.15s var(--ease-out), transform 1.3s var(--ease-out);
+}
+[data-beat='design'] .fg-glow { opacity: 0.28; transform: scale(0.7); }
+[data-beat='laser'] .fg-glow { opacity: 0.85; transform: scale(0.86); }
+[data-beat='seal'] .fg-glow { opacity: 0.5; transform: scale(0.92); }
+[data-beat='ready'] .fg-glow { opacity: 1; transform: scale(1.05); }
+[data-beat='load'] .fg-glow { opacity: 0.6; transform: scale(0.95); }
+[data-beat='install'] .fg-glow { opacity: 0.72; transform: scale(0.95); }
+[data-beat='search'] .fg-glow { opacity: 0.3; transform: scale(1); }
+[data-beat='live'] .fg-glow { opacity: 1; transform: scale(1.18); }
+
+/* ============================================================
+   Die Karte
+   ============================================================ */
+
+/* Zentriert ueber negative Raender statt ueber translate(-50%,-50%):
+   so bleibt transform frei fuer die Lage im jeweiligen Takt. */
+.fg-plate {
+  position: absolute; left: 50%; top: 50%;
+  width: 292px; height: 159px; margin: -79px 0 0 -146px;
+  transform-origin: 50% 50%;
+  transition: transform 1.3s var(--ease-out);
+}
+.fg-plate svg { width: 100%; height: 100%; display: block; overflow: visible; }
+/* Das Schweben liegt auf dem SVG, nicht auf der Platte: dort wuerde es
+   mit der Lageaenderung des Takts um dieselbe Eigenschaft streiten. */
+.fg-plate svg { animation: fgFloat 10.15s var(--ease-out) infinite; }
+@keyframes fgFloat {
+  0%, 100% { transform: translateY(-5px) rotate(-0.4deg); }
+  50% { transform: translateY(5px) rotate(0.4deg); }
+}
+
+/* Takt 1-3 liegt die Karte auf der Werkbank — gekippt und gedreht wie
+   in der Figma-Vorlage. Ab "bereit" richtet sie sich auf und wendet
+   sich dem Kunden zu. Das ist der Moment der Uebergabe. */
+[data-beat='design'] .fg-plate,
+[data-beat='laser'] .fg-plate,
+[data-beat='seal'] .fg-plate {
+  transform: perspective(1000px) rotateX(56deg) rotateZ(-24deg) scale(1.02);
+}
+[data-beat='ready'] .fg-plate { transform: perspective(1000px) scale(1); }
+[data-beat='load'] .fg-plate,
+[data-beat='install'] .fg-plate { transform: perspective(1000px) translateY(8px) scale(0.8); }
+/* Zum Schluss tritt die Karte zurueck und gibt dem Netz die Flaeche. */
+[data-beat='search'] .fg-plate,
+[data-beat='live'] .fg-plate { transform: perspective(1000px) scale(0.46); }
+
+/* ---------- Grundzustand: die fertige Karte ---------- */
+/* Die Karte in der Fertigung traegt den Koerper ihres Tarifs — sonst
+   entstuende hier eine Karte, die der Kunde danach nirgends
+   wiedersieht. Die Farbe kommt aus denselben Variablen wie .sim-card. */
+.fg-fill { fill: var(--sim-connect-deep); transition: opacity 0.6s var(--ease-out), fill 0.6s var(--ease-out); }
+[data-plan='create'] .fg-fill { fill: var(--sim-create-deep); }
+.fg-outline {
+  fill: none; stroke: rgba(255, 255, 255, 0.4); stroke-width: 1.5;
+  stroke-dasharray: 1100; stroke-dashoffset: 0;
+  transition: stroke 0.85s var(--ease-out);
+}
+/* Eine zweite Kontur knapp innerhalb der ersten: sie gibt der Karte
+   Dicke, ohne dass ein Schatten noetig waere. */
+.fg-edge {
+  fill: none; stroke: rgba(255, 255, 255, 0.09); stroke-width: 1;
+  transform-box: view-box; transform-origin: 172.5px 86.5px; transform: scale(0.984);
+}
+
+.fg-esim, .fg-engrave, .fg-print, .fg-active { transition: opacity 0.6s var(--ease-out); }
+
+/* eSIM-Zeichen — dieselben Werte wie .esim-icon in global.css */
+.fg-esim-dot { fill: rgba(255, 255, 255, 0.35); }
+.fg-esim-sq { fill: var(--primary); }
+.fg-esim-in { fill: none; stroke: rgba(0, 0, 0, 0.45); stroke-width: 1.4; }
+.fg-esim-e { fill: rgba(0, 0, 0, 0.55); font-family: var(--font); font-weight: 700; font-size: 8px; font-style: italic; }
+
+/* Gravur: gesperrt und gedaempft — eingebrannt, nicht aufgedruckt. */
+.fg-engrave text {
+  fill: rgba(255, 255, 255, 0.5);
+  font-family: var(--font); font-weight: 600; font-size: 16px;
+}
+
+/* Aufdruck — Schnitte und Groessen aus .sim-card */
+.fg-title { fill: #fff; font-family: var(--font); font-weight: 700; font-size: 20px; }
+.fg-price { fill: #fff; font-family: var(--font); font-weight: 700; font-size: 16px; }
+.fg-sub { fill: var(--noura-text-muted); font-family: var(--font); font-weight: 500; font-size: 12px; }
+
+/* Der Aktiv-Chip: Akzentpille, Radius 1000 wie ueberall. */
+.fg-active { opacity: 0; transform-box: fill-box; transform-origin: center; }
+.fg-active rect { fill: var(--noura-accent); }
+.fg-active text { fill: #fff; font-family: var(--font); font-weight: 500; font-size: 12px; }
+
+/* Blaupause und Werkzeug sind nur waehrend der Fertigung da. */
+.fg-draft { opacity: 0; transition: opacity 0.7s var(--ease-out); }
+.fg-grid { stroke: rgba(255, 255, 255, 0.14); stroke-width: 1; }
+.fg-guides > * { fill: none; stroke: rgba(255, 255, 255, 0.3); stroke-width: 1; stroke-dasharray: 5 5; }
+.fg-cross path { fill: none; stroke: var(--noura-accent); stroke-width: 1.2; }
+.fg-dim line { stroke: var(--noura-accent); stroke-width: 1.2; opacity: 0.6; }
+.fg-laser { opacity: 0; transform-box: view-box; transform-origin: 0 0; }
+.fg-tip { fill: #fff; }
+.fg-sparks circle { fill: #fff; opacity: 0; transform-box: view-box; transform-origin: 0 0; }
+.fg-wipe { opacity: 0; transform-box: view-box; transform-origin: 0 0; }
+
+/* ---------- Takt 1 — entworfen ----------
+   Nicht nur eine Kontur, sondern ein Plan: Passkreuze an den drei
+   rechtwinkligen Ecken, Masszeichen aussen, und gestrichelte
+   Platzhalter dort, wo Tarifname, Chip, Gravur, Preis und eSIM-Zeichen
+   hinkommen. Man sieht damit nicht, DASS etwas entsteht — man sieht,
+   WAS entstehen wird. */
+[data-beat='design'] .fg-draft { opacity: 1; }
+[data-beat='design'] .fg-fill,
+[data-beat='design'] .fg-edge,
+[data-beat='design'] .fg-face,
+[data-beat='design'] .fg-esim,
+[data-beat='design'] .fg-engrave,
+[data-beat='design'] .fg-print { opacity: 0; }
+[data-beat='design'] .fg-outline { stroke: var(--noura-accent); }
+.forge.run[data-beat='design'] .fg-outline { animation: fgDraw 1.45s var(--ease-out) backwards; }
+.forge.run[data-beat='design'] .fg-cross path { animation: fgPop 0.5s var(--spring) backwards; }
+.forge.run[data-beat='design'] .fg-cross path:nth-of-type(1) { animation-delay: 0.29s; }
+.forge.run[data-beat='design'] .fg-cross path:nth-of-type(2) { animation-delay: 0.45s; }
+.forge.run[data-beat='design'] .fg-cross path:nth-of-type(3) { animation-delay: 0.6s; }
+.forge.run[data-beat='design'] .fg-guides > * { animation: fgIn 0.6s var(--ease-out) backwards; }
+.forge.run[data-beat='design'] .fg-guides > *:nth-child(1) { animation-delay: 0.75s; }
+.forge.run[data-beat='design'] .fg-guides > *:nth-child(2) { animation-delay: 0.85s; }
+.forge.run[data-beat='design'] .fg-guides > *:nth-child(3) { animation-delay: 1s; }
+.forge.run[data-beat='design'] .fg-guides > *:nth-child(4) { animation-delay: 1.1s; }
+.forge.run[data-beat='design'] .fg-guides > *:nth-child(5) { animation-delay: 1.2s; }
+.forge.run[data-beat='design'] .fg-dim { animation: fgIn 0.65s var(--ease-out) 1.15s backwards; }
+@keyframes fgDraw { from { stroke-dashoffset: 1100; } }
+@keyframes fgIn { from { opacity: 0; } }
+@keyframes fgPop { from { opacity: 0; transform: scale(0.4); } }
+
+/* ---------- Takt 2 — gelasert ----------
+   Der Kopf hat drei Aufgaben nacheinander: die drei Kontaktreihen
+   serpentinenfoermig, dann die vier Leiterbahnen, dann die ICCID.
+   Die schnellen Ruecklaeufe dazwischen sind Absicht — so bewegt sich
+   eine Maschine, und der Rhythmus macht den Vorgang als Arbeit
+   lesbar statt als Effekt.
+
+   Die Verzoegerungen der Teile folgen dem Weg des Kopfes, nicht einem
+   gleichen Takt: etwas leuchtet auf, wenn der Laser darueber steht. */
+/* Das Tarifgesicht gehoert zum Aufdruck, nicht zum Rohling: solange
+   die Karte nur graviert ist, ist sie noch keine CREATE. */
+[data-beat='laser'] .fg-print,
+[data-beat='laser'] .fg-face { opacity: 0; }
+.forge.run[data-beat='laser'] .fg-fill { animation: fgIn 1.15s var(--ease-out) backwards; }
+.forge.run[data-beat='laser'] .fg-edge { animation: fgIn 1.15s var(--ease-out) backwards; }
+
+/* Die 16 Kontaktpunkte in der Reihenfolge, in der der Kopf sie
+   umrundet — im Markup steht seine Fahrtrichtung, hier ihr Takt. */
+.forge.run[data-beat='laser'] .fg-esim-dot {
+  animation: fgPop 0.45s var(--spring) backwards;
+  animation-delay: calc(0.13s + var(--i) * 0.1s);
+}
+.forge.run[data-beat='laser'] .fg-esim-sq { animation: fgPop 0.6s var(--spring) 1.9s backwards; }
+.forge.run[data-beat='laser'] .fg-esim-in,
+.forge.run[data-beat='laser'] .fg-esim-e { animation: fgIn 0.45s var(--ease-out) 2.05s backwards; }
+
+/* Jeder Buchstabe wird heiss geschrieben und kuehlt dann auf seinen
+   Grundton ab. Genau das unterscheidet Gravieren von Einblenden. */
+.forge.run[data-beat='laser'] .fg-engrave text {
+  animation: fgEtch 0.5s var(--ease-out) backwards; animation-delay: calc(2.1s + var(--i) * 0.06s);
+}
+@keyframes fgEtch {
+  0% { opacity: 0; fill: #fff; }
+  30% { opacity: 1; fill: #fff; }
+  100% { opacity: 1; fill: rgba(255, 255, 255, 0.5); }
+}
+
+.forge.run[data-beat='laser'] .fg-laser { animation: fgLaser 3.05s linear backwards; }
+@keyframes fgLaser {
+  0% { opacity: 0; transform: translate(292.5px, 112.5px); }
+  4% { opacity: 1; }
+  14% { transform: translate(310.5px, 112.5px); }
+  18% { transform: translate(319.5px, 120.5px); }
+  28% { transform: translate(319.5px, 138.5px); }
+  32% { transform: translate(310.5px, 147.5px); }
+  42% { transform: translate(292.5px, 147.5px); }
+  46% { transform: translate(284.5px, 138.5px); }
+  56% { transform: translate(284.5px, 120.5px); }
+  62% { transform: translate(302px, 130px); }
+  68% { transform: translate(30.75px, 95px); }
+  94% { transform: translate(179.25px, 95px); }
+  97% { opacity: 1; }
+  100% { opacity: 0; transform: translate(179.25px, 95px); }
+}
+
+.forge.run[data-beat='laser'] .fg-sparks circle { animation: fgSpark 1.05s var(--ease-out) infinite; animation-delay: calc(var(--i) * 0.13s); }
+.fg-sparks circle:nth-of-type(1) { --dx: 30px; --dy: -34px; }
+.fg-sparks circle:nth-of-type(2) { --dx: -28px; --dy: -30px; }
+.fg-sparks circle:nth-of-type(3) { --dx: 40px; --dy: -14px; }
+.fg-sparks circle:nth-of-type(4) { --dx: -37px; --dy: -9px; }
+.fg-sparks circle:nth-of-type(5) { --dx: 14px; --dy: -44px; }
+.fg-sparks circle:nth-of-type(6) { --dx: -11px; --dy: -41px; }
+.fg-sparks circle:nth-of-type(7) { --dx: 24px; --dy: 18px; }
+.fg-sparks circle:nth-of-type(8) { --dx: -22px; --dy: 16px; }
+@keyframes fgSpark {
+  0% { opacity: 0.95; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.25); }
+}
+
+/* ---------- Takt 3 — versiegelt ----------
+   Jetzt kommt der Tarif auf die Karte: Name, Preis, Unterzeile — der
+   Aufdruck, den .sim-card auch auf Home traegt. Vorher war es ein
+   Rohling mit einer Gravur, jetzt ist es eine bestimmte Karte fuer
+   einen bestimmten Tarif.
+
+   Der Aktiv-Chip gehoert NICHT hierher. Er behauptet einen Zustand,
+   den die Karte an dieser Stelle noch nicht hat — sie ist freigegeben,
+   aber nicht im Netz. Er kommt im letzten Takt. */
+.forge.run[data-beat='seal'] .fg-print > * { animation: fgMark 0.7s var(--spring) backwards; }
+.forge.run[data-beat='seal'] .fg-print > *:nth-child(2) { animation-delay: 0.26s; }
+.forge.run[data-beat='seal'] .fg-print > *:nth-child(3) { animation-delay: 0.4s; }
+@keyframes fgMark { from { opacity: 0; transform: translateX(-14px); } }
+/* Spiegelung und Akzentlicht kommen mit dem Aufdruck — langsamer als
+   er, weil sie Material sind und keine Beschriftung. */
+.forge.run[data-beat='seal'] .fg-face { animation: fgIn 1.1s var(--ease-out) 0.2s backwards; }
+/* CREATE hat die hellere Kante, wie .sim-card.create auf Home. */
+[data-plan='create'] .fg-edge { stroke: rgba(255, 255, 255, 0.16); }
+
+/* ---------- Takt 4 — bereit ----------
+   Die Karte richtet sich auf und wendet sich dem Kunden zu. Ein
+   einzelner Glanzstreifen laeuft dabei ueber die Flaeche — das
+   Licht, das eine Karte beim Drehen einfaengt. Einmal, nicht in
+   Schleife: der Screen, auf dem sie dann steht, ist ein Lesescreen. */
+.forge.run[data-beat='ready'] .fg-wipe {
+  opacity: 1; animation: fgWipe 1.5s var(--ease-out) 0.45s backwards;
+}
+
+/* ---------- Takt 6 — eingerichtet ----------
+   Ein Schreibbalken laeuft ueber die Flaeche, Kontaktfelder und
+   Leiterbahnen pochen versetzt mit. Auf die Silhouette maskiert, nicht
+   auf ein Rechteck. */
+.forge.run[data-beat='install'] .fg-wipe { opacity: 1; animation: fgWipe 1.65s var(--ease-out) infinite; }
+@keyframes fgWipe { from { transform: translateX(0); } to { transform: translateX(485px); } }
+.forge.run[data-beat='install'] .fg-esim-dot {
+  animation: fgPadBeat 1.65s var(--ease-out) infinite; animation-delay: calc(var(--i) * 0.07s);
+}
+@keyframes fgPadBeat { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* ============================================================
+   Das Netz — liegt hinter der Karte, damit die Strahlen unter ihr
+   verschwinden statt an ihrer Kante zu enden.
+   ============================================================ */
+.fg-net { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fg-ring {
+  fill: none; stroke: rgba(255, 255, 255, 0.28); stroke-width: 1.2; opacity: 0;
+  transform-box: view-box; transform-origin: 160px 130px;
+}
+.fg-node { opacity: 0; transition: opacity 0.6s var(--ease-out); }
+.fg-dot { fill: var(--noura-accent); }
+.fg-ray { stroke: var(--noura-accent); stroke-width: 1.2; stroke-dasharray: 40; stroke-dashoffset: 0; }
+.fg-packet { fill: #fff; opacity: 0; transform-box: view-box; transform-origin: 0 0; }
+.fg-stream circle { fill: #fff; opacity: 0; transform-box: view-box; transform-origin: 0 0; }
+.fg-radar { opacity: 0; transform-box: view-box; transform-origin: 160px 130px; }
+.fg-radar-edge { stroke: rgba(255, 255, 255, 0.45); stroke-width: 1.2; }
+
+/* ---------- Takt 5 — geladen ----------
+   Das Profil faellt in den Chip. Der Strom zielt auf die Kontakte,
+   nicht auf die Kartenmitte — dort kommt er auch wirklich an. */
+.forge.run[data-beat='load'] .fg-stream circle {
+  animation: fgStream 1.65s var(--ease-in) infinite; animation-delay: calc(var(--i) * 0.28s);
+}
+@keyframes fgStream {
+  0% { opacity: 0; transform: translate(63px, 4px); }
+  16%, 78% { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(63px, 120px); }
+}
+
+/* ---------- Takt 7 — Netz wird gesucht ----------
+   Ein Suchstrahl dreht einmal herum, Ringe laufen nach aussen und
+   verlaufen sich. Die Knoten sind schon da, aber blass und
+   unverbunden: es ist etwas in Reichweite, nur noch nichts erreicht.
+   Genau der Zustand, in dem das iPhone kurz ohne Balken dasteht. */
+[data-beat='search'] .fg-radar { opacity: 1; }
+.forge.run[data-beat='search'] .fg-radar { animation: fgSpin 2.6s linear infinite; }
+@keyframes fgSpin { to { transform: rotate(360deg); } }
+.forge.run[data-beat='search'] .fg-ring { animation: fgSearch 2.45s var(--ease-out) infinite; }
+.forge.run[data-beat='search'] .fg-ring.r2 { animation-delay: 0.45s; }
+.forge.run[data-beat='search'] .fg-ring.r3 { animation-delay: 0.95s; }
+@keyframes fgSearch {
+  0% { opacity: 0; transform: scale(0.3); }
+  22% { opacity: 0.5; }
+  100% { opacity: 0; transform: scale(1.06); }
+}
+[data-beat='search'] .fg-node { opacity: 0.32; }
+[data-beat='search'] .fg-dot { fill: rgba(255, 255, 255, 0.65); }
+[data-beat='search'] .fg-ray { stroke-dashoffset: 40; }
+
+/* ---------- Takt 8 — im Netz ----------
+   Die Ringe hoeren auf zu wandern und stehen. Die Strahlen zeichnen
+   sich von aussen nach innen, und auf jedem laeuft ein Paket zur
+   Karte — das Netz kommt zu ihr, nicht umgekehrt. */
+[data-beat='live'] .fg-ring { stroke: var(--noura-accent); opacity: 0.3; }
+.forge.run[data-beat='live'] .fg-ring { animation: fgHold 3.75s var(--ease-out) infinite; }
+.forge.run[data-beat='live'] .fg-ring.r2 { animation-delay: 0.29s; }
+.forge.run[data-beat='live'] .fg-ring.r3 { animation-delay: 0.6s; }
+@keyframes fgHold {
+  0%, 100% { opacity: 0.16; transform: scale(1); }
+  50% { opacity: 0.48; transform: scale(1.035); }
+}
+[data-beat='live'] .fg-node { opacity: 1; }
+/* Der Chip sagt "Aktiv" — und erscheint deshalb genau dann, wenn sie es
+   ist. Auf dem Schluss-Screen bleibt er stehen, und damit traegt die
+   Karte dort dasselbe Zeichen wie spaeter auf Home. */
+[data-beat='live'] .fg-active { opacity: 1; }
+.forge.run[data-beat='live'] .fg-active { animation: fgStamp 0.7s var(--spring) 0.5s backwards; }
+@keyframes fgStamp { from { opacity: 0; transform: scale(0.4); } }
+.forge.run[data-beat='live'] .fg-node { animation: fgIn 0.65s var(--ease-out) backwards; animation-delay: calc(var(--i) * 0.13s); }
+.forge.run[data-beat='live'] .fg-ray { animation: fgRay 0.7s var(--ease-out) backwards; animation-delay: calc(var(--i) * 0.13s); }
+@keyframes fgRay { from { stroke-dashoffset: 40; } }
+.forge.run[data-beat='live'] .fg-packet { animation: fgPacket 2.3s var(--ease-in) infinite; animation-delay: calc(1s + var(--i) * 0.23s); }
+@keyframes fgPacket {
+  0% { opacity: 0; transform: translate(0, 0); }
+  18% { opacity: 0.95; }
+  100% { opacity: 0; transform: translate(var(--px), var(--py)); }
+}
+
+/* ============================================================
+   Die Buehne im Ablauf
+
+   EIN Element ueber alle vier Phasen — sie faehrt ihre Lage an, statt
+   in jeder Phase neu gebaut zu werden. Vorher stand in jedem
+   Phasenblock eine eigene Buehne; beim Wechsel baute React sie neu auf
+   (rund sechzig SVG-Knoten und zwanzig Animationen auf einen Schlag),
+   und die Karte sprang in ihre neue Groesse, weil eine
+   Uebergangsangabe auf einem frischen Element nicht laeuft. Genau das
+   hat an den Uebergaengen gehakt.
+
+   Angehaengt wird oben, nicht an der Mitte: die Werte sind dieselben
+   Figma-Vertikalmasse wie im uebrigen Ablauf und verrutschen damit auf
+   einem hoeheren Geraet nicht gegen den Text, der sie umgibt (siehe
+   "Geraete-Realitaet" im Design-System).
+   ============================================================ */
+.jr { position: absolute; inset: 0; }
+.jr-stage {
+  position: absolute; left: 50%; top: 0; margin-left: -160px;
+  width: 320px; height: 260px;
+  transform-origin: 50% 50%; pointer-events: none;
+  transition: transform 0.9s var(--ease-out);
+}
+/* Laufend: gross und mittig, der Text steht darunter. */
+[data-phase='forge'] .jr-stage,
+[data-phase='install'] .jr-stage { transform: translateY(236px); }
+/* Statisch: kleiner und hoeher, sie teilt sich den Screen mit Text und Knopf. */
+[data-phase='handover'] .jr-stage { transform: translateY(128px) scale(0.74); }
+[data-phase='done'] .jr-stage { transform: translateY(77px) scale(0.58); }
+
+/* Der Text der laufenden Phase sitzt genau unter der Buehne (236 + 260
+   + 20 Abstand) — dieselbe Stelle, an der ihn die alte mittige Spalte
+   hatte. */
+.jr-run {
+  position: absolute; left: 0; right: 0; top: 516px;
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+  padding: 0 24px;
+}
+/* In den statischen Phasen laeuft der Text um die Buehne herum: der
+   Platzhalter haelt ihr die Luecke frei, sie selbst liegt darueber. */
+[data-phase='handover'] .jr-gap { height: 218px; }
+[data-phase='done'] .jr-gap { height: 168px; }
+
+/* Der Inhalt kommt nach der Buehne. Die Verzoegerung ist der Punkt:
+   erst setzt sich die Karte in Bewegung, dann baut sich auf, was um
+   sie herum steht. Beides gleichzeitig liest sich als Ruck. */
+.jr-run { animation: jrBodyUp 0.6s var(--ease-out) 0.25s backwards; }
+.jr > .flow { animation: jrBody 0.6s var(--ease-out) 0.25s backwards; }
+@keyframes jrBody { from { opacity: 0; } }
+@keyframes jrBodyUp { from { opacity: 0; transform: translateY(10px); } }
+
+/* Auf einem Screen, auf dem gelesen und entschieden wird, steht die
+   Karte still. Das Schweben ist Leben, solange etwas passiert — sobald
+   der Ablauf auf eine Entscheidung wartet, ist es nur noch Unruhe
+   unter dem Text, den der Kunde gerade liest.
+
+   ANGEHALTEN, nicht abgeschaltet: animation:none setzt die Karte auf
+   ihre Grundlage zurueck und liess sie im Moment des Phasenwechsels um
+   die Amplitude des Schwebens zurueckspringen. play-state friert sie
+   dort ein, wo sie gerade steht.
+
+   Die langsame Atmung der Netzringe bleibt — sie ist kein bewegtes
+   Objekt, sondern die Anzeige, dass die Verbindung steht. */
+[data-phase='handover'] .fg-plate svg,
+[data-phase='done'] .fg-plate svg { animation-play-state: paused; }
+/* Die Pakete dagegen abschalten: angehalten bliebe eines auf halbem
+   Weg stehen. Ihr Grundzustand ist unsichtbar. */
+[data-phase='done'] .fg-packet { animation: none; }
+
+/* Der Messer sitzt bei der Uebergabe ueber dem Knopf und nimmt dort die
+   volle Breite — er misst ja auch den ganzen Ablauf, nicht die Buehne. */
+.flow-cta .beat-meter { width: 100%; margin-bottom: 16px; }
+
+/* ============================================================
+   Bewegung reduziert
+   Alles Dauerlaufende steht still. Die Endzustaende muessen trotzdem
+   stimmen: gezeichnete Pfade sind gezeichnet, Knoten sind verbunden.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .fg-plate svg,
+  .forge.run .fg-outline, .forge.run .fg-laser,
+  .forge.run .fg-sparks circle, .forge.run .fg-wipe,
+  .forge.run .fg-cross path, .forge.run .fg-guides > *,
+  .forge.run .fg-esim-dot, .forge.run .fg-esim-sq,
+  .forge.run .fg-esim-in, .forge.run .fg-esim-e,
+  .forge.run .fg-engrave text, .forge.run .fg-print > *, .forge.run .fg-active,
+  .forge.run .fg-face,
+  .forge.run .fg-ring, .forge.run .fg-node, .forge.run .fg-ray,
+  .forge.run .fg-packet, .forge.run .fg-radar,
+  .forge.run .fg-stream circle, .forge.run .fg-dim {
+    animation: none !important;
+  }
+  .fg-plate, .fg-glow, .jr-stage { transition: none; }
+  .jr-run, .jr > .flow { animation: none !important; }
+  .fg-laser, .fg-wipe, .fg-radar { opacity: 0 !important; }
+  [data-beat='search'] .fg-ring, [data-beat='live'] .fg-ring { opacity: 0.3; }
+}

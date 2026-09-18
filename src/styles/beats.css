@@ -1,0 +1,78 @@
+/* ============================================================
+   NOURA — Takt-Text und Taktmesser
+
+   Gehoert zu components/beats.tsx und damit zu jedem mehrteiligen
+   Wartevorgang: eSIM-Ablauf und Identitaetspruefung benutzen beide
+   dieselbe Darstellung. Lag bis zum 2026-09-17 in esim-forge.css und
+   trug dort den fg-Praefix; seit es zwei Verwender gibt, gehoert es
+   keinem von beiden.
+
+   ---------------------------------------------------------------
+   TEMPO (Stand 2026-09-17)
+
+   Alles Erzaehlerische laeuft seit diesem Stand um den Faktor 1,45
+   langsamer als vorher — es wirkte hektisch. Betroffen sind die
+   Taktdauern (data/account.ts), die Animationen der beiden Buehnen
+   (esim-forge.css, ident.css), der Auftritt auf Home und die
+   Ueberblendung zwischen Screens.
+
+   NICHT betroffen und bewusst schnell geblieben: Druckreaktionen
+   (0,15–0,2s), Sheet-Bewegungen und der Onboarding-Wisch. Die folgen
+   einem Finger. Eine Rueckmeldung, die sich Zeit laesst, wirkt nicht
+   ruhig, sondern kaputt — das ist der Unterschied zwischen Tempo und
+   Traegheit.
+
+   Wer das Tempo erneut aendert, aendert beides zusammen: Taktdauer
+   UND die Animationen darin. Laufen sie auseinander, schneidet der
+   Taktwechsel das Bild mittendrin ab.
+   ---------------------------------------------------------------
+   ============================================================ */
+
+/* Buehne, Text und Messer stehen dichter zusammen als die drei Bloecke
+   der alten Aktivierung — sie sind eine Aussage, nicht drei.
+
+   Der Auftritt mit Verzoegerung: der Block, der vorher da war, ist in
+   dem Moment schon weg, und ein sofort einsetzender neuer liest sich
+   als harter Schnitt. Die kurze Luecke dazwischen macht daraus einen
+   Wechsel. */
+.act-stage.beat-stage {
+  gap: 20px; padding: 0 24px;
+  animation: beatStageIn 0.7s var(--ease-out) 0.2s backwards;
+}
+@keyframes beatStageIn { from { opacity: 0; transform: translateY(12px); } }
+
+/* Feste Hoehe: der Text wechselt mit jedem Takt seine Laenge, und ein
+   springender Block unter einer stehenden Buehne liest sich wie ein
+   Ruckeln der Buehne. */
+.beat-status { width: 100%; min-height: 78px; display: flex; justify-content: center; }
+.beat-caption { text-align: center; max-width: 290px; animation: beatIn 0.65s var(--spring) backwards; }
+@keyframes beatIn { from { opacity: 0; transform: translateY(10px); } }
+.beat-caption b { display: block; font-weight: 700; font-size: var(--fs-screen); line-height: 1.35; }
+.beat-caption p {
+  margin-top: 6px; font-weight: 500; font-size: var(--fs-label); line-height: 1.43;
+  color: var(--noura-text-muted);
+}
+
+/* Ein Balken je Takt. Die breitere Luecke (gap) trennt, was wir tun,
+   von dem, was der Kunde bzw. sein Geraet tut. */
+.beat-meter { display: flex; gap: 6px; width: 230px; max-width: 100%; }
+.beat-meter span.gap { margin-right: 16px; }
+.beat-meter span { flex: 1; height: 3px; border-radius: 2px; background: var(--noura-line); overflow: hidden; }
+.beat-meter i { display: block; width: 100%; height: 100%; background: var(--noura-accent); transform: scaleX(0); transform-origin: left; }
+.beat-meter span.done i { transform: scaleX(1); }
+/* Der laufende Balken fuellt sich ueber die echte Dauer SEINES Takts —
+   sie kommt als Variable herein, damit Bild und Balken nicht
+   auseinanderlaufen. */
+.beat-meter span.now i { transform: scaleX(1); transition: transform var(--ms) linear; }
+/* Wo niemand arbeitet, laeuft auch kein Balken — er pocht nur an. */
+.beat-meter span.wait i { transform: scaleX(0.22); animation: beatWait 2.6s var(--ease-out) infinite; }
+@keyframes beatWait { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+/* Der Messer sitzt bei einer Uebergabe ueber dem Knopf und nimmt dort
+   die volle Breite — er misst den ganzen Ablauf, nicht die Buehne. */
+.flow-cta .beat-meter { width: 100%; margin-bottom: 16px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .act-stage.beat-stage, .beat-caption, .beat-meter span.wait i { animation: none !important; }
+  .beat-meter i { transition: none; }
+}
