@@ -11,6 +11,10 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
+    /* vite/client bleibt explizit drin: ein "types"-Eintrag ersetzt die
+       Voreinstellung (alle @types/*), und ohne ihn verlieren
+       import.meta.env und die Asset-Importe ihre Typen. */
+    "types": ["vite/client", "@figma/code-connect/figma-types"],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,

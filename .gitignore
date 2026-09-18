@@ -2,6 +2,14 @@ node_modules
 dist
 dist-ssr
 *.local
+
+# Zugangsdaten — die Figma-CLI ruft dotenv.config() und liest .env aus dem
+# Arbeitsverzeichnis. *.local deckt das NICHT ab.
+.env
+.env.*
+*.env
+*token*
+!.env.example
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
