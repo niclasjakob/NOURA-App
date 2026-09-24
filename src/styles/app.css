@@ -130,27 +130,6 @@ button.sim-card:active {
 .pagination button { transition: opacity var(--dur-tap) var(--ease-out); }
 .tabs button:active, .pagination button:active { opacity: var(--press-dim); }
 
-/* Bewegung reduziert — onboarding.css faengt die Daueranimationen ab,
-   hier kommen die Uebergaenge dazu: Screenwechsel, Sheets, Karussell,
-   Aufklappen. */
-@media (prefers-reduced-motion: reduce) {
-  .screen, .sheet, .sheet-backdrop, .plan-track, .tabs .pill,
-  .usage-panel, .toast, .fab-stack .btn, .bubble, .section-toggle svg,
-  .cycle-bar i, .act-bar i, .opt,
-  button.sim-card, .avatar-btn, .section-toggle, .magic,
-  .opt-btn, .disclosure-btn, .list-row, .icon-plain,
-  .tabs button, .pagination button,
-  .spark-line, .spark-area, .allow-arc {
-    transition-duration: 0.01ms !important;
-  }
-  .bubble, .opt-extra, .opt.on .opt-mark, .field.invalid input, .field-err {
-    animation: none !important;
-  }
-  /* Die Endzustaende muessen trotzdem stimmen — ohne Uebergang, aber
-     vollstaendig. */
-  .spark-line { stroke-dashoffset: 0; }
-  .spark-area { opacity: 1; }
-}
 
 /* ============================================================
    2 — Verbrauch mit Zeitbezug
@@ -630,7 +609,12 @@ button.sim-card:active {
 .event-avatar {
   flex-shrink: 0; width: 44px; height: 44px; border-radius: var(--noura-radius-pill);
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(140deg, var(--noura-accent), #6d459a);
+  /* Ein Verlauf, und das ist die Aurora. Hier stand ein zweiter
+     (Akzent → #6d459a) auf einem Monogramm von 44px — dazu ein
+     Aurora-Ton als Flaeche, obwohl die Aurora-Farben ausdruecklich nur
+     im Verlauf vorkommen. Das Monogramm ist ein Bedienelement-Nachbar,
+     also traegt es Glas. */
+  background: var(--noura-glass-strong);
   font-weight: 700; font-size: var(--fs-label); line-height: 1; letter-spacing: 0.02em;
 }
 .event-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -699,9 +683,6 @@ button.sim-card:active {
 }
 .drop-when { margin-top: 4px; }
 
-@media (prefers-reduced-motion: reduce) {
-  .event-live i { animation: none; }
-}
 
 /* ============================================================
    5 — Verfeinerungen am Kaufablauf
@@ -717,7 +698,127 @@ button.sim-card:active {
   padding-top: calc(54px + 12px + 64px);
 }
 .plan-header { position: static; padding: 0 24px 12px; flex-shrink: 0; z-index: 10; }
-.plan-track-wrap { position: static; flex: 1; min-height: 0; }
+
+/* ---- Vergleichen statt wischen (2026-09-22) ----
+   Der Screen hatte den ganzen Inhalt im Karussell: zwei Spalten, jede
+   mit Karte, Tempozeile und einer sechs- bzw. siebenzeiligen
+   Leistungsliste, von der VIER Zeilen in beiden Tarifen identisch
+   waren. Wer die 100 gegen die 300 Mbit/s halten wollte, musste
+   wischen, sich eine Zahl merken und zurueckwischen.
+
+   Jetzt wischt nur die Karte. Sie ist der Gegenstand, den man waehlt —
+   alles darunter steht fest und zeigt beide Tarife nebeneinander.
+   Gescrollt wird vertikal in EINEM Behaelter, nicht in jeder Karte
+   einzeln. */
+.plan-scroll {
+  flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none;
+  padding-bottom: var(--plan-cta-space);
+}
+.plan-scroll::-webkit-scrollbar { display: none; }
+/* Kein `flex: 1` mehr: die Bahn ist jetzt so hoch wie die Karte, und
+   was darunter kommt, scrollt mit. `overflow: hidden` haelt die
+   zweite Karte weiterhin ausserhalb des Bildes. */
+.plan-track-wrap { position: static; flex: none; overflow: hidden; }
+.plan-slide { padding: 16px 24px 0; }
+
+/* Die Positionierung des Tarifs, direkt unter seiner Karte. */
+.plan-desc {
+  margin-top: 12px;
+  font-weight: 600; font-size: var(--fs-label); line-height: 1.45;
+  color: var(--noura-text-muted);
+}
+
+/* ---- Die Vergleichstabelle ---- */
+.plan-diff-sec { padding: 0 24px; margin-top: 20px; }
+.plan-shared-sec { padding: 0 24px; margin-top: 32px; }
+.plan-diff-sec h2, .plan-shared-sec h2 {
+  font-weight: 700; font-size: var(--fs-title); line-height: 1.35; margin-bottom: 12px;
+}
+/* Erbt `.card` und dunkelt den Grund zusaetzlich ab — siehe
+   --glass-refract. Ohne das stehen die Werte ueber der korallenen
+   Aurora-Zone bei 2,90:1. */
+.plan-diff {
+  padding: 16px;
+  backdrop-filter: var(--glass-refract); -webkit-backdrop-filter: var(--glass-refract);
+}
+
+/* Zwei gleich breite Wertspalten. Das Merkmal steht als Zeile
+   darueber und nicht in einer dritten Spalte: auf 345px blieben sonst
+   je rund 100px fuer Werte wie "Tools, Lernvorteile & Co-Creations",
+   und die Zeile waere vierzeilig geworden. */
+.plan-diff .diff-heads,
+.plan-diff .diff-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.plan-diff .diff-heads {
+  margin-bottom: 4px;
+  font-weight: 700; font-size: var(--fs-caption); line-height: 1.333;
+  letter-spacing: 0.04em; color: var(--noura-text);
+}
+.plan-diff .diff-heads span { padding: 0 10px; opacity: 0.55; }
+/* Die Spaltenueberschrift der Wahl steht voll da, die andere
+   zurueckgenommen. Deckkraft statt einer zweiten Textfarbe: so bleibt
+   es derselbe Weisston, und die Stufe ist auf jedem Grund dieselbe. */
+.plan-diff .diff-heads .on { opacity: 1; }
+
+/* Weiss wie die Werte, aber 12px/500 gegen 14px/600 — die Stufe
+   traegt Groesse und Schnitt. Gedaempft waere sie auf dieser Karte
+   nicht lesbar (3,41:1), und ein Merkmalsname ist Text, den man lesen
+   muss, bevor man die Zeile versteht. */
+.plan-diff dt {
+  grid-column: 1 / -1;
+  margin-top: 12px; padding-bottom: 4px;
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
+  color: var(--noura-text);
+}
+/* BEIDE Werte stehen in Weiss. Der nicht gewaehlte in `text-muted` zu
+   daempfen lag nahe — und war nachgerechnet nicht haltbar: auf dieser
+   Karte kommt `text-muted` ueber der korallenen Zone auf 2,09:1 und
+   auch mit abgedunkeltem Grund nur auf 3,41:1. Ueber 4,5:1 hebt es
+   dort keine Abdunklung, weil Vordergrund und Grund gemeinsam
+   nachdunkeln.
+
+   Fuer eine Vergleichstabelle ist das ohnehin die richtige Antwort:
+   BEIDE Spalten sollen gelesen werden. Die Wahl traegt die Flaeche
+   unter dem Wert, nicht seine Farbe — und damit nicht die Farbe
+   allein, was `accessibility.md` fuer Bedeutungstraeger verlangt.
+   `glass-raised` ist die Stufe fuer eine Flaeche IN einer Karte; ein
+   Rand waere hier falsch, der heisst "bedienbar". */
+.plan-diff dd {
+  padding: 8px 10px; border-radius: var(--noura-radius-tile);
+  font-weight: 600; font-size: var(--fs-label); line-height: 1.357;
+  color: var(--noura-text);
+  transition: background var(--dur-quick) var(--ease-out);
+}
+.plan-diff dd.on { background: var(--noura-glass-raised); }
+
+/* Was die Zahl im Alltag heisst.
+   Die Zahl stand hier zuerst in Akzentrot — gemessen 3,49:1 auf dem
+   Grund, den sie tatsaechlich hat. `accessibility.md > Vision` verlangt
+   4,5:1 bis 17pt, und 12px Fett faellt nicht unter die Ausnahme fuer
+   grossen Text (die beginnt bei 14pt fett ≈ 18,6px). Der Skill sagt
+   dasselbe: #e15055 ist auf dem Canvas "nur als Icon tragfaehig".
+   Die Betonung traegt jetzt der Schnitt (700 gegen 500) — der
+   Unterschied ist ohnehin schon in der Tabelle darueber gefaerbt
+   markiert, hier zaehlt die Lesbarkeit. */
+.plan-speed-note {
+  margin-top: 12px;
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.45;
+  color: var(--noura-text-muted);
+}
+.plan-speed-note b { font-weight: 700; color: var(--noura-text); }
+
+/* ---- Das Gemeinsame ----
+   Leise: kleiner Punkt statt des 24px-Icons der Leistungsliste, enge
+   Zeilen. Es ist die Fussnote der Entscheidung, nicht ihr Inhalt. */
+.plan-shared { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.plan-shared li {
+  display: flex; align-items: baseline; gap: 10px;
+  font-weight: 500; font-size: var(--fs-label); line-height: 1.45;
+  color: var(--noura-text-muted);
+}
+.plan-shared li::before {
+  content: ''; flex-shrink: 0; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--noura-text-faint); transform: translateY(-3px);
+}
 
 /* Der Preis gehoert an den Reiter: sonst muss man zwischen den
    Karten wischen, um zwei Zahlen zu vergleichen. */
@@ -725,16 +826,6 @@ button.sim-card:active {
 .tabs .t-name { font-weight: 600; font-size: var(--fs-label); line-height: 1.357; }
 .tabs .t-price { font-weight: 500; font-size: var(--fs-caption); line-height: 1.25; opacity: 0.85; }
 
-/* Was die Datenrate im Alltag heisst — die Zahl allein sagt es nicht. */
-.plan-speed {
-  display: flex; align-items: baseline; gap: 10px; margin-top: 16px;
-  padding: 12px 16px; border-radius: var(--noura-radius-tile);
-  background: var(--noura-glass);
-  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card));
-}
-.plan-speed + .features-block { margin-top: 28px; }
-.plan-speed b { font-weight: 700; font-size: var(--fs-label); line-height: 1.357; color: var(--noura-accent); white-space: nowrap; }
-.plan-speed span { font-weight: 500; font-size: var(--fs-caption); line-height: 1.4; color: var(--noura-text-muted); }
 
 /* Der Scrim gehoert unter den Knopf, nicht auf ihn.
    In global.css trug .plan-cta selbst die Maske — und eine Maske gilt

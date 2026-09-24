@@ -155,7 +155,8 @@ curl -s -H "X-Figma-Token: $FIGMA_ACCESS_TOKEN" \
 
 | Screen | Node-ID | Referenzbild |
 |---|---|---|
-| Intro | `1330:1947` | `reference/01-intro.webp` |
+| Intro | `1700:3984` | ab 2026-09-21 massgeblich — schlanke Fassung |
+| Intro (alt) | `1330:1947` | `reference/01-intro.webp` — Wortmarke + Lockup |
 | Attributes (Onboarding) | `1330:1956` | `reference/02-attributes.webp` |
 | Select Plan / Creator | `1330:1960` | `reference/03-plan-creator.webp` |
 | Select Plan / Consumer | `1330:1984` | `reference/04-plan-consumer.webp` |
@@ -217,6 +218,10 @@ Schnitte: 500 (Medium), 600 (Semibold), 700 (Bold).
 | Screen-Titel | 700 | 24px | 34px | 5× |
 | Section | 600 | 20px | 27px | 8× |
 
+> **`--fs-hero` (40px) ist am 2026-09-21 entfallen.** Die Stufe gab es fuer
+> genau einen Zweck — die korallene Wortmarke auf dem Intro — und der ist
+> weg. Die Wortmarke lebt weiter auf Home, dort in 16px.
+
 **Poppins Bold** ausschließlich für die Wortmarke "NOURA" (13.3px im
 Logo-Lockup). **SF Pro** nur in der iOS-Statusleiste — im nativen Build
 zeichnet iOS die echte Leiste, dort entfällt sie.
@@ -261,10 +266,10 @@ Aus Figma exportiert, liegen unter `src/assets/`. Insgesamt 112 KB.
 
 | Datei | Größe | Herkunft (Node) | Zweck |
 |---|---|---|---|
-| `img/aurora-bg.webp` | 16 KB | `1330:1780` | Hintergrundverlauf, 1179×2556 (@3x) |
+| `img/aurora-bg.png` | 238 KB | `1330:1780` | Hintergrundverlauf, 393×852 (@1x, verlustfrei — der 150px-Weichzeichner traegt kein Detail, das @3x braeuchte; das alte 16-KB-WebP zeigte Blockartefakte und Streifen) |
 | `img/avatar-marcel.webp` | 6 KB | `1330:1860` | Profilbild Home |
-| `img/connected-by-vodafone.png` | 9 KB | `1330:1951` | Logo-Lockup — **seit 2026-09-17 ungenutzt**, siehe unten |
-| `img/noura-mark.svg` | 0,6 KB | erzeugt | Zeichen auf dem Intro, aus `build-icon.py` |
+| `img/connected-by-vodafone.png` | 9 KB | `1330:1951` | Logo-Lockup auf dem Intro, 61px breit |
+| `img/noura-app-icon.svg` | 6,3 KB | erzeugt | App-Icon auf dem Intro, aus `build-icon.py` |
 | `fonts/GeneralSans-{500,600,700}.woff2` | 67 KB | Fontshare | Schrift |
 
 **Warum Bilder statt CSS:** Der Aurora-Verlauf besteht in Figma aus vier
@@ -304,37 +309,145 @@ python3 tools/app-icon/build-icon.py --mark wordmark  # gesetztes N
 | `…-tinted.png` | getoent (iOS 18) — Graustufen auf **transparentem** Grund, iOS faerbt selbst |
 | `public/apple-touch-icon.png`, `public/favicon.png` | Web, aus der hellen Variante skaliert |
 
-### Startbildschirm
+**Die Silhouette ist eine Superellipse, kein `border-radius`.** Die iOS-Kachel
+hat keine Kreisboegen in den Ecken, sondern eine durchgehende Kruemmung;
+`|x|^n + |y|^n = 1` mit n=5 trifft sie so genau, dass der Unterschied zum
+22,37-%-Radius bei 90 % der halben Kantenlaenge unter einem Zehntelpixel auf
+1024 liegt (nachgerechnet, nicht geschaetzt). `squircle_path()` in
+`build-icon.py` tastet sie mit 400 Punkten ab — bei der Punktzahl bleibt die
+Sehnenabweichung ebenfalls unter 0,1px, und der Pfad bleibt lesbar.
 
-Dieselbe Marke, aber ein **eigener Verlauf** — und das ist kein Schmuck,
-sondern Notwendigkeit. Das Storyboard zieht ein quadratisches Bild mit
-`scaleAspectFill` auf; auf einem 1206x2622-Schirm bleiben davon die **mittleren
-46 % der Breite** stehen. Der diagonale Icon-Verlauf verliert dabei genau die
-Ecken, aus denen er seine Farbe bezieht. Der Splash-Verlauf laeuft deshalb
-fast senkrecht (170°), und beide Radialen sitzen innerhalb des Streifens.
+Gebraucht wird sie erst, seit der Intro-Screen das ganze Icon zeigt: in den
+PNGs fuer iOS schneidet das System selbst zu, im SVG fuer die App nicht.
 
-| Datei | Zweck |
+### Startbildschirm (Stand 2026-09-21)
+
+Er zeigt **den Intro-Screen in seinem Anfangszustand** — den Aurora-Hintergrund
+und darauf das App-Icon, sonst nichts. Das ist der ganze Trick an der nahtlosen
+Uebergabe: das System zoomt beim Tippen das Icon auf, der Startbildschirm
+faengt es an einer bestimmten Stelle auf, und der Screen, der ihn abloest,
+zeigt es an genau derselben. Es bewegt sich nichts, weil es nichts zu bewegen
+gibt.
+
+Bis zum 2026-09-18 stand hier ein eigener, gesaettigter Verlauf mit grossem
+weissen Zeichen — schoen fuer sich, aber er hatte mit dem Screen dahinter
+nichts zu tun, und der Schnitt war entsprechend hart.
+
+| Bildsatz | Datei | Inhalt |
+|---|---|---|
+| `Splash.imageset` | `splash.jpg` | Hintergrund, 1179x2556 (@3x des 393x852-Rahmens) |
+| `SplashIcon.imageset` | `splash-icon.png` | das App-Icon mit Alphakanal, 512px |
+
+**Der Hintergrund kommt aus den App-Stilen selbst.** `build-icon.py` laedt
+`global.css` und `onboarding.css`, baut die Markup-Zeilen des Screens nach
+(`.bg-grad`, `.bg-noise`, `.aurora-flow.tone-coral`) und laesst Chrome den
+393x852-Rahmen bei dreifacher Aufloesung fotografieren. Ein nachgebauter
+Verlauf waere ein zweiter Stand, und der Unterschied faellt genau dann auf,
+wenn der Startbildschirm in den Screen uebergeht. Die driftenden Farbwolken
+stehen beim Rendern still (`animation-play-state: paused`), damit ihr
+0%-Zustand im Bild landet — derselbe, mit dem der Screen beginnt.
+
+**Das Icon liegt bewusst nicht im Bild**, sondern als eigene Ebene im
+Storyboard. Nur so laesst sich seine Groesse an die Bildschirmhoehe binden:
+
+```
+Hoehe   = 0.176 * Bildschirmhoehe    (150px auf dem 852er Rahmen)
+Mitte y = 0.472 * Bildschirmhoehe    (y = 402)
+```
+
+Dieselben zwei Zahlen stehen an **drei** Stellen und muessen zusammen
+geaendert werden, sonst springt das Icon beim Start:
+
+| Stelle | Form |
 |---|---|
-| `ios/.../Splash.imageset/splash-light.jpg` | Light Mode — gesaettigt wie das Icon |
-| `…/splash-dark.jpg` | Dark Mode — derselbe Verlauf, 34 % abgedunkelt |
+| `src/styles/global.css` | `--intro-icon`, `--intro-cy` (gerechnet aus `--screen-h`) |
+| `tools/app-icon/build-icon.py` | `ICON_FRAC`, `ICON_CY` |
+| `ios/.../LaunchScreen.storyboard` | Constraint-Multiplikatoren `0.176` und `0.472` |
 
-Drei Punkte, die beim Nachbauen Zeit kosten:
+`build-icon.py` sieht beim Bauen in den beiden anderen Dateien nach und
+meldet eine Abweichung (`check_geometry`). Das kostet zehn Zeilen und faengt
+genau den Fehler, den man sonst erst im Mitschnitt sieht — im Screenshot
+sieht ein um 10pt verschobenes Icon voellig in Ordnung aus.
 
-1. **Die erste Background-Ebene liegt oben.** Der Abdunkler muss vor die
-   Farbebenen, angehaengt ist er unsichtbar — dann sind hell und dunkel
-   byte-identisch, und genau so ist es hier beim ersten Lauf passiert.
-2. **JPEG statt PNG.** Der 2732er Verlauf kostet als PNG 2,4 MB, als JPEG
-   knapp 300 KB. Transparenz braucht der Startbildschirm nicht.
-3. **Ein Eintrag je Erscheinungsbild, ohne `scale`** ("Single Scale") statt
-   der drei identischen 1x/2x/3x-Kopien, die Capacitor anlegt.
+Warum Anteile und nicht Pixel: `scaleAspectFill` skaliert das
+Hintergrundbild mit der **Bildschirmhoehe**. Ein ins Bild gebackenes Icon
+saesse nur auf 393x852 richtig und waere auf einem iPhone 16 Pro (874pt)
+rund 10pt zu hoch — sichtbar als Ruck im Moment der Uebergabe. Auch das CSS
+rechnet deshalb in Anteilen: `--screen-h` ist auf dem Geraet `100dvh` und im
+Browser die 852px des Rahmens.
 
-Pruefen laesst sich das Ergebnis nicht per Screenshot — der Startbildschirm
-steht zu kurz. Stattdessen im gebauten Katalog nachsehen:
+**Ein Bild, kein Hell/Dunkel-Paar.** Die App ist dauerhaft dunkel; ihr erster
+Screen sieht in beiden Systemeinstellungen gleich aus, also waere die zweite
+Datei eine Kopie. (Das App-Icon behaelt seine drei Varianten — das ist der
+Home-Screen, nicht die App.)
+
+**JPEG fuer den Hintergrund, PNG fuer das Icon.** Der Verlauf kostet als JPEG
+220 KB statt Megabytes, und harte Kanten, an denen JPEG klingeln wuerde, hat
+er keine — die hat nur das Icon, und das liegt daneben.
+
+### Die Luecke zwischen Startbildschirm und Screen
+
+Hier stand frueher, das Ergebnis lasse sich nicht per Screenshot pruefen, der
+Startbildschirm stehe zu kurz. Das stimmt fuer Screenshots — und hat verdeckt,
+dass er **gar nicht vorkam**. Am 2026-09-18 gemessen (iPhone 17, Mitschnitt
+mit `simctl recordVideo`, Einzelbilder alle 16ms): zwischen Systemanimation
+und erstem Frame des Webviews lagen **rund 500ms flache Hintergrundfarbe**.
+
+Der Grund ist Bauart, kein Fehler: iOS nimmt den Startbildschirm weg, sobald
+das Fenster steht — der Webview laedt danach noch. Drei Schichten schliessen
+das jetzt, von aussen nach innen:
+
+1. **Deckschicht (`SceneDelegate` in `AppDelegate.swift`).** Die App legt den
+   Startbildschirm selbst noch einmal ueber das Fenster. Kein Nachbau: sie
+   instanziiert `LaunchScreen.storyboard`, also dieselben Bilder und
+   Constraints.
+2. **Vorschau (`index.html`).** Derselbe Anfangszustand als Markup, mit den
+   Klassen des Screens — gezeichnet, bevor das erste Skript laeuft. Im Build
+   haengt das Stylesheet als `<link>` im Kopf und blockiert das Zeichnen, die
+   Vorschau ist also ab dem ersten Frame da. `App.tsx` nimmt sie weg, sobald
+   der echte Screen steht.
+3. **Hintergrundfarbe (`capacitor.config.ts`).** `#513f6e`, der Mittelwert des
+   Startbildschirms — der Rest, der uebrig bleibt, wenn die ersten beiden
+   ausfallen. Voreingestellt waere Weiss.
+
+**Das Signal ist `window.nouraPainted`, nicht `isLoading`.** Der Unterschied
+ist gemessen und betraegt rund 350ms: `isLoading` faellt, waehrend der Webview
+noch nichts im Bild hat. Der erste Versuch blendete darauf ab und zeigte damit
+exakt die Luecke, die er schliessen sollte — im Mitschnitt fuer drei
+Einzelbilder ein vollstaendig leerer Schirm. Jetzt setzt ein Inline-Skript in
+`index.html` die Marke nach zwei `requestAnimationFrame` (der zweite laeuft
+erst nach dem Zeichnen), und Swift fragt sie alle 40ms ab. Nach spaetestens
+zwei Sekunden faellt die Deckschicht in jedem Fall — eine haengende
+Deckschicht wuerde die App unbedienbar machen.
+
+**Der Intro-Screen animiert sein Icon nicht.** Es steht schon da. Bewegung
+tragen die Stufen darunter: Wortmarke Buchstabe fuer Buchstabe, dann die
+Knoepfe, zuletzt die Vorfuehr-Abkuerzung.
+
+### Pruefen
+
+Im gebauten Katalog stehen die Bilder:
 
 ```bash
-xcrun assetutil --info <DerivedData>/App.app/Assets.car | grep -A2 Splash
-# erwartet: zwei Eintraege, "(default)" und "UIAppearanceDark"
+xcrun assetutil --info <DerivedData>/App.app/Assets.car | grep -E "Splash"
+# erwartet: Splash 1179x2556 und SplashIcon 512x512, je ein "(default)"
 ```
+
+Der Start selbst braucht einen Mitschnitt. `simctl recordVideo` schreibt nur
+bei Bildaenderung, jedes Bild darin ist also ein echter Wechsel:
+
+```bash
+xcrun simctl io <SIM> recordVideo --codec=h264 --force start.mov &
+xcrun simctl launch <SIM> com.niclasjakob.noura
+# ... kurz warten, dann: pkill -INT -f recordVideo
+```
+
+Danach die Bilder abtasten statt sie zu zaehlen: fuenf Punkte je Bild (vier
+Ecken, Icon-Mitte) und die **Spanne** zwischen ihnen. Eine Spanne nahe null
+heisst flache Flaeche — also Hintergrundfarbe statt Bild, und genau das ist
+der Fehler, nach dem man sucht. Ein Mitschnitt-Abtaster in Swift
+(`AVAssetReader`) steht in der Sitzung vom 2026-09-21; `ffmpeg` ist auf dieser
+Maschine nicht installiert, `AVFoundation` ueber `xcrun swift` schon.
 
 ### Behoben: UIScene-Adoption (2026-09-17)
 
@@ -361,29 +474,69 @@ Behoben mit zwei Eingriffen:
 Geprueft: Build ohne Fehler, App laeuft im Simulator (iPhone 18 Pro, iOS 27)
 und zeigt den Intro-Screen.
 
-### Entschieden: der Intro traegt das Zeichen, nicht das Vodafone-Lockup
+### Entschieden: der Intro traegt ein Markenelement, nicht drei
 
-**Gilt seit 2026-09-17**, von Niclas beauftragt. Der Intro-Screen zeigte bis
-dahin zwei Logos nebeneinander: den Schriftzug "NOURA" und das Bild
-`connected-by-vodafone.png`. Beide sind ersetzt durch **das Zeichen ueber der
-Wortmarke** — das Logo, das auch auf dem App-Icon steht.
+**Gilt seit 2026-09-21**, von Niclas beauftragt, Vorlage
+[Figma 1700:3984](https://www.figma.com/design/6DK1NP0pdeuesOy14tl4YE/NOURA-Concept?node-id=1700-3984).
+Der Screen zeigt jetzt **das App-Icon, darunter das Vodafone-Lockup** — und
+sonst nichts.
 
-Damit ist die Abweichung **#5 der Liste unten ueberholt**: dort steht noch
-"General Sans + echtes Lockup-Bild" als Sollzustand. Das galt, solange Figma
-die Vorlage war; hier ist die Vorlage bewusst verlassen.
+Die Vorgeschichte in zwei Zeilen, weil sie erklaert, warum hier schon dreimal
+etwas anderes stand:
 
-- Das Zeichen kommt aus `src/assets/img/noura-mark.svg` — **erzeugt**, nicht
-  gepflegt: `build-icon.py` schreibt es zusammen mit den Icons, damit App und
-  `brand/` nicht auseinanderlaufen.
-- **116px, nicht 96.** Das Zeichen steht in Weiss, die Wortmarke in Koralle;
-  bei gleicher Hoehe traegt die Koralle mehr Gewicht und das Zeichen wirkt wie
-  eine Beigabe.
-- `.intro-center` steht auf **`top: 334px`** statt 399: der Block ist jetzt
-  184px hoch (116 + 14 + 54) statt 54px. 334 = 426 (alte optische Mitte)
-  minus die halbe neue Hoehe. Wer die Groessen anfasst, rechnet das nach —
-  sonst wandert die Marke auf dem Screen.
-- `connected-by-vodafone.png` bleibt im Repo, wird aber nirgends mehr
-  geladen. Wer das Lockup zurueckholt, findet es dort.
+| Stand | Was auf dem Intro stand |
+|---|---|
+| bis 2026-09-17 | Wortmarke "NOURA" 40px + Vodafone-Lockup nebeneinander |
+| 2026-09-17 | das nackte weisse Zeichen ueber der Wortmarke, kein Lockup |
+| **seit 2026-09-21** | **das App-Icon, darunter das Lockup, keine Wortmarke** |
+
+Was den Ausschlag gab: eine korallene 40px-Wortmarke direkt unter einem Icon,
+das dasselbe N schon zeigt, sagt den Namen zweimal — einmal laut und einmal
+sehr laut. Das Icon traegt allein, das Lockup nennt den Absender, fertig. Die
+Knoepfe sind geblieben, wo sie in Figma immer standen (y=666 und y=743).
+
+**Damit ist Abweichung #5 der Liste unten wieder in Kraft**: das echte
+Lockup-Bild ist der Sollzustand, `connected-by-vodafone.png` wird wieder
+geladen. Die Zeile im Asset-Register, es sei „ungenutzt", galt vier Tage.
+
+Die Maße, alle aus `1700:3984`:
+
+| | Wert |
+|---|---|
+| Icon | 150 x 150, Mitte y = 402 |
+| Abstand Icon zu Lockup | 30px |
+| Lockup | 61 x 18 bei y = 507 |
+| Knoepfe | unveraendert y = 666 / 743 |
+
+- **Icon-Groesse und -Hoehe stehen als Anteil der Bildschirmhoehe**, nicht in
+  Pixeln: `--intro-icon` = 17,6 %, `--intro-cy` = 47,2 %. Der Grund steht
+  unter „Startbildschirm" — der native Startbildschirm skaliert mit der
+  Hoehe, feste Pixel saessen nur auf 393x852 richtig. Verankert ist die
+  **Icon-Mitte**, nicht der Block: was darunter steht, darf seine Hoehe
+  aendern, ohne die Uebergabe zu verschieben.
+- **Das Lockup wird ueber die Breite gesetzt (61px), nicht ueber die Hoehe.**
+  Das Bild im Repo traegt 4px Rand je Seite; ueber die Breite gemessen deckt
+  sich seine Zeichnung mit der aus Figma (58 x 17,5), ueber die Hoehe waere
+  sie 8 % zu klein.
+- **Das Icon ist die Ueberschrift.** `<h1>` mit `alt="NOURA"` — ohne die
+  Wortmarke waere der Name sonst nirgends mehr ausgesprochen. Das Lockup
+  traegt `alt="Connected by Vodafone"`.
+- **Das Icon animiert nicht ein.** Es steht vom Startbildschirm her schon da.
+  Bewegung tragen Lockup (0,24s), Knoepfe (0,40s / 0,52s) und die
+  Vorfuehr-Abkuerzung (0,64s). Die Folge ist dabei von 1,66s auf 1,24s
+  zusammengerueckt: mit der Wortmarke ist ihr Buchstabenaufbau entfallen, und
+  der war es, der alles dahinter nach hinten geschoben hat.
+- **Entfallen:** `--fs-hero`, die Klasse `.intro-logo`, die Keyframes
+  `letterIn` und `src/assets/img/noura-mark.svg`. Alles hing allein an der
+  Wortmarke. Der Vektor des nackten Zeichens liegt weiter in `brand/`.
+
+**Was bewusst von der Vorlage abweicht:** das Icon selbst. Figma zeigt in
+diesem Knoten einen aelteren, dunkleren Export mit gewoehnlichem
+`border-radius`; im Code steht das echte App-Icon mit der
+Superellipsen-Silhouette (siehe „Entschieden: das Icon ist lauter als die
+App", 2026-09-17). Das ist kein Versehen, sondern die Bedingung dafuer, dass
+der Startbildschirm nahtlos in den Screen laeuft — es muss dasselbe Bild sein,
+das iOS beim Tippen aufzieht.
 
 ### Entschieden: Wortmarke auf Home, ohne Vodafone
 
@@ -414,6 +567,7 @@ Stand entsteht:
 | `brand/noura-icon-dark.svg` | volle Kachel, dunkler Ton |
 | `brand/noura-icon-tinted.svg` | Graustufen-Zeichen, transparent |
 | `brand/noura-mark.svg` | nur das Zeichen, transparent |
+| `brand/noura-app-icon.svg` | die volle Kachel mit Silhouette — die Fassung, die Intro und Startbildschirm zeigen |
 
 Der bold-Grund liegt dafuer als Daten in `BOLD_LAYERS` vor (Ebenen mit
 Mitte, Radien und Stops), aus denen sowohl das CSS fuer die Renderei als
@@ -443,7 +597,7 @@ linear-gradient(150deg, #f0455c 0%, #b32d7d 48%, #5b2bb0 100%)
 Drei Gruende gegen die naheliegenderen Wege:
 
 - **Nicht das Aurora-Bild aufdrehen.** `filter: saturate(2.3)` auf
-  `aurora-bg.webp` kippt ins Blau und bandet in der Mitte. Der nachgebaute
+  `aurora-bg.png` kippt ins Blau und bandet in der Mitte. Der nachgebaute
   Verlauf ist kontrollierbar — hier ausnahmsweise CSS statt Bild, weil es
   ein 1024er Feld ist und keine Bildschirmflaeche.
 - **Kein volles Korallenfeld**, obwohl es die lauteste Variante waere: NOURA
@@ -628,15 +782,71 @@ trägt `isolation: isolate`. Tokens: `--lg-tint`, `--lg-tint-pressed`,
 > Schlagschatten". Das galt bis zu dieser Entscheidung und ist für Buttons
 > jetzt überholt — für Karten, Sheets und Chips gilt es weiter.
 
-Getragen von `.btn` (alle Varianten), `.btn.icon-btn` und `.sheet-close`.
-**Nicht** von Listenzeilen, Segment-Schaltern (`.demo-switch`, `.opt-btn`)
-oder Tabs — Apple setzt das Material für schwebende Bedienelemente ein,
-nicht für Inhalt in der Fläche.
+Getragen von `.btn` (alle Varianten), `.btn.icon-btn`, `.sheet-close` und —
+seit dem 2026-09-22 — der **Pille der Tarifleiste** (`.tabs .pill`, siehe
+"Entschieden: die Tarifleiste trägt eine Linse"). **Nicht** von Listenzeilen
+und nicht von den übrigen Segment-Schaltern (`.demo-switch`, `.opt-btn`) —
+Apple setzt das Material für schwebende Bedienelemente ein, nicht für Inhalt
+in der Fläche.
+
+> Hier stand bis zum 2026-09-22 "nicht … oder Tabs". Das war zu grob: es
+> meinte Reiter **im Inhalt**. Die Tarifleiste steht im angehefteten Kopf
+> über der scrollenden Fläche, also in der funktionalen Schicht.
+
+### Entschieden: die Tarifleiste trägt eine Linse
+
+**Gilt seit 2026-09-22**, von Niclas beauftragt. Die Wahl im Tarif-Segment
+(`.tabs .pill`) trägt Liquid Glass; die Spur (`.tabs`) trägt es **nicht**.
+
+Das ist die ganze Bauart, und sie ist nicht verhandelbar: eine Linse, die über
+einer Mulde reist — genau das Bild, das iOS 26 im Segment zeichnet. Zwei
+Glasflächen übereinander wären nur zweimal hell.
+
+> `liquid-glass.md › Review checklist`: "Glass stacked on glass blurs the
+> hierarchy the material exists to create."
+
+Die Spur bekam dafür eine Kante nach innen (`inset 0 1px 2px rgba(0,0,0,.22)`)
+— eine Vertiefung fängt oben Schatten, keine Reflexion.
+
+**Neuer Token `--lg-refract-dim`** (`brightness(0.68)` statt `1.06`). Zwei
+Beugungswerte sind hier das Modell, kein Versehen: Apples Material richtet
+seine Luminanz nach dem, was darunter liegt. Der Knopf steht über dem fast
+schwarzen Verlauf der CTA-Leiste, die Linse mitten auf der Aurora.
+
+> `color.md › Liquid Glass color`: "adapt between a light and a dark
+> appearance in response to the content beneath them".
+
+0.68 ist dabei **keine neue Zahl** — es ist derselbe Wert wie in
+`--glass-refract`, und aus demselben Grund: über der Aurora macht eine
+Weißfüllung den Grund heller, als er ohne sie wäre.
+
+Gemessen am 2026-09-22 (Chrome-Rendering des echten Kopfs auf `aurora-bg.png`,
+Tab-Band y=201, Pixel abgetastet — nicht geschätzt), **Weiß auf der Linse**:
+
+| Position | flach (vorher) | mit `1.06` | mit `0.68` |
+|---|---|---|---|
+| CONNECT (links) | 4,47:1 | 4,18:1 | **5,45:1** |
+| CREATE (rechts) | **3,74:1** | 3,38:1 | **4,68:1** |
+
+**Die rechte Pille stand schon vor dem Material unter der Schwelle** — der
+Aurora-Verlauf ist dort heller. Das Material hat den Fund sichtbar gemacht,
+nicht verursacht; mit `0.68` tragen jetzt beide Positionen.
+
+Der Kantenreflex zahlt sich zusätzlich aus: die Grenze Linse↔Spur steht auf
+5,2:1 (links) und 7,1:1 (rechts) gegen 1,9:1 vorher — weit über den 3:1, die
+`accessibility.md` für nicht-textliche Ränder verlangt. Die reine
+Flächendifferenz sinkt dabei (1,35:1 links), das ist bewusst: bei Glas trägt
+die Kante die Form, nicht die Füllung.
+
+**Offen:** das Etikett des *nicht* gewählten Reiters steht mit
+`--noura-text-muted` auf der Spur bei **4,18:1** — unter 4,5:1 bei 14px/600.
+Unberührt von dieser Änderung und älter als sie. Niclas entscheidet, ob die
+Spur dunkler wird oder das Etikett heller.
 
 ### Aurora-Hintergrund
 
 ```css
-background: #232452 url('/src/assets/img/aurora-bg.webp') center/cover no-repeat;
+background: #232452 url('/src/assets/img/aurora-bg.png') center/cover no-repeat;
 ```
 
 ---
@@ -652,7 +862,7 @@ Referenz, was jeweils die Fehlerquelle war:
 | 2 | SIM-Karte | Glaskarte, drei Farbverläufe | einheitlich dunkel, abgeschnittene Ecke |
 | 3 | Verbrauchs-Icons | weiß | Akzentrot `#e15055` |
 | 4 | Profilbild | leerer CSS-Kreis | echtes Foto |
-| 5 | Intro-Logo | Poppins-Text + CSS-Kreis | General Sans + echtes Lockup-Bild |
+| 5 | Intro-Logo | Poppins-Text + CSS-Kreis | App-Icon + echtes Lockup-Bild (Stand 2026-09-21) |
 | 6 | Onboarding-Karte | CSS-Perspektive | 3D-Karte als Bild |
 | 7 | Hintergrund | 4 CSS-Flächen, 150px Blur | Verlaufsbild (16 KB) |
 | 8 | Verbrauchsring | roter Fortschrittsbogen | heller Ring, ∞ in Akzentfarbe |

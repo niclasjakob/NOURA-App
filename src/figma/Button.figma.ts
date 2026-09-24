@@ -30,8 +30,11 @@ instance.getEnum('State', { Enabled: 'enabled', Pressed: 'pressed' })
 const variant =
   labelType === 'icon' && size === 'small' ? 'icon' : type === 'ghost' ? 'ghost' : 'filled'
 
+/* findText liefert bei Misserfolg ein ErrorHandle — truthy, aber ohne
+   textContent. Deshalb ueber den Diskriminator pruefen, nicht ueber die
+   Eigenschaft; dieselbe Regel gilt fuer findInstance weiter unten. */
 const label = instance.findText('Button')
-const labelText = label && label.textContent ? label.textContent : ''
+const labelText = label.type === 'TEXT' ? label.textContent : ''
 
 /* Die verschachtelte Icons-Instanz loest ueber ihre eigene Zuordnung
    auf (src/figma/Icons.figma.ts) — nicht aus dem Ebenennamen geraten. */

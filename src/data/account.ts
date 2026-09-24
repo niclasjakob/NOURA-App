@@ -132,10 +132,15 @@ const ZONES: Record<RoamZone, { country: string; flag: string; network: string; 
   world: { country: 'T\u00FCrkei', flag: '\u{1F1F9}\u{1F1F7}', network: 'Vodafone TR', usedGb: 2.1 },
 }
 
-/** Der Reisezustand haengt am Tarif, nicht an einer festen Tabelle:
-    CONNECT traegt kein Weltkontingent, und die EU-Fair-Use-Grenze
-    folgt dem Preis. Frueher stand hier fuer jeden Tarif "3 GB
-    weltweit" — fuer den Einstiegstarif schlicht falsch. */
+/** Der Reisezustand haengt am Tarif, nicht an einer festen Tabelle.
+    Seit dem 2026-09-22 traegt KEIN Tarif mehr ein Weltkontingent —
+    weltweit wird in beiden vor der Reise zugebucht. Was am Tarif
+    haengt, ist die EU-Fair-Use-Grenze: sie folgt dem Preis und liegt
+    damit bei 32 GB (CONNECT) gegen 51 GB (CREATE).
+
+    Der Weg fuer ein Kontingent bleibt bestehen: `roamingGb` steuert
+    ihn weiter, steht nur bei beiden Tarifen auf null. Frueher stand
+    hier fuer jeden Tarif fest "3 GB weltweit". */
 export function roamingState(zone: RoamZone, plan: Plan, extraGb = 0): RoamingState {
   const z = ZONES[zone]
   const includedGb = plan.roamingGb ?? 0

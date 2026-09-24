@@ -26,6 +26,7 @@ import { Button, Close, FeatureList, SimCard } from '../components/ui'
 import { MagicTicket } from '../components/magic-pass'
 import { AllowanceRing } from '../components/roaming'
 import { useDialog, useDragToDismiss, useInert } from '../hooks/a11y'
+import { hapticError, hapticSelection, hapticSuccess } from '../lib/haptics'
 
 export type SheetId = 'support' | 'profile' | 'plan' | 'roaming' | 'magic' | null
 
@@ -261,7 +262,12 @@ export function ProfileSheet({
                 role="radio"
                 aria-checked={roamZone === z}
                 className={roamZone === z ? 'on' : ''}
-                onClick={() => onRoamZone(z)}
+                onClick={() => {
+                  /* Segmentwechsel — dieselbe Gestenklasse wie das
+                     Tarifkarussell, also dieselbe Rueckmeldung. */
+                  if (roamZone !== z) hapticSelection()
+                  onRoamZone(z)
+                }}
               >
                 {label}
               </button>
@@ -538,9 +544,15 @@ export function MagicSheet({
       const res = onRedeem(code)
       setChecking(false)
       if (res.ok) {
+        /* Angenommen und abgelehnt sind die beiden Momente, an denen
+           dieser Ablauf entscheidet. Die Ablehnung begleitet den
+           Ruettler, den das Feld ohnehin zeigt — Regel 1: nie das
+           einzige Signal. */
+        hapticSuccess()
         setShown(res.pass.id)
         setCode('')
       } else {
+        hapticError()
         setFail(res.reason)
       }
     }, CHECK_MS)

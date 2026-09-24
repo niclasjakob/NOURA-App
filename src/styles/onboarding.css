@@ -115,91 +115,106 @@
 .orb.o2 { bottom: 6%; right: 8%; width: 22px; height: 22px; }
 .orb.o3 { top: 44%; right: -6px; width: 14px; height: 14px; background: rgba(225, 80, 85, 0.55); border-color: rgba(225, 80, 85, 0.7); }
 
-/* Schritt 2 — Kalenderblatt mit Zyklusring */
-.cycle-ring { position: absolute; width: 300px; height: 300px; animation: spin 30s linear infinite; pointer-events: none; }
-.cal-card {
-  position: relative; width: 210px; border-radius: 18px; overflow: hidden;
+/* Schritt 2 — Magic Code: vier Kacheln, darunter die drei Tueren */
+.mcode { position: relative; display: flex; flex-direction: column; align-items: center; }
+.mcode-row { display: flex; gap: 8px; }
+.mcode-tile {
+  width: 60px; height: 74px; display: flex; align-items: center; justify-content: center;
+  border-radius: var(--noura-radius-tile);
   background: var(--noura-glass); border: 1.5px solid rgba(255, 255, 255, 0.35);
   backdrop-filter: blur(var(--noura-blur-control)); -webkit-backdrop-filter: blur(var(--noura-blur-control));
-  animation: calFloat 7s var(--ease-out) infinite;
+  font-weight: 700; font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums;
+  animation: tileIn 0.5s var(--ease-out) backwards;
+  animation-delay: calc(var(--i) * 70ms);
 }
-/* Neigung steckt in den Keyframes — sonst wuerde die Schwebeanimation die
-   Perspektive ueberschreiben. */
-@keyframes calFloat {
-  0%, 100% { transform: perspective(760px) rotateX(11deg) rotateZ(-3.5deg) translateY(-5px); }
-  50% { transform: perspective(760px) rotateX(11deg) rotateZ(-3.5deg) translateY(5px); }
+/* Waehrend der Code laeuft, sitzt das Leuchten auf den Kacheln — es
+   markiert den Moment, in dem die Stellen einrasten. */
+.mcode-row.rolling .mcode-tile { animation: tileIn 0.5s var(--ease-out) backwards, tileRoll 0.22s var(--ease-out) infinite; }
+@keyframes tileIn { from { opacity: 0; transform: translateY(14px) scale(0.9); } }
+@keyframes tileRoll {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(225, 80, 85, 0); }
+  50% { box-shadow: 0 0 18px 0 rgba(225, 80, 85, 0.45); }
 }
-.cal-top {
-  height: 34px; background: var(--noura-accent); display: flex; align-items: center; gap: 5px;
-  padding: 0 12px; font-weight: 600; font-size: 0.647rem; line-height: 1.364; color: #fff;
+
+/* Der Strich sagt, in welche Richtung gelesen wird: Code oben, was er
+   oeffnet darunter. Ohne ihn stehen zwei Gruppen unverbunden da. */
+.mcode-stem {
+  width: 1.5px; height: 26px; margin: 10px 0;
+  background: linear-gradient(to bottom, rgba(225, 80, 85, 0.85), rgba(225, 80, 85, 0.15));
+  animation: stemIn 0.45s var(--ease-out) 0.34s backwards;
 }
-.cal-top i { width: 5px; height: 12px; border-radius: 3px; background: rgba(255, 255, 255, 0.75); display: block; }
-.cal-top span { margin-left: auto; opacity: 0.9; }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 12px 12px 4px; }
-.cal-grid .day {
-  display: flex; align-items: center; justify-content: center; height: 18px;
-  border-radius: 6px; font-weight: 600; font-size: 0.529rem; line-height: 1.333;
+@keyframes stemIn { from { opacity: 0; transform: scaleY(0); } }
+
+.mcode-doors { display: flex; gap: 6px; }
+.mcode-door {
+  padding: 7px 12px; border-radius: var(--noura-radius-pill);
+  background: var(--noura-glass); border: 1px solid rgba(255, 255, 255, 0.28);
+  font-weight: 600; font-size: var(--fs-caption); line-height: 1.333;
+  animation: doorIn 0.5s var(--ease-out) backwards;
+  animation-delay: calc(0.44s + var(--i) * 90ms);
+}
+@keyframes doorIn { from { opacity: 0; transform: translateY(10px); } }
+
+/* Schritt 3 — die zugesicherte Rate
+   Eine Kurve, ein Boden, sonst nichts. Die frueheren zwei Spuren
+   standen fuer Vorfahrt; hier steht nur noch die eigene Rate und die
+   Linie, unter die sie nicht faellt. */
+.rate { position: relative; width: min(300px, 100%); display: flex; flex-direction: column; gap: 8px; }
+.rate-cap {
+  font-weight: 600; font-size: var(--fs-caption); line-height: 1.333;
   color: var(--noura-text-muted);
 }
-.cal-card.run .day.on {
-  background: var(--noura-accent); color: #fff; font-weight: 700;
-  animation: dayPulse 2.4s var(--ease-out) infinite;
-}
-.cal-foot { padding: 6px 12px 12px; font-weight: 600; font-size: 0.588rem; line-height: 1.4; color: var(--noura-text-muted); }
-@keyframes dayPulse {
-  0% { box-shadow: 0 0 0 0 rgba(225, 80, 85, 0.55); }
-  70%, 100% { box-shadow: 0 0 0 13px rgba(225, 80, 85, 0); }
-}
+.rate-plot { border-radius: var(--noura-radius-tile); background: var(--noura-glass); overflow: hidden; }
+.rate-plot svg { display: block; width: 100%; height: auto; }
 
-/* Schritt 3 — Tacho
-   Bogen, Skalenstriche und Zeiger sind ein SVG; bewegt wird nur der
-   rotate-Wert des Zeigers und die Strichlaenge des Bogens. */
-.g5 { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.gauge { position: relative; width: 240px; }
-.gauge svg { display: block; width: 100%; height: auto; }
-.gauge-track { fill: none; stroke: rgba(255, 255, 255, 0.14); stroke-width: 10; stroke-linecap: round; }
-.gauge-fill {
-  fill: none; stroke: var(--noura-accent); stroke-width: 10; stroke-linecap: round;
-  filter: drop-shadow(0 0 8px rgba(225, 80, 85, 0.5));
+.rate-band { fill: rgba(225, 80, 85, 0.2); }
+.rate-floor { stroke: var(--noura-accent); stroke-width: 2; }
+
+/* Die Linie zeichnet sich einmal, wenn der Schritt aufgebaut wird — der
+   Schrittwechsel remountet das Visual (key), sie laeuft also bei jedem
+   Besuch neu. Bewusst keine Schleife: ein Durchlauf, der sich
+   wiederholt, muesste am Ende ausblenden, und genau diesen Endzustand
+   friert die globale Reduziert-Regel ein (1ms, letztes Keyframe). Die
+   Kurve waere dann unsichtbar. So endet sie gezeichnet — mit und ohne
+   Bewegung dasselbe Bild. */
+.rate-line {
+  fill: none; stroke: var(--noura-text); stroke-width: 2.5;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: var(--len); stroke-dashoffset: 0;
+  animation: rateDraw 2.2s var(--ease-out) 0.15s backwards;
 }
-.gauge-needle line { stroke: #fff; stroke-width: 3; }
-.gauge-cap { fill: rgba(20, 16, 34, 0.72); stroke: rgba(255, 255, 255, 0.26); stroke-width: 1.5; }
-.gauge-mark {
-  font-family: var(--font); font-weight: 700; font-size: 23px;
-  fill: var(--noura-accent); letter-spacing: 0.02em;
+@keyframes rateDraw { from { stroke-dashoffset: var(--len); } }
+
+.rate-legend {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 600; font-size: var(--fs-caption); line-height: 1.333;
 }
-.g5-speed { display: flex; align-items: baseline; gap: 6px; }
-.g5-speed b { font-weight: 700; font-size: 1.529rem; line-height: 1.231; font-variant-numeric: tabular-nums; }
-.g5-speed em { font-style: normal; font-weight: 600; font-size: var(--fs-caption); line-height: 1.333; color: var(--noura-text-muted); }
+.rate-legend i { width: 14px; height: 2px; border-radius: 1px; background: var(--noura-accent); display: block; }
 
 /* ---------- Intro-Auftritt ----------
-   Drei Stufen: Wortmarke Buchstabe fuer Buchstabe, Lockup, Buttons. Die
-   SIM-Karte steht hier bewusst nicht — Figma 1330:1947 zeigt sie nicht. */
+   Das App-Icon ist der Anker und bewegt sich nicht: es steht schon auf
+   dem Startbildschirm des Systems, an derselben Stelle in derselben
+   Groesse. Wuerde es hier einblenden oder heranfahren, waere genau der
+   Moment sichtbar, in dem der Webview uebernimmt — und der soll nicht zu
+   sehen sein.
+
+   Bewegung tragen die Stufen darunter: das Lockup, dann die Knoepfe,
+   zuletzt die Vorfuehr-Abkuerzung. Die SIM-Karte steht hier bewusst
+   nicht — Figma 1330:1947 zeigt sie nicht.
+
+   Die Folge ist am 2026-09-21 von 1,66s auf 1,24s zusammengerueckt. Mit
+   der Wortmarke ist ihr Buchstabenaufbau entfallen, und der war es, der
+   alles dahinter nach hinten geschoben hat. Ein Screen mit zwei Zeilen
+   darf nicht so lange brauchen wie einer mit sieben. */
 .intro-stage { position: absolute; inset: 0; z-index: 1; }
 
-.intro-logo span { display: inline-block; }
-.intro-stage.on .intro-logo span {
-  animation: letterIn 0.75s var(--ease-out) backwards;
-  /* Startet frueher als zuvor: die Karte lief hier als erste Stufe, ohne sie
-     stuende der Screen eine halbe Sekunde leer da. */
-  animation-delay: calc(0.2s + var(--i) * 70ms);
-}
-/* Nur transform und opacity. `filter: blur(6px)` stand hier auf fuenf
-   gleichzeitig laufenden Buchstaben — auf dem iPhone ist ein grosser
-   Filter pro Frame teuer, und die Hausregel verbietet ihn genau
-   deshalb. Die Weichheit traegt jetzt der Versatz. */
-@keyframes letterIn {
-  from { opacity: 0; transform: translateY(24px) scale(0.84); }
-  to { opacity: 1; transform: none; }
-}
-/* Das Zeichen kommt zuerst, die Buchstaben laufen darunter ein. */
-.intro-stage.on .intro-mark { animation: fadeUp 0.7s var(--ease-out) 0.08s backwards; }
+.intro-stage.on .intro-lockup { animation: fadeUp 0.6s var(--ease-out) 0.24s backwards; }
 .intro-stage.on .intro-nav .btn { animation: fadeUp 0.6s var(--ease-out) backwards; }
-.intro-stage.on .intro-nav .btn:nth-child(1) { animation-delay: 0.82s; }
-.intro-stage.on .intro-nav .btn:nth-child(2) { animation-delay: 0.94s; }
+.intro-stage.on .intro-nav .btn:nth-child(1) { animation-delay: 0.4s; }
+.intro-stage.on .intro-nav .btn:nth-child(2) { animation-delay: 0.52s; }
 /* Die Vorfuehr-Abkuerzung kommt als letzte — sie soll die Marke nicht
    ueberholen. Eigene Regel, weil sie kein .btn ist. */
-.intro-stage.on .demo-skip { animation: fadeUp 0.6s var(--ease-out) 1.06s backwards; }
+.intro-stage.on .demo-skip { animation: fadeUp 0.6s var(--ease-out) 0.64s backwards; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 
 /* ---------- Onboarding ----------
@@ -348,19 +363,13 @@
 @keyframes draw { to { stroke-dashoffset: 0; } }
 
 /* ---------- Bewegung reduziert ----------
-   Alles Dauerlaufende steht still, die Zustaende bleiben lesbar. */
+   Die Aufzaehlung ist entfallen — die globale Regel in global.css laesst
+   jede Animation in 1ms auf ihren Endzustand laufen. Fuer die Kurve in
+   Schritt 3 ist das genau richtig: ihr Endzustand ist die fertig
+   gezeichnete Linie, das Standbild sagt also dasselbe wie der Ablauf.
+
+   Was bleibt: Scan- und Glanzstreifen sind reine Bewegung und haben kein
+   sinnvolles Standbild. */
 @media (prefers-reduced-motion: reduce) {
-  .af, .card3d, .card3d-glow, .card3d-sheen::after, .card3d-scan::after,
-  .viz-glow, .orbit, .cycle-ring, .cal-card, .cal-card.run .day.on,
-  .btn.icon-btn.final, .act-steps li.now .mark,
-  .burst .ripple, .burst-check, .burst-circle, .burst-path,
-  .intro-stage.on .intro-logo span,
-  .intro-stage.on .intro-mark, .intro-stage.on .intro-nav .btn, .intro-stage.on .demo-skip,
-  .ob-visual, .ob-text > * {
-    animation: none !important;
-  }
-  .cal-card { transform: perspective(760px) rotateX(11deg) rotateZ(-3.5deg); }
-  .act-card { transition: none; }
   .card3d-scan, .card3d-sheen { display: none; }
-  .burst-circle, .burst-path { stroke-dashoffset: 0; }
 }

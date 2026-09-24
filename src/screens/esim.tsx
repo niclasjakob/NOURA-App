@@ -29,6 +29,7 @@ import type { Plan } from '../data/plans'
 import { AuroraFlow } from '../components/onboarding-visuals'
 import { BEAT_TONE, EsimStage } from '../components/esim-forge'
 import { BeatCaption, BeatMeter } from '../components/beats'
+import { hapticLand, hapticPress, hapticSuccess } from '../lib/haptics'
 import {
   ESIM_INSTALL_ACTS,
   ESIM_MANUAL,
@@ -147,6 +148,47 @@ export function EsimJourney({
         : phase === 'install'
           ? FORGE_ACTS.length + idx
           : TOTAL_BEATS
+
+  /* ---------- Die Signatur ----------
+     Acht Takte, acht Schlaege. Der Kunde sieht nicht nur zu, wie seine
+     eSIM entsteht — er spuert es. Sieben leichte Schlaege bauen auf
+     einen schwereren hin: "im Netz" ist der letzte, und er ist der
+     einzige, der anders landet.
+
+         entworfen · gelasert · versiegelt · bereit
+         geladen · eingerichtet · gesucht · IM NETZ
+            ·          ·           ·         ●
+
+     Der Schlag haengt am Taktwechsel, nicht am Rendern: derselbe Takt
+     zweimal gerendert loest nichts aus (Regel 2). Gezaehlt wird dabei
+     nach Phase UND Index, nicht nach `step` — `step` steht am Ende der
+     Fertigung, waehrend der Uebergabe und zu Beginn der Einrichtung
+     auf demselben Wert, und der erste Schlag des iPhones fiele
+     stillschweigend aus.
+
+     Der letzte Index der Einrichtung wird doppelt gestellt: der
+     Nachlauf haelt das Bild eine Sekunde, damit das Netz zeigen kann,
+     was es erreicht hat. Dieser Nachschlag traegt keinen eigenen
+     Takt — sonst landete "im Netz" zweimal. */
+  const beaten = useRef('')
+  useEffect(() => {
+    if (!active) return
+    if (phase !== 'forge' && phase !== 'install') return
+    const last = ESIM_INSTALL_ACTS.length - 1
+    if (phase === 'install' && idx > last) return
+    const key = `${phase}:${idx}`
+    if (key === beaten.current) return
+    beaten.current = key
+    if (phase === 'install' && idx === last) hapticLand()
+    else hapticPress()
+  }, [active, phase, idx])
+
+  /* Am Ende des Ablaufs steht die Karte im Netz. Das ist eine Sekunde
+     nach dem letzten Takt (der Nachlauf von runActs) und damit ein
+     eigener Moment, keine Doppelung. */
+  useEffect(() => {
+    if (phase === 'done') hapticSuccess()
+  }, [phase])
 
   const meter = (paused = false) => (
     <BeatMeter

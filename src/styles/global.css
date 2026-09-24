@@ -77,6 +77,23 @@
   --noura-blur-control: 12px;
   --noura-blur-bar: 40px;
 
+  /* ---- Stufe 2, Material (2026-09-22) ----
+     Die Fuellung bleibt `glass` nach Figma, der gebeugte Hintergrund
+     wird zusaetzlich abgedunkelt. Der Grund dafuer ist gemessen, nicht
+     geschaetzt: ueber der korallenen Zone der Aurora macht eine
+     10-%-Weissfuellung den Grund HELLER als er ohne Karte waere
+     (gerendert #a791a4), und Weiss darauf faellt auf 2,90:1 — unter den
+     3,42:1, die derselbe Text direkt auf dem Verlauf haette. Die
+     Glaskarte verschlechtert den Kontrast dort also, statt ihn zu
+     tragen. Mit 0.68 stehen dieselben Pixel bei rund 5:1.
+
+     Das ist dieselbe Bauart wie `--lg-refract` beim Button: Figma
+     zeichnet die Fuellung, das Material kommt darueber. Liegt bislang
+     nur auf `.plan-diff` — der Karte, die am meisten Text in diese
+     Zone stellt. Ob `.card` insgesamt nachzieht, entscheidet Niclas
+     (Zahlen in der Sitzung vom 2026-09-22). */
+  --glass-refract: blur(var(--noura-blur-card)) brightness(0.68);
+
   /* ---- Liquid Glass (iOS 26) ----
      Grundwerte aus der Figma-Buttonkomponente 301:1461 ("der tatsaechlich
      in allen 12 Screens verwendete Button", Node 1330:1974 als Instanz):
@@ -95,6 +112,33 @@
   --lg-tint-pressed: rgba(255, 255, 255, 0.15);      /* surface/translucent-pressed */
   --lg-blur: 12px;                                   /* Figma-Wert, nicht die 24px der Karten */
   --lg-refract: blur(var(--lg-blur)) saturate(180%) brightness(1.06);
+  /* Dieselbe Beugung, die Leuchtkraft nach UNTEN statt nach oben. Apples
+     Material richtet seine Luminanz nach dem, was darunter liegt —
+     `color.md > Liquid Glass color`: "adapt between a light and a dark
+     appearance in response to the content beneath them". Zwei Werte sind
+     hier also das Modell, nicht ein Versehen: `--lg-refract` fuer Glas
+     ueber Dunklem, dieser fuer Glas mitten auf der Aurora.
+
+     Der Knopf steht ueber dem fast schwarzen Verlauf der CTA-Leiste, da
+     hebt 1.06 nichts an, was stoeren koennte. Eine Linse auf der Aurora
+     steht ueber mittelhellem Violett, und dort kostet dasselbe 1.06 den
+     weissen Text seine Lesbarkeit.
+
+     0.68 ist keine neue Zahl: es ist derselbe Wert wie in
+     --glass-refract, und aus demselben Grund — ueber der Aurora macht
+     eine Weissfuellung den Grund heller, als er ohne sie waere, und der
+     weisse Text darauf faellt unter 4,5:1. Gemessen am 2026-09-22 auf
+     der Tarifleiste (y=201), Weiss auf der Linse:
+
+       Position   flach (vorher)   mit 1.06   mit 0.68
+       CONNECT       4,47:1         4,18:1     5,45:1
+       CREATE        3,74:1         3,38:1     4,68:1
+
+     Die rechte Pille stand also schon vor dem Material unter der
+     Schwelle — der Aurora-Verlauf ist dort heller. Die Saettigung
+     ueberlebt das Abdunkeln: die dunklere Linse ist die FARBIGERE von
+     beiden. Genau darum geht es bei der Beugung. */
+  --lg-refract-dim: blur(var(--lg-blur)) saturate(180%) brightness(0.68);
   --lg-inner: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -8px 20px -12px rgba(255, 255, 255, 0.35);
   --lg-lift: 0 10px 26px -12px rgba(0, 0, 0, 0.45), 0 2px 6px -3px rgba(0, 0, 0, 0.3);
 
@@ -145,10 +189,29 @@
   --fs-body: 0.941rem;      /* 16px */
   --fs-title: 1.176rem;     /* 20px */
   --fs-screen: 1.412rem;    /* 24px */
-  --fs-hero: 2.353rem;      /* 40px — Wortmarke */
 
   /* Mindestgroesse fuer Tippziele nach den iOS-Vorgaben */
   --tap: 44px;
+
+  /* ---- Bildschirmhoehe als Wert ----
+     Drei Stellen rechnen damit: der Intro-Auftritt, die Vorschau in
+     index.html und — ueber dieselben Anteile — der native
+     Startbildschirm. Der Rahmen setzt sie weiter unten neu, sobald er
+     den ganzen Bildschirm einnimmt. */
+  --screen-h: 852px;
+
+  /* ---- Uebergabe Startbildschirm -> Intro ----
+     Kantenlaenge des App-Icons und Hoehe seiner Mitte, beides als Anteil
+     der Bildschirmhoehe statt in Pixeln. Genau diese zwei Zahlen stehen
+     ein zweites Mal in tools/app-icon/build-icon.py (ICON_FRAC, ICON_CY)
+     und ein drittes Mal als Constraint-Multiplikator in
+     LaunchScreen.storyboard. Anteile und nicht Pixel, weil der native
+     Startbildschirm mit der Bildschirmhoehe skaliert: feste Pixel saessen
+     nur auf 393x852 an derselben Stelle, und auf jedem anderen Geraet
+     spraenge das Icon beim Uebergang. Wer eine Zahl aendert, aendert
+     alle drei. */
+  --intro-icon: calc(0.176 * var(--screen-h));  /* 150px auf dem 852er Rahmen */
+  --intro-cy: calc(0.472 * var(--screen-h));    /* Icon-Mitte bei y=402 */
 
   /* ---- Bewegung ----
      Fuenf Dauern, drei Kurven, eine Feder. Vorher: 75 verschiedene
@@ -253,23 +316,49 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
 /* ---------- Phone frame ---------- */
 .stage { display: flex; align-items: center; justify-content: center; width: 100%; height: 100vh; }
 .phone {
-  position: relative; width: 393px; height: 852px;
+  position: relative; width: 393px; height: var(--screen-h);
   border-radius: 54px; overflow: hidden; background: var(--noura-canvas);
   box-shadow: 0 0 0 12px #191a2e, 0 0 0 14px #2c2d4a, 0 40px 100px rgba(0, 0, 0, 0.6);
   flex-shrink: 0;
 }
 @media (max-width: 480px), (max-height: 900px) {
-  .phone { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0; box-shadow: none; }
+  /* Der Rahmen ist jetzt der Bildschirm — und damit gilt dessen Hoehe
+     auch fuer alles, was sich daran ausrichtet. 100vh als Rueckfall fuer
+     Browser ohne dvh. */
+  :root { --screen-h: 100vh; --screen-h: 100dvh; }
+  .phone { width: 100vw; height: var(--screen-h); border-radius: 0; box-shadow: none; }
+}
+
+/* ---------- Uebergabe vom Startbildschirm ----------
+   index.html malt den Intro-Screen in seinem Anfangszustand — Aurora und
+   App-Icon, sonst nichts — schon vor dem ersten Skript. Grund: der native
+   Startbildschirm verschwindet, sobald das Fenster steht, nicht erst wenn
+   React gezeichnet hat. Ohne diese Vorschau liegt dazwischen der leere
+   Webview.
+
+   Sie benutzt dieselben Klassen wie der Screen selbst, ist also kein
+   Nachbau, der auseinanderlaufen koennte. App.tsx nimmt sie weg, sobald
+   der echte Screen steht. */
+#boot {
+  position: fixed; inset: 0; z-index: 100;
+  background: #0d0e1f;
+  /* Hebt die Zeile im Kopf von index.html auf — ueber die ID, damit die
+     Reihenfolge der beiden Stylesheets keine Rolle spielt. */
+  visibility: visible;
 }
 
 /* ---------- Aurora-Hintergrund ----------
    Verlaufsbild direkt aus Figma (Node 1330:1780) statt vier CSS-Flaechen mit
    150px Weichzeichner. Grund: exakt statt naeherungsweise, und auf dem iPhone
    deutlich fluessiger — Safari rendert grosse Blur-Filter traege.
-   16 KB WebP. */
+   Verlustfreies PNG @1x (393x852, 238 KB): Der Verlauf hat kein Detail,
+   das @3x braeuchte, der Browser skaliert ihn glatt hoch. Vorher stand
+   hier ein 16-KB-WebP @3x — die Kompression zeigte auf dem Geraet
+   Blockstufen und senkrechte Streifen. Nicht wieder verlustbehaftet
+   komprimieren. */
 .bg-grad {
   position: absolute; inset: 0; pointer-events: none;
-  background: var(--noura-canvas) url('../assets/img/aurora-bg.webp') center / cover no-repeat;
+  background: var(--noura-canvas) url('../assets/img/aurora-bg.png') center / cover no-repeat;
 }
 .bg-noise {
   position: absolute; inset: 0; opacity: 0.05; pointer-events: none;
@@ -409,23 +498,33 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
 /* Mittig statt bei festem x=67: Figma zeichnet fuer 393px Breite, echte
    Geraete sind breiter (iPhone 16 Pro: 402pt). Zentriert sitzt die Marke
    auf jedem Geraet richtig. */
-/* Zeichen ueber Wortmarke, mittig. Der Block ist 184px hoch (116 Zeichen +
-   14 Abstand + 54 Zeile); frueher waren es 54px ab y=399. Damit die Marke
-   optisch dort bleibt, wo sie war, steht top auf 334: 426 (alte Mitte)
-   minus die halbe neue Hoehe.
-   116 und nicht 96: das Zeichen steht in Weiss, die Wortmarke in Koralle —
-   bei gleicher Hoehe traegt die Koralle mehr Gewicht und das Zeichen wirkt
-   wie eine Beigabe. */
+/* App-Icon, darunter das Vodafone-Lockup. Maße aus Figma 1700:3984:
+   Icon 150x150 bei y=327 (Mitte y=402), Lockup 61x18 bei y=507 — also
+   30px Abstand. Die Knoepfe stehen unveraendert bei y=666/743.
+
+   Ein Markenelement, nicht zwei: die korallene Wortmarke in 40px ist am
+   2026-09-21 entfallen. Sie stand direkt unter einem Icon, das dasselbe
+   N schon zeigt, und hat den Screen doppelt so laut gemacht, wie er sein
+   muss. Das Icon traegt jetzt allein, das Lockup nennt nur noch den
+   Absender.
+
+   Verankert ist die Icon-Mitte (--intro-cy), nicht der Block: was
+   darunter steht, darf seine Hoehe aendern, ohne die Uebergabe vom
+   Startbildschirm zu verschieben. */
 .intro-center {
-  position: absolute; top: 334px; left: 0; right: 0;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  position: absolute; top: calc(var(--intro-cy) - var(--intro-icon) / 2);
+  left: 0; right: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px;
 }
-.intro-mark { width: 116px; height: 116px; display: block; }
-.intro-logo {
-  font-family: var(--font); font-weight: 700; font-size: var(--fs-hero); line-height: 1.35;
-  color: var(--noura-accent); letter-spacing: 0;
-  text-shadow: 1px 1px 8px rgba(217, 104, 108, 0.2);
-}
+/* Traegt den Namen des Screens — das Icon ist die Ueberschrift, sein
+   alt-Text ist ihr Wort. display:flex, damit die Zeilenhoehe der
+   Ueberschrift dem Bild keinen Rand unterschiebt. */
+.intro-brand { display: flex; }
+.intro-icon { width: var(--intro-icon); height: var(--intro-icon); display: block; }
+/* Breite statt Hoehe gesetzt: das Bild im Repo traegt 4px Rand je Seite,
+   ueber die Breite gemessen deckt sich seine Zeichnung mit der aus
+   Figma (58x17,5). Ueber die Hoehe waere sie 8 % zu klein. */
+.intro-lockup { width: 61px; height: auto; display: block; }
 /* Figma: erster Button y=666, zweiter y=743 (Abstand 16px), Rand 24px,
    unten 48px bis zur Screen-Kante — siehe --bar-bottom. */
 .intro-nav {
@@ -530,7 +629,9 @@ button.sim-card { cursor: pointer; }
 .chip {
   background: var(--noura-accent); border-radius: var(--noura-radius-pill);
   padding: 1px 8px; min-height: 17px; display: inline-flex; align-items: center;
-  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
+  /* 600, nicht 500: das Etikett steht auf einer gesaettigten Flaeche
+     und braucht mehr Strich als eine Nebenzeile auf Glas. */
+  font-weight: 600; font-size: var(--fs-caption); line-height: 1.333;
 }
 .sim-card .foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .sim-card .price { font-weight: 700; font-size: var(--fs-body); line-height: 1.375; }
@@ -561,9 +662,24 @@ button.sim-card { cursor: pointer; }
    Mindesthoehe 44px nach den iOS-Vorgaben: die Pille bleibt mit 35px
    optisch flach, das Tippziel darunter ist es nicht. */
 .tabs {
-  display: flex; gap: 4px; margin-top: 33px; position: relative;
+  /* 33px stammen aus Figma, wo unter der Leiste sofort die Karte kam.
+     Seit darunter Karte UND Vergleich stehen, zaehlt jeder Punkt: 20px
+     halten die Leiste noch deutlich vom Absatz getrennt. */
+  display: flex; gap: 4px; margin-top: 20px; position: relative;
   background: var(--noura-glass); border-radius: var(--noura-radius-pill); padding: 3px;
+  /* Die Spur ist eine Mulde, kein Glas. Seit die Wahl darueber das
+     Material traegt (2026-09-22), braucht sie eine Kante nach innen —
+     sonst liegen zwei helle Raender nebeneinander und die Linse
+     verschmilzt mit ihrer Spur. Nach innen dunkel, nicht hell: eine
+     Vertiefung faengt oben Schatten, keine Reflexion. */
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22);
 }
+/* Beide Haelften teilen sich die Spur. Ohne `flex: 1` sind die Knoepfe
+   inhaltsbreit — solange die Spur unsichtbar war, fiel das nicht auf;
+   seit sie eine Flaeche traegt (2026-09-18), stand rechts ein Drittel
+   leere Pille. `segmented-controls.md > Best practices`: "When all
+   segments have equal width, a segmented control feels balanced." */
+.tabs button { flex: 1; min-width: 0; }
 /* Die Pille reist, die Beschriftungen bleiben stehen — also bewegt sich
    die Pille auf dur-move und der Feder, waehrend die Beschriftungen auf
    dur-quick ueberblenden. Gleiche Zeiten fuer beides lassen das ganze
@@ -571,11 +687,56 @@ button.sim-card { cursor: pointer; }
 /* top/bottom 0 statt eines eigenen Einzugs: `left` und `offsetLeft`
    messen beide ab der Innenkante der Spur, also deckt die Pille genau
    den Knopf — der 3px-Einzug der Spur liegt dann rundum gleich. */
+/* ---- Liquid Glass auf der Wahl (2026-09-22, von Niclas beauftragt) ----
+   Die Fuellung bleibt `glass-active` (.28) — die Sprosse der Leiter fuer
+   "gewaehltes Bedienelement", und die einzige Zahl, die Figma hier
+   vorgibt. Darueber kommt dasselbe Material wie auf `.btn`: gebeugter
+   Hintergrund, Kantenreflex (::before), flacher Glanz (::after), leichte
+   Abhebung. Nur die Beugung ist eine andere — `--lg-refract-dim` statt
+   `--lg-refract`, die Begruendung samt Messwerten steht am Token.
+
+   Traeger ist die Pille, NICHT die Spur. Das ist die ganze Pointe:
+   `liquid-glass.md > The two layers` — "Glass stacked on glass blurs the
+   hierarchy the material exists to create". Eine Linse, die ueber einer
+   Mulde reist, ist genau das Bild, das iOS 26 im Segment zeichnet; zwei
+   Glasflaechen uebereinander waeren nur zweimal hell.
+
+   Damit weicht diese Stelle bewusst von der Zeile im Skill ab, Liquid
+   Glass gelte "nicht fuer Tabs". Die Zeile meinte Reiter IM Inhalt; die
+   Tarifleiste steht im angehefteten Kopf ueber der scrollenden Flaeche,
+   also in der funktionalen Schicht — und `materials.md` nennt den
+   Umschalter ausdruecklich als Ausnahme im Inhaltsbereich. */
 .tabs .pill {
   position: absolute; top: 0; bottom: 0; border-radius: var(--noura-radius-pill);
   background: var(--noura-glass-active);
+  backdrop-filter: var(--lg-refract-dim); -webkit-backdrop-filter: var(--lg-refract-dim);
+  /* Nicht --lg-lift: der ist fuer den 61px hohen Knopf gerechnet und
+     wuerfe hier 26px Unschaerfe weit ueber die 3px schmale Spur hinaus.
+     Dieselbe Richtung, auf die Hoehe der Linse gebracht. */
+  box-shadow: var(--lg-inner), 0 4px 12px -6px rgba(0, 0, 0, 0.45);
+  isolation: isolate;
   transition: left var(--dur-move) var(--spring), width var(--dur-move) var(--spring);
   z-index: 0;
+}
+/* Kantenreflex und Glanz wie bei .btn — dort stehen die Werte begruendet.
+   Beide auf z-index -1 unter der Fuellung, gehalten vom `isolation`
+   oben; ohne das faenden sie den Stapel des Screens statt den der Pille. */
+.tabs .pill::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: linear-gradient(150deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(255, 255, 255, 0.18) 32%,
+    rgba(255, 255, 255, 0.06) 58%,
+    rgba(255, 255, 255, 0.42) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  pointer-events: none; z-index: -1;
+}
+.tabs .pill::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 42%);
+  z-index: -1;
 }
 .tabs button {
   position: relative; z-index: 1; background: none; border: none; cursor: pointer;
@@ -586,13 +747,15 @@ button.sim-card { cursor: pointer; }
 }
 .tabs button.on { color: var(--noura-text); }
 .plan-track-wrap { position: absolute; top: 276px; bottom: 0; left: 0; right: 0; overflow: hidden; }
-.plan-track { display: flex; height: 100%; transition: transform var(--dur-move) var(--ease-out); touch-action: pan-y; }
+.plan-track { display: flex; transition: transform var(--dur-move) var(--ease-out); touch-action: pan-y; }
 .plan-track.dragging { transition: none; }
-.plan-slide { width: 393px; flex-shrink: 0; padding: 24px; overflow-y: auto; scrollbar-width: none; }
-.plan-slide::-webkit-scrollbar { display: none; }
+.plan-slide { width: 393px; flex-shrink: 0; padding: 24px; }
 @media (max-width: 480px) { .plan-slide { width: 100vw; } }
-.features-block { margin-top: 56px; padding-bottom: var(--plan-cta-space); }
-.features-block h2 { font-weight: 700; font-size: var(--fs-title); }
+/* Die Leistungsliste steht seit dem 2026-09-22 nur noch im Plan-Sheet:
+   auf dem Auswahl-Screen hat sie der Vergleich abgeloest. Die Regeln
+   nennen deshalb `h3` — das Tag, das das Sheet wirklich traegt. Vorher
+   stand hier `h2` und griff dort nie. */
+.features-block h3 { font-weight: 700; font-size: var(--fs-title); line-height: 1.35; }
 .features-block .desc { font-weight: 600; font-size: var(--fs-label); color: var(--noura-text-muted); line-height: 1.4; margin-top: 4px; }
 .feat-list { display: flex; flex-direction: column; gap: 24px; margin-top: 24px; }
 .feat { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: var(--fs-label); line-height: 1.357; }
@@ -725,10 +888,6 @@ button.sim-card { cursor: pointer; }
 .magic-label svg { width: 16px; height: 16px; transition: transform var(--dur-quick) var(--ease-out); }
 .magic:active .magic-label svg { transform: translateX(3px); }
 
-@media (prefers-reduced-motion: reduce) {
-  .magic::before, .magic-drift { animation: none; }
-  .magic-cloud text { transition: none; }
-}
 /* Ohne eigene Margin: den Abstand traegt der gap der Scrollspalte. */
 .section-toggle { display: flex; align-items: center; gap: 8px; background: none; border: none; cursor: pointer; color: #fff; font-weight: 600; font-size: var(--fs-title); padding: 0; margin: 0; }
 .section-toggle svg { transition: transform var(--dur-quick) var(--ease-out); }
@@ -847,7 +1006,12 @@ button.sim-card { cursor: pointer; }
   border: none; border-radius: var(--noura-radius-card);
   padding: 0 20px; color: var(--noura-text); font-weight: 600; font-size: var(--fs-label); line-height: 1.357; min-height: 64px; outline: none;
 }
-.chat-input input::placeholder { color: var(--noura-glass-strong); }
+/* Ein Flaechentoken als Textfarbe: 20 % Weiss auf der Glasleiste sind
+   rund 2:1 und damit weit unter den 4,5:1, die `accessibility.md` fuer
+   Text verlangt. Ein Platzhalter ist Text, den man lesen muss, bevor
+   man handeln kann — er nimmt `text-muted` wie jede andere
+   Nebenzeile, so wie die beiden anderen Felder der App auch. */
+.chat-input input::placeholder { color: var(--noura-text-muted); }
 .chat-input .send {
   width: 64px; height: 64px; border-radius: var(--noura-radius-pill); cursor: pointer;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;

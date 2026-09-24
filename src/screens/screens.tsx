@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import mark from '../assets/img/noura-mark.svg'
+import appIcon from '../assets/img/noura-app-icon.svg'
+import lockup from '../assets/img/connected-by-vodafone.png'
 import avatarMarcel from '../assets/img/avatar-marcel.webp'
-import { ONBOARDING, PLANS } from '../data/plans'
+import { ONBOARDING, PLAN_DIFF, PLAN_SHARED, PLANS } from '../data/plans'
 import {
   ArrowLeft,
   ArrowRight,
   BackgroundGradient,
   ChevronDown,
   DemoSkip,
-  FeatureList,
   Plus,
   Screen,
   SimCard,
@@ -16,6 +16,7 @@ import {
   Button,
 } from '../components/ui'
 import { useInert } from '../hooks/a11y'
+import { hapticSelection } from '../lib/haptics'
 import { CycleCard, ForecastCard } from '../components/usage'
 import { MagicCodeCard } from '../components/magic-code'
 import { PassCard } from '../components/magic-pass'
@@ -26,8 +27,8 @@ import {
   Card3D,
   SuccessBurst,
   VisualDigital,
-  VisualFlexible,
-  VisualSpeed,
+  VisualMagic,
+  VisualNetwork,
 } from '../components/onboarding-visuals'
 
 interface ScreenProps {
@@ -49,18 +50,18 @@ export function Intro({
       <AuroraFlow tone="coral" />
       <div className={`intro-stage${active ? ' on' : ''}`}>
         <div className="intro-center">
-          {/* Das Zeichen aus dem App-Icon, darunter die Wortmarke. Ersetzt
-              seit 2026-09-17 den reinen Schriftzug und das Vodafone-Lockup —
-              siehe Abweichungsliste im Design-System. Das Bild traegt alt="",
-              den Namen spricht die Wortmarke daneben ohnehin aus. */}
-          <img src={mark} className="intro-mark" alt="" />
-          <span className="intro-logo" aria-label="NOURA">
-            {['N', 'O', 'U', 'R', 'A'].map((c, i) => (
-              <span key={i} style={{ '--i': i } as React.CSSProperties} aria-hidden="true">
-                {c}
-              </span>
-            ))}
-          </span>
+          {/* Das App-Icon traegt die Marke allein — dasselbe Bild, das der
+              Startbildschirm des Systems an derselben Stelle zeigt, und
+              damit laeuft der Start in diesen Screen hinein.
+
+              Als <h1>, weil es die Ueberschrift dieses Screens ist: die
+              korallene Wortmarke darunter ist am 2026-09-21 entfallen
+              (Figma 1700:3984), und damit waere der Name sonst nirgends
+              mehr ausgesprochen. Der alt-Text ist jetzt dieser Name. */}
+          <h1 className="intro-brand">
+            <img src={appIcon} className="intro-icon" alt="NOURA" />
+          </h1>
+          <img src={lockup} className="intro-lockup" alt="Connected by Vodafone" />
         </div>
         <div className="intro-nav">
           {/* In Figma ist dieser Button Glas, nicht rot gefuellt */}
@@ -166,8 +167,8 @@ export function Onboarding({
               animation bei jedem Schritt erneut */}
           <div className="ob-visual" key={`v${step}`}>
             {step === 0 && <VisualDigital />}
-            {step === 1 && <VisualFlexible run={active} />}
-            {step === 2 && <VisualSpeed run={active} />}
+            {step === 1 && <VisualMagic run={active} />}
+            {step === 2 && <VisualNetwork />}
           </div>
 
           <div className="ob-text" key={`t${step}`} aria-live="polite">
@@ -254,10 +255,21 @@ export function SelectPlan({
   onBack: () => void
   onChoose: () => void
 }) {
+  /* Das Karussell rastet auf einer Karte ein — das iOS-Idiom fuer
+     "eine Wahl schrubbt vorbei". Beide Wege dorthin (Reiter tippen,
+     Karte wischen) laufen ueber diese eine Stelle, sonst haengt
+     dieselbe Geste an zwei Orten und driftet auseinander. */
+  const choosePlan = (i: number) => {
+    if (i !== planIdx) hapticSelection()
+    onPlanChange(i)
+  }
+
   const trackRef = useRef<HTMLDivElement>(null)
   const tabsRef = useRef<HTMLDivElement>(null)
   const [pill, setPill] = useState({ left: 0, width: 79 })
-  const drag = useRef<{ startX: number; base: number } | null>(null)
+  /* `axis` haelt fest, wofuer die Geste sich entschieden hat: null =
+     noch offen, 'x' = Karussell, 'y' = die Seite scrollt. */
+  const drag = useRef<{ startX: number; startY: number; base: number; axis: 'x' | 'y' | null } | null>(null)
   const [dragging, setDragging] = useState(false)
 
   const slideWidth = () => trackRef.current?.querySelector<HTMLElement>('.plan-slide')?.offsetWidth ?? 393
@@ -269,21 +281,45 @@ export function SelectPlan({
   }, [planIdx, active])
 
   const onPointerDown = (e: React.PointerEvent) => {
-    drag.current = { startX: e.clientX, base: -planIdx * slideWidth() }
+    drag.current = { startX: e.clientX, startY: e.clientY, base: -planIdx * slideWidth(), axis: null }
     setDragging(true)
   }
   useEffect(() => {
+    /* ---- Achsensperre ----
+       Die Geste entscheidet sich nach 8px fuer eine Richtung und
+       bleibt dabei. Ohne das schob jede senkrechte Bewegung auf der
+       Karte sie zugleich seitwaerts: `touch-action: pan-y` laesst die
+       Seite scrollen, der Zeiger-Handler zog die Bahn trotzdem mit.
+       Solange die Bahn den ganzen Screen fuellte, fiel das kaum auf —
+       seit der Vergleich darunter scrollt (2026-09-22), faehrt der
+       Finger staendig senkrecht ueber die Karte. */
+    const LOCK = 8
     const move = (e: PointerEvent) => {
-      if (!drag.current || !trackRef.current) return
-      trackRef.current.style.transform = `translateX(${drag.current.base + (e.clientX - drag.current.startX)}px)`
+      const d = drag.current
+      if (!d || !trackRef.current) return
+      const dx = e.clientX - d.startX
+      const dy = e.clientY - d.startY
+      if (!d.axis) {
+        if (Math.abs(dx) < LOCK && Math.abs(dy) < LOCK) return
+        d.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
+        if (d.axis === 'y') {
+          /* Die Seite scrollt — die Bahn geht auf ihren Platz zurueck
+             und ruehrt sich bis zum naechsten Aufsetzen nicht mehr. */
+          drag.current = null
+          setDragging(false)
+          trackRef.current.style.transform = `translateX(${-planIdx * slideWidth()}px)`
+          return
+        }
+      }
+      trackRef.current.style.transform = `translateX(${d.base + dx}px)`
     }
     const up = (e: PointerEvent) => {
       if (!drag.current) return
-      const dx = e.clientX - drag.current.startX
+      const dx = drag.current.axis === 'x' ? e.clientX - drag.current.startX : 0
       drag.current = null
       setDragging(false)
-      if (dx < -60 && planIdx < PLANS.length - 1) onPlanChange(planIdx + 1)
-      else if (dx > 60 && planIdx > 0) onPlanChange(planIdx - 1)
+      if (dx < -60 && planIdx < PLANS.length - 1) choosePlan(planIdx + 1)
+      else if (dx > 60 && planIdx > 0) choosePlan(planIdx - 1)
       else if (trackRef.current) trackRef.current.style.transform = `translateX(${-planIdx * slideWidth()}px)`
     }
     window.addEventListener('pointermove', move)
@@ -304,15 +340,16 @@ export function SelectPlan({
       <div className="plan-flow">
       <div className="plan-header">
         <h1>Wähle Deinen Tarif</h1>
-        {/* Der Unterschied benannt statt die Ueberschrift wiederholt:
-            beide Tarife sind unbegrenzt und monatlich kuendbar,
-            verschieden sind Tempo und Magic Codes. Wer das vorne
-            liest, muss nicht zwei Feature-Listen vergleichen. */}
-        <p>Beide unbegrenzt mit 5G und monatlich kündbar. Der Unterschied ist das Tempo — und was Deine Magic Codes öffnen.</p>
+        {/* Nur noch das Gemeinsame, eine Zeile. Hier stand bis zum
+            2026-09-22 zusaetzlich, WORIN sich die Tarife unterscheiden
+            — drei Zeilen, die den Vergleich ankuendigten, der jetzt
+            eine Bildschirmhoehe darunter tatsaechlich steht. Ein Screen,
+            der den Unterschied zeigt, muss ihn nicht vorher erzaehlen. */}
+        <p>Beide unbegrenzt, beide monatlich kündbar.</p>
         <div className="tabs" ref={tabsRef}>
           <span className="pill" style={{ left: pill.left, width: pill.width }} />
           {PLANS.map((p, i) => (
-            <button key={p.key} className={i === planIdx ? 'on' : ''} onClick={() => onPlanChange(i)}>
+            <button key={p.key} className={i === planIdx ? 'on' : ''} onClick={() => choosePlan(i)}>
               {/* Der Preis gehoert an den Reiter. Sonst muss man
                   zwischen den Karten wischen, um zwei Zahlen zu
                   vergleichen. */}
@@ -322,31 +359,88 @@ export function SelectPlan({
           ))}
         </div>
       </div>
-      <div className="plan-track-wrap">
-        <div
-          className={`plan-track${dragging ? ' dragging' : ''}`}
-          ref={trackRef}
-          onPointerDown={onPointerDown}
-        >
-          {PLANS.map((p) => (
-            <div className="plan-slide" key={p.key}>
-              <SimCard plan={p} chipText={p.chip} />
-              {/* "Bis zu 300 Mbit/s" ist eine Zahl, die niemand
-                  einordnen kann — und sie ist der greifbarste
-                  Unterschied zwischen den Tarifen. Also steht daneben,
-                  was sie im Alltag bedeutet. */}
-              <div className="plan-speed">
-                <b>{p.downMbit} Mbit/s</b>
-                <span>{p.speedNote}</span>
+      {/* ---- Der scrollende Teil ----
+          Bis zum 2026-09-22 scrollte jede Tarifkarte fuer sich, und der
+          ganze Screen lag im Karussell. Wer vergleichen wollte, musste
+          wischen, sich die Zahl der einen Karte merken und auf der
+          anderen nachsehen — bei zwei Tarifen, die sich in vier Punkten
+          unterscheiden und in vier Punkten gleich sind.
+
+          Jetzt wischt nur noch die Karte: sie ist der Gegenstand, den
+          man waehlt. Der Vergleich darunter steht fest und zeigt beide
+          Spalten gleichzeitig. */}
+      <div className="plan-scroll">
+        <div className="plan-track-wrap">
+          <div
+            className={`plan-track${dragging ? ' dragging' : ''}`}
+            ref={trackRef}
+            onPointerDown={onPointerDown}
+          >
+            {PLANS.map((p) => (
+              <div className="plan-slide" key={p.key}>
+                <SimCard plan={p} chipText={p.chip} />
+                {/* Eine Zeile, nicht drei: sie beantwortet "ist der
+                    fuer mich?" — die restliche Antwort steht in der
+                    Tabelle darunter, und die muss ins Bild passen. */}
+                <p className="plan-desc">{p.tagline}</p>
               </div>
-              <div className="features-block">
-                <h2>Deine Features</h2>
-                <p className="desc">{p.desc}</p>
-                <FeatureList plan={p} />
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+
+        {/* ---- Der Unterschied ----
+            Vier Zeilen, beide Spalten sichtbar. Die gewaehlte Spalte
+            ist hell, die andere gedaempft — so haengt die Tabelle am
+            Reiter oben und am Knopf unten, statt danebenzustehen. */}
+        <section className="plan-diff-sec">
+          <h2>Der Unterschied</h2>
+          <div className="plan-diff card">
+            <div className="diff-heads" aria-hidden="true">
+              {PLANS.map((p, i) => (
+                <span key={p.key} className={i === planIdx ? 'on' : ''}>
+                  {p.name}
+                </span>
+              ))}
+            </div>
+            {/* Eine Definitionsliste: Merkmal, dann die beiden Werte.
+                <dl> statt <table>, weil es keine zwei Achsen gibt —
+                VoiceOver liest damit "Tempo, bis 100 Mbit/s, bis 300
+                Mbit/s" statt Zellkoordinaten. */}
+            <dl>
+              {PLAN_DIFF.map((row) => (
+                <div className="diff-row" key={row.label}>
+                  <dt>{row.label}</dt>
+                  {PLANS.map((p, i) => (
+                    <dd key={p.key} className={i === planIdx ? 'on' : ''}>
+                      {/* Der Tarifname steht nur fuer VoiceOver dabei —
+                          sichtbar traegt ihn die Spaltenueberschrift. */}
+                      <span className="sr-only">{p.name}: </span>
+                      {row.value(p)}
+                    </dd>
+                  ))}
+                </div>
+              ))}
+            </dl>
+          </div>
+          {/* Was die Datenrate im Alltag heisst — die Zahl in der
+              Tabelle allein sagt es nicht. Steht beim gewaehlten Tarif,
+              weil es ein Satz ist und keine Vergleichszeile. */}
+          <p className="plan-speed-note">
+            <b>{PLANS[planIdx].downMbit} Mbit/s:</b> {PLANS[planIdx].speedNote}
+          </p>
+        </section>
+
+        {/* ---- Das Gemeinsame ----
+            Leise und einmal. Vorher stand es zweimal ausgeschrieben und
+            fuellte die Haelfte beider Listen. */}
+        <section className="plan-shared-sec">
+          <h2>In beiden Tarifen</h2>
+          <ul className="plan-shared">
+            {PLAN_SHARED.map((f) => (
+              <li key={f}>{f}</li>
+            ))}
+          </ul>
+        </section>
       </div>
       </div>
       <div className="plan-cta">

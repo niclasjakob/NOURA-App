@@ -155,15 +155,13 @@
    ============================================================ */
 [data-ibeat='confirm'] .id-plate { opacity: 0.32; transform: perspective(1100px) scale(0.93); }
 
+/* Die Aufzaehlung ist entfallen — die globale Regel in global.css
+   haelt jede Animation dieser Datei an. Was bleibt: Scanbalken und
+   Blitz sind reine Bewegung und gehoeren im Stillstand weg, und die
+   drei Endzustaende tragen kein `forwards`, faenden also ohne
+   Wiederholung hier nicht statt. */
 @media (prefers-reduced-motion: reduce) {
-  .ident.run .id-nfc circle, .ident.run .id-frame, .ident.run .id-flash,
-  .ident.run .id-call-win, .ident.run .id-call-dot,
-  .ident.run .id-scan, .ident.run .id-line, .ident.run .id-portrait rect {
-    animation: none !important;
-  }
-  .id-plate, .id-glow { transition: none; }
   .id-scan, .id-flash { opacity: 0 !important; }
-  /* Die Endzustaende muessen trotzdem stimmen. */
   [data-ibeat='check'] .id-line { fill: rgba(255, 255, 255, 0.34); }
   [data-ibeat='read'][data-method='eid'] .id-nfc,
   [data-ibeat='read'][data-method='photo'] .id-frame,

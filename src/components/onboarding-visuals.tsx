@@ -7,8 +7,9 @@
    filter:blur oder backdrop-filter — Safari auf dem iPhone rendert
    grossflaechige Filter traege (siehe Aurora-Entscheidung in global.css).
    ============================================================ */
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import onboardCard from '../assets/img/onboard-simcard.webp'
+import { randomCode } from '../data/magic'
 
 /* ---------- Driftende Farbwolken ----------
    Liegt ueber dem statischen Aurora-Bild und haelt den Hintergrund in
@@ -21,32 +22,6 @@ export function AuroraFlow({ tone = 'coral' }: { tone?: 'coral' | 'violet' | 'bl
       <span className="af af-3" />
     </div>
   )
-}
-
-/* ---------- Zaehler ----------
-   Zaehlt beim Einblenden auf den Zielwert hoch (ease-out cubic). */
-function useCountUp(target: number, run: boolean, ms = 1400) {
-  const [value, setValue] = useState(0)
-  useEffect(() => {
-    if (!run) {
-      setValue(0)
-      return
-    }
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setValue(target)
-      return
-    }
-    let raf = 0
-    const start = performance.now()
-    const tick = (now: number) => {
-      const p = Math.min(1, (now - start) / ms)
-      setValue(Math.round(target * (1 - Math.pow(1 - p, 3))))
-      if (p < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [target, run, ms])
-  return value
 }
 
 /* ---------- Die 3D-Karte ----------
@@ -80,113 +55,164 @@ export function VisualDigital() {
   )
 }
 
-/* ================= Schritt 2 — Flexibel =================
-   Kalenderblatt mit hervorgehobenem Stichtag, darum ein rotierender
-   gestrichelter Ring als Bild fuer den monatlichen Zyklus. */
-export function VisualFlexible({ run }: { run: boolean }) {
-  const days = Array.from({ length: 28 }, (_, i) => i + 1)
+/* ================= Schritt 2 — Magic Codes =================
+   Vier Zeichen, drei Tueren. Der Code rollt und rastet ein wie die
+   Kachel auf Home — und wechselt alle paar Sekunden, weil genau das
+   seine Aussage ist: er ist nie derselbe, ein abfotografierter Code
+   ist eine Stunde spaeter wertlos.
+
+   Hier stand bis zum 2026-09-21 ein Kalenderblatt fuer "monatlich
+   kuendbar". Ein Kalender ist kein Bauteil dieser App; die Magic Codes
+   sind eines, mit eigener Kachel, eigenem Sheet und eigenem
+   Creator-Werkzeug — und kamen im Onboarding nirgends vor. */
+const DOORS = ['Festival', 'Konzert', 'Meet-up'] as const
+
+/* Zeitmass des Ziffernlaufs — dieselben Werte wie in magic-code.tsx,
+   damit Onboarding und Home denselben Rhythmus haben. */
+const ROLL_MS = 55
+const ROLL_FRAMES = 4
+const CODE_CYCLE_MS = 3600
+
+const prefersReduced = () =>
+  typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+
+export function VisualMagic({ run }: { run: boolean }) {
+  const reduced = useMemo(prefersReduced, [])
+  const [digits, setDigits] = useState<string[]>(() => randomCode().split(''))
+  const [rolling, setRolling] = useState(false)
+  const rollRef = useRef(0)
+
+  /* Die Stellen rasten von links nach rechts ein, jede nach vier
+     Bildern. Bis dahin flackert sie durch das Alphabet. */
+  const roll = useCallback(() => {
+    const target = randomCode().split('')
+    window.clearInterval(rollRef.current)
+    if (reduced) {
+      setDigits(target)
+      return
+    }
+    setRolling(true)
+    let frame = 0
+    rollRef.current = window.setInterval(() => {
+      frame += 1
+      const locked = Math.floor(frame / ROLL_FRAMES)
+      if (locked >= target.length) {
+        window.clearInterval(rollRef.current)
+        setDigits(target)
+        setRolling(false)
+        return
+      }
+      setDigits(target.map((c, i) => (i < locked ? c : randomCode(1))))
+    }, ROLL_MS)
+  }, [reduced])
+
+  /* Nur laufen, solange der Screen sichtbar ist. */
+  useEffect(() => {
+    if (!run) return
+    const iv = window.setInterval(roll, CODE_CYCLE_MS)
+    return () => {
+      window.clearInterval(iv)
+      window.clearInterval(rollRef.current)
+      setRolling(false)
+    }
+  }, [run, roll])
+
   return (
-    <div className="viz">
+    /* Der Text unter dem Bild nennt Festival, Konzert und Meet-up
+       bereits — fuer VoiceOver waere die Grafik also eine Wiederholung. */
+    <div className="viz" aria-hidden="true">
       <span className="viz-glow glow-violet" />
-      <svg className="cycle-ring" viewBox="0 0 240 240" aria-hidden="true">
-        <circle cx="120" cy="120" r="112" fill="none" stroke="rgba(255,255,255,.22)" strokeWidth="1.5" strokeDasharray="4 12" strokeLinecap="round" />
-      </svg>
-      <div className={`cal-card${run ? ' run' : ''}`}>
-        <div className="cal-top">
-          <i />
-          <i />
-          <span>Monat 01</span>
-        </div>
-        <div className="cal-grid">
-          {days.map((d) => (
-            <span key={d} className={d === 10 ? 'day on' : 'day'}>
+      <div className="mcode">
+        <div className={`mcode-row${rolling ? ' rolling' : ''}`}>
+          {digits.map((d, i) => (
+            <span key={i} className="mcode-tile" style={{ '--i': i } as React.CSSProperties}>
               {d}
             </span>
           ))}
         </div>
-        <div className="cal-foot">jederzeit kündbar</div>
+        <span className="mcode-stem" />
+        <div className="mcode-doors">
+          {DOORS.map((d, i) => (
+            <span key={d} className="mcode-door" style={{ '--i': i } as React.CSSProperties}>
+              {d}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
-/* ================= Schritt 3 — Highspeed =================
-   Tacho: der Zeiger schwingt beim Einblenden auf die volle Bandbreite hoch,
-   der Bogen faerbt sich mit. Angetrieben wird beides vom selben Zaehler wie
-   die Zahl darunter — Nadel, Bogen und Ziffer koennen nicht auseinander
-   laufen. */
-const MAX_MBIT = 500
+/* ================= Schritt 3 — die zugesicherte Rate =================
+   Hier standen bis zum 2026-09-22 zwei Spuren nebeneinander, eine
+   verstopft, eine frei. Das Bild erzaehlte das falsche Produkt: zwei
+   Spuren sind Vorfahrt — Du zuerst, die anderen warten. Das ist
+   Priorisierung, und die verkauft NOURA nicht. Von Niclas korrigiert.
 
-/* SVG misst im Uhrzeigersinn ab 3 Uhr. 200 Grad Sweep, unten offen und
-   symmetrisch: Vollausschlag landet damit knapp unter der Waagerechten
-   rechts. Bei den 240 Grad eines Auto-Tachos zeigt der Zeiger bei Vollgas
-   nach unten und liest sich wie durchgehangen. */
-const GAUGE_R = 96
-const GAUGE_CIRC = 2 * Math.PI * GAUGE_R
-const GAUGE_SWEEP = 200
-const GAUGE_ARC = (GAUGE_CIRC * GAUGE_SWEEP) / 360
-const GAUGE_START = 270 - GAUGE_SWEEP / 2
-const TICKS = 9
+   Zugesichert wird eine Datenrate, kein Vortritt. Die Kurve darf
+   fallen, nur nicht unter den Boden — und genau das ist jetzt das Bild:
+   eine Rate, die mit der Netzlast absackt, auf dem garantierten Wert
+   aufsetzt und dort weiterlaeuft. Eine einzige Partei, kein Vergleich,
+   niemandem wird etwas weggenommen. Die Aussage ist nicht "schneller
+   als die anderen", sondern "faellt nie aus".
 
-export function VisualSpeed({ run }: { run: boolean }) {
-  const mbit = useCountUp(MAX_MBIT, run)
-  const ratio = mbit / MAX_MBIT
-  const needle = GAUGE_START + GAUGE_SWEEP * ratio
+   Der Tacho davor (bis 2026-09-21) war aus demselben Grund die falsche
+   Form: ein Tacho zeigt die Spitze, eine Zusicherung ist ein Boden. */
 
+/* Zeichenflaeche 300x112, Boden bei y=88 — darunter das zugesicherte
+   Band. Die Kurve faellt in Wellen statt gleichmaessig, weil Netzlast
+   schwankt, und setzt bei x=220 auf. Das letzte Drittel laeuft flach:
+   erst diese Strecke sagt "hier ist Schluss nach unten". */
+const PLOT_W = 300
+const PLOT_H = 112
+const FLOOR_Y = 88
+
+/* Die Kurve setzt drei Einheiten ueber dem Boden auf, nicht genau
+   darauf. Genau darauf gelegt deckt der 2,5 Einheiten breite weisse
+   Strich die 2 Einheiten der Bodenlinie vollstaendig zu — im ersten
+   Entwurf verschwand die Zusicherung ab dem Aufsetzpunkt aus dem Bild,
+   also genau dort, wo sie die Aussage traegt. Drei Einheiten Abstand
+   lesen sich weiter als Aufliegen und lassen beide Linien stehen. */
+const SETTLE_Y = FLOOR_Y - 3
+const RATE_POINTS: ReadonlyArray<readonly [number, number]> = [
+  [0, 18], [24, 26], [46, 14], [70, 40], [92, 30], [116, 56],
+  [138, 48], [162, 70], [184, 62], [204, 79], [220, SETTLE_Y], [PLOT_W, SETTLE_Y],
+]
+
+/* Gerechnet, nicht geschaetzt: stroke-dasharray braucht die echte
+   Laenge des Linienzugs, sonst beginnt die Linie sichtbar zu spaet oder
+   ist vor dem Ende des Durchlaufs schon fertig. */
+const RATE_LEN = RATE_POINTS.reduce(
+  (sum, [x, y], i) =>
+    i === 0 ? 0 : sum + Math.hypot(x - RATE_POINTS[i - 1][0], y - RATE_POINTS[i - 1][1]),
+  0,
+)
+
+export function VisualNetwork() {
   return (
-    <div className="viz">
+    <div className="viz" aria-hidden="true">
       <span className="viz-glow glow-blue" />
-      <div className="g5">
-        <div className="gauge">
-          <svg viewBox="0 0 240 158" aria-hidden="true">
-            {/* Skalenstriche: die oberen beiden in Akzentfarbe, damit das
-                Ende der Skala als Zielbereich lesbar ist */}
-            {Array.from({ length: TICKS }, (_, i) => {
-              const a = ((GAUGE_START + (GAUGE_SWEEP * i) / (TICKS - 1)) * Math.PI) / 180
-              const [cos, sin] = [Math.cos(a), Math.sin(a)]
-              return (
-                <line
-                  key={i}
-                  x1={120 + cos * 106}
-                  y1={120 + sin * 106}
-                  x2={120 + cos * 114}
-                  y2={120 + sin * 114}
-                  stroke={i >= TICKS - 2 ? 'var(--noura-accent)' : 'rgba(255,255,255,.3)'}
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-              )
-            })}
-
-            <circle
-              className="gauge-track"
-              cx="120" cy="120" r={GAUGE_R}
-              strokeDasharray={`${GAUGE_ARC} ${GAUGE_CIRC}`}
-              transform={`rotate(${GAUGE_START} 120 120)`}
+      <div className="rate">
+        {/* Die Zeile erklaert die x-Achse. Ohne sie sieht man eine Linie
+            fallen und erfaehrt den Grund erst im Absatz darunter. */}
+        <span className="rate-cap">Deine Datenrate, wenn das Netz voll läuft</span>
+        <div className="rate-plot">
+          <svg viewBox={`0 0 ${PLOT_W} ${PLOT_H}`}>
+            {/* Das Band unter dem Boden ist der Bereich, den die Kurve
+                nicht betreten kann — gezeigt als Flaeche, nicht als
+                zweite Spur. */}
+            <rect className="rate-band" x="0" y={FLOOR_Y} width={PLOT_W} height={PLOT_H - FLOOR_Y} />
+            <line className="rate-floor" x1="0" y1={FLOOR_Y} x2={PLOT_W} y2={FLOOR_Y} />
+            <polyline
+              className="rate-line"
+              points={RATE_POINTS.map(([x, y]) => `${x},${y}`).join(' ')}
+              style={{ '--len': RATE_LEN } as React.CSSProperties}
             />
-            <circle
-              className="gauge-fill"
-              cx="120" cy="120" r={GAUGE_R}
-              strokeDasharray={`${GAUGE_ARC * ratio} ${GAUGE_CIRC}`}
-              transform={`rotate(${GAUGE_START} 120 120)`}
-            />
-
-            {/* Der Zeiger beginnt ausserhalb des Deckels (r=31). Liefe er
-                darunter durch, schiene er durch dessen Glasfuellung hindurch. */}
-            <g className="gauge-needle" transform={`rotate(${needle} 120 120)`}>
-              <line x1="156" y1="120" x2="196" y2="120" strokeLinecap="round" />
-            </g>
-            {/* Nabendeckel traegt die Wortmarke, wie bei einem echten Tacho */}
-            <circle className="gauge-cap" cx="120" cy="120" r="31" />
-            <text className="gauge-mark" x="120" y="120" textAnchor="middle" dominantBaseline="central">
-              5G
-            </text>
           </svg>
         </div>
-
-        <div className="g5-speed">
-          <b>{mbit}</b>
-          <em>Mbit/s</em>
+        <div className="rate-legend">
+          <i />
+          garantiert 1 Mbit/s
         </div>
       </div>
     </div>

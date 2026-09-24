@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Plan } from '../data/plans'
+import { hapticPress } from '../lib/haptics'
 import { useInert } from '../hooks/a11y'
 
 /* ---------- Button ----------
@@ -24,6 +25,7 @@ export function Button({
   variant = 'filled',
   className = '',
   type = 'button',
+  onPointerDown,
   ...rest
 }: {
   variant?: ButtonVariant
@@ -33,7 +35,24 @@ export function Button({
     variant === 'icon' ? 'icon-btn' : '',
     className].filter(Boolean).join(' ')
   return (
-    <button className={cls} type={type} {...rest}>
+    <button
+      className={cls}
+      type={type}
+      /* Beruehrung beim DRUECKEN, nicht beim Loslassen: der Finger
+         liegt noch auf, und die Rueckmeldung liest sich als Kontakt
+         mit dem Knopf. Das Loslassen traegt schon die Feder — beides
+         zu belegen macht aus einem Druck zwei Ereignisse.
+
+         Nur der gefuellte Knopf. Der Geisterknopf ist die leise
+         Zweitwahl und der Symbolknopf sitzt in der Navigation; beiden
+         eine Haptik zu geben hiesse, sie an alles zu haengen, und dann
+         bedeutet sie nichts mehr. */
+      onPointerDown={(e) => {
+        if (variant === 'filled' && !rest.disabled) hapticPress()
+        onPointerDown?.(e)
+      }}
+      {...rest}
+    >
       {children}
     </button>
   )
@@ -58,7 +77,13 @@ export function Screen({ active, children }: { active: boolean; children: React.
   useEffect(() => {
     const left = wasActive.current && !active
     wasActive.current = active
-    if (!left) return
+    if (!left) {
+      /* Wer zurueckkommt, bevor die 460ms um sind, traegt die
+         Markierung sonst weiter — sichtbar waere das erst beim
+         uebernaechsten Wechsel, und dann nicht mehr erklaerbar. */
+      setLeaving(false)
+      return
+    }
     setLeaving(true)
     const t = window.setTimeout(() => setLeaving(false), 460)
     return () => window.clearTimeout(t)

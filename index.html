@@ -7,9 +7,60 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>NOURA — eSIM App</title>
+    <style>
+      /* Bis die App-Stile stehen, bleibt die Vorschau unsichtbar. Im
+         Build ist das ein Wimpernschlag ohne Folgen — dort haengt das
+         Stylesheet als <link> im Kopf und blockiert das Zeichnen, die
+         Vorschau ist also ab dem ersten Frame da. Im Entwicklungsmodus
+         liefert Vite die Stile erst mit dem Skript aus; ohne diese Zeile
+         staende dort kurz ein 1024px grosses Icon im Bild. */
+      #boot { visibility: hidden; }
+    </style>
   </head>
   <body>
+    <!-- Uebergabe vom Startbildschirm des Systems: der Intro-Screen in
+         seinem Anfangszustand — Aurora und App-Icon, sonst nichts. Der
+         native Startbildschirm verschwindet, sobald das Fenster steht,
+         nicht erst wenn React gezeichnet hat; ohne diese Vorschau laege
+         dazwischen der leere Webview.
+
+         Kein Nachbau: es sind dieselben Klassen wie im Screen selbst,
+         die Stile stehen nur an einer Stelle. App.tsx nimmt die Vorschau
+         weg, sobald der echte Screen steht. -->
+    <div id="boot" aria-hidden="true">
+      <div class="stage">
+        <div class="phone">
+          <div class="bg-grad"></div>
+          <div class="bg-noise"></div>
+          <div class="aurora-flow tone-coral">
+            <span class="af af-1"></span><span class="af af-2"></span><span class="af af-3"></span>
+          </div>
+          <div class="intro-center">
+            <!-- Nur das Icon: das Lockup darunter blendet erst ein, im
+                 ersten Moment des Screens steht es also noch nicht da. -->
+            <div class="intro-brand">
+              <img class="intro-icon" src="/src/assets/img/noura-app-icon.svg" alt="" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div id="root"></div>
+    <script>
+      /* Meldung an den nativen Startbildschirm: der erste Frame steht.
+         Er liegt bis dahin als Deckschicht ueber dem Webview (siehe
+         SceneDelegate in AppDelegate.swift) und wartet auf genau diese
+         Zeile — das Ende des Ladens taugt dafuer nicht, es faellt rund
+         350ms zu frueh.
+
+         Zwei requestAnimationFrame: der erste laeuft vor dem naechsten
+         Zeichnen, der zweite erst danach. Wenn er dran ist, ist die
+         Vorschau oben also wirklich im Bild. Ein gewoehnliches Skript,
+         kein Modul — es soll vor dem Bundle laufen, nicht danach. */
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { window.nouraPainted = true })
+      })
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

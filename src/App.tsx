@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { BackgroundGradient, LiveRegion, StatusBar } from './components/ui'
 import { Activation, Home, Intro, Onboarding, SelectPlan } from './screens/screens'
@@ -49,6 +49,15 @@ export default function App() {
   const [passes, setPasses] = useState<MagicPass[]>([])
   /* Welcher Zugang beim Oeffnen zu sehen ist. null = Eingabe. */
   const [focusPass, setFocusPass] = useState<string | null>(null)
+
+  /* Die Vorschau aus index.html hat ihren Zweck erfuellt, sobald dieser
+     Screen gezeichnet ist — ab da zeigte sie dasselbe Bild ein zweites
+     Mal. useEffect und nicht useLayoutEffect: der Effekt laeuft nach dem
+     Frame, der den Intro-Screen bringt, es gibt also keinen Moment, in
+     dem weder Vorschau noch Screen zu sehen waeren. */
+  useEffect(() => {
+    document.getElementById('boot')?.remove()
+  }, [])
 
   const screensRef = useRef<HTMLDivElement>(null)
   /* Solange ein Sheet offen ist, darf nichts dahinter fokussierbar

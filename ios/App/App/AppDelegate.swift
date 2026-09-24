@@ -1,4 +1,5 @@
 import UIKit
+import WebKit
 import Capacitor
 
 @UIApplicationMain
@@ -52,13 +53,97 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
    der Start mit EXC_BREAKPOINT in
    __UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption ab.
 
-   Das Fenster baut UIKit selbst aus Main.storyboard (UISceneStoryboardFile im
-   Info.plist), deshalb bleibt willConnectTo leer. Die Klasse existiert nur,
-   um die beiden Rueckwege durchzureichen, die unter Scenes nicht mehr am
-   AppDelegate ankommen — sonst verlieren Plugins ihre URL-Callbacks. */
+   Das Fenster baut UIKit selbst aus Main.storyboard (UISceneStoryboardFile
+   im Info.plist); willConnectTo legt deshalb nur die Deckschicht des
+   Startbildschirms darueber, mehr nicht. Die beiden Rueckwege am Ende
+   reichen durch, was unter Scenes nicht mehr am AppDelegate ankommt —
+   sonst verlieren Plugins ihre URL-Callbacks. */
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
+
+    /* ---- Uebergabe vom Startbildschirm ----
+       Startbildschirm und Intro-Screen zeigen dasselbe Bild an derselben
+       Stelle. Dazwischen liegt aber eine Luecke: das System nimmt den
+       Startbildschirm weg, sobald das Fenster steht, und der Webview malt
+       seinen ersten Frame erst deutlich spaeter. Gemessen am 2026-09-18
+       im Simulator (iPhone 17, Aufzeichnung mit simctl, Einzelbilder alle
+       16ms): rund 500ms, in denen die flache Hintergrundfarbe des
+       Webviews im Bild stand — und der Startbildschirm selbst kam dabei
+       gar nicht erst vor.
+
+       Also legt die App ihn selbst noch einmal darueber und nimmt ihn
+       weg, wenn der Webview geladen hat. Die Deckschicht kommt aus
+       LaunchScreen.storyboard, ist also kein Nachbau: dieselben Bilder,
+       dieselben Constraints, und sie folgt automatisch, wenn dort etwas
+       geaendert wird.
+
+       Zwei Sicherungen, denn eine haengende Deckschicht macht die App
+       unbedienbar: sie nimmt keine Eingaben an, und sie verschwindet
+       nach spaetestens drei Sekunden auch ohne jedes Signal. */
+    private var cover: UIViewController?
+
+    func scene(_ scene: UIScene, willConnectTo session: UISceneSession,
+               options connectionOptions: UIScene.ConnectionOptions) {
+        // Das Fenster baut UIKit aus Main.storyboard (UISceneStoryboardFile),
+        // hier kommt nur die Deckschicht dazu.
+        guard let window = window,
+              let cover = UIStoryboard(name: "LaunchScreen", bundle: nil)
+                .instantiateInitialViewController() else { return }
+        self.cover = cover
+        cover.view.frame = window.bounds
+        cover.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        cover.view.isUserInteractionEnabled = false
+        window.addSubview(cover.view)
+
+        DispatchQueue.main.async { [weak self] in
+            // Die Wurzelansicht kann nach unserer Deckschicht ins Fenster
+            // gekommen sein; und der Webview entsteht erst mit ihr.
+            window.bringSubviewToFront(cover.view)
+            guard let bridge = window.rootViewController as? CAPBridgeViewController else { return }
+            bridge.loadViewIfNeeded()
+            guard let webView = bridge.webView else { return }
+            self?.waitForFirstFrame(webView)
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.revealApp() }
+    }
+
+    /* Gefragt wird nach dem ersten gezeichneten Frame, nicht nach dem Ende
+       des Ladens. Der Unterschied ist gemessen und betraegt rund 350ms:
+       `isLoading` faellt, waehrend der Webview noch nichts im Bild hat.
+       Wer darauf abblendet, zeigt genau die Luecke, die er schliessen
+       soll — im Mitschnitt vom 2026-09-18 war der Schirm dabei fuer drei
+       Einzelbilder vollstaendig leer.
+
+       Die Seite meldet sich deshalb selbst: index.html setzt
+       window.nouraPainted, sobald ihr erster Frame steht. Gefragt wird
+       alle 40ms; nach spaetestens zwei Sekunden gilt die Antwort als
+       gegeben. */
+    private func waitForFirstFrame(_ webView: WKWebView, attempt: Int = 0) {
+        webView.evaluateJavaScript("window.nouraPainted === true") { [weak self] value, _ in
+            guard let self = self, self.cover != nil else { return }
+            if (value as? Bool) == true || attempt >= 50 {
+                self.revealApp()
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) {
+                self.waitForFirstFrame(webView, attempt: attempt + 1)
+            }
+        }
+    }
+
+    /* Dass beide Bilder gleich aussehen, macht die Blende unsichtbar; sie
+       ist trotzdem da, damit ein Rest Abweichung nicht als Sprung liest. */
+    private func revealApp() {
+        guard let cover = cover else { return }
+        self.cover = nil
+        UIView.animate(withDuration: 0.2, delay: 0, options: [.curveEaseOut]) {
+            cover.view.alpha = 0
+        } completion: { _ in
+            cover.view.removeFromSuperview()
+        }
+    }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
         guard let context = URLContexts.first else { return }

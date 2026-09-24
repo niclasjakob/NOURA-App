@@ -38,6 +38,7 @@ import {
   identAvailable,
   type IdentMethod,
 } from '../data/account'
+import { hapticSuccess } from '../lib/haptics'
 
 /* ================= Checkout ================= */
 export type NumberMode = 'new' | 'port'
@@ -105,6 +106,9 @@ export function Checkout({
   const submit = () => {
     const gap = missing()
     if (!gap) {
+      /* Der eine folgenreiche Tipp in der App: hier wird bestellt.
+         Alles davor laesst sich zuruecknehmen, das hier nicht. */
+      hapticSuccess()
       onSubmit()
       return
     }

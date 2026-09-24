@@ -48,7 +48,18 @@
   position: absolute; left: 50%; top: 50%;
   width: 292px; height: 159px; margin: -79px 0 0 -146px;
   transform-origin: 50% 50%;
-  transition: transform 1.3s var(--ease-out);
+  /* 1,05s statt 1,3s. Der Takt "bereit" dauert 1300ms (FORGE_FINALE),
+     und danach wechselt die Phase auf "handover" — dabei wird der
+     komplette rechte Block neu in den Baum gehaengt. Mit 1,3s endete
+     die Aufrichtbewegung der Karte GENAU in diesem Moment: der Einbau
+     fiel auf das letzte Bild der Bewegung, und der Ruck lag auf dem
+     Punkt, an dem das Auge auf der Karte ruht. Jetzt steht sie 250ms
+     still, bevor sich um sie herum etwas aendert. */
+  transition: transform 1.05s var(--ease-out);
+  /* Die Platte traegt eine 3D-Lage und darin einen Baum, der sich
+     dauernd aendert. Ohne Hinweis entscheidet Safari in jedem Bild neu,
+     ob sie eine eigene Ebene bekommt. */
+  will-change: transform;
 }
 .fg-plate svg { width: 100%; height: 100%; display: block; overflow: visible; }
 /* Das Schweben liegt auf dem SVG, nicht auf der Platte: dort wuerde es
@@ -61,24 +72,58 @@
 
 /* Takt 1-3 liegt die Karte auf der Werkbank — gekippt und gedreht wie
    in der Figma-Vorlage. Ab "bereit" richtet sie sich auf und wendet
-   sich dem Kunden zu. Das ist der Moment der Uebergabe. */
+   sich dem Kunden zu. Das ist der Moment der Uebergabe.
+
+   ---------------------------------------------------------------
+   ALLE VIER LAGEN TRAGEN DIESELBE FUNKTIONSLISTE IN DERSELBER
+   REIHENFOLGE. Das ist keine Kosmetik, sondern die Ursache dafuer,
+   dass die Karte sich bis zum 2026-09-22 nicht sauber bewegt hat.
+
+   Vorher standen hier vier verschiedene Listen — vier Funktionen beim
+   Entwurf, zwei bei "bereit", drei beim Laden. Stimmen die Listen
+   nicht ueberein, kann der Browser nicht Funktion fuer Funktion
+   rechnen: er baut beide Zustaende zu 4x4-Matrizen um, zerlegt sie in
+   Verschiebung, Drehung, Skalierung und Scherung, interpoliert diese
+   Bestandteile und setzt sie wieder zusammen. Das Ergebnis ist ein
+   ANDERER Bewegungsweg als der, den die Werte beschreiben: die Karte
+   schwimmt durch Zwischenlagen, die auf der direkten Strecke nicht
+   liegen, und Drehung und Groesse laufen dabei nicht monoton.
+
+   Am deutlichsten beim Uebergang "versiegelt" -> "bereit", also
+   ausgerechnet im Hauptmoment des Ablaufs: 56 Grad Kippung und 24 Grad
+   Drehung gleichzeitig herausrechnen ergibt einen Schlenker, keinen
+   Aufrichter.
+
+   Wer hier eine Lage aendert, schreibt alle fuenf Funktionen hin —
+   auch die, die auf ihrem neutralen Wert stehen. Eine weggelassene
+   Funktion faellt sofort in die Matrix-Rechnung zurueck.
+   --------------------------------------------------------------- */
 [data-beat='design'] .fg-plate,
 [data-beat='laser'] .fg-plate,
 [data-beat='seal'] .fg-plate {
-  transform: perspective(1000px) rotateX(56deg) rotateZ(-24deg) scale(1.02);
+  transform: perspective(1000px) translateY(0px) rotateX(56deg) rotateZ(-24deg) scale(1.02);
 }
-[data-beat='ready'] .fg-plate { transform: perspective(1000px) scale(1); }
+[data-beat='ready'] .fg-plate {
+  transform: perspective(1000px) translateY(0px) rotateX(0deg) rotateZ(0deg) scale(1);
+}
 [data-beat='load'] .fg-plate,
-[data-beat='install'] .fg-plate { transform: perspective(1000px) translateY(8px) scale(0.8); }
+[data-beat='install'] .fg-plate {
+  transform: perspective(1000px) translateY(8px) rotateX(0deg) rotateZ(0deg) scale(0.8);
+}
 /* Zum Schluss tritt die Karte zurueck und gibt dem Netz die Flaeche. */
 [data-beat='search'] .fg-plate,
-[data-beat='live'] .fg-plate { transform: perspective(1000px) scale(0.46); }
+[data-beat='live'] .fg-plate {
+  transform: perspective(1000px) translateY(0px) rotateX(0deg) rotateZ(0deg) scale(0.46);
+}
 
 /* ---------- Grundzustand: die fertige Karte ---------- */
 /* Die Karte in der Fertigung traegt den Koerper ihres Tarifs — sonst
    entstuende hier eine Karte, die der Kunde danach nirgends
    wiedersieht. Die Farbe kommt aus denselben Variablen wie .sim-card. */
-.fg-fill { fill: var(--sim-connect-deep); transition: opacity 0.6s var(--ease-out), fill 0.6s var(--ease-out); }
+/* Nur opacity im Uebergang: der Tarif steht beim Betreten des Screens
+   fest und wechselt waehrend des Ablaufs nie, ein Uebergang auf `fill`
+   konnte also nie laufen — er kostete nur die Pruefung. */
+.fg-fill { fill: var(--sim-connect-deep); transition: opacity 0.6s var(--ease-out); }
 [data-plan='create'] .fg-fill { fill: var(--sim-create-deep); }
 .fg-outline {
   fill: none; stroke: rgba(255, 255, 255, 0.4); stroke-width: 1.5;
@@ -102,7 +147,10 @@
 
 /* Gravur: gesperrt und gedaempft — eingebrannt, nicht aufgedruckt. */
 .fg-engrave text {
-  fill: rgba(255, 255, 255, 0.5);
+  /* Weiss mit Deckkraft 0,5 statt halbtransparentem Weiss als Fuellung:
+     sieht gleich aus, laesst den Laser-Takt aber ueber `opacity`
+     animieren statt ueber `fill` — siehe fgEtch. */
+  fill: #fff; opacity: 0.5;
   font-family: var(--font); font-weight: 600; font-size: 16px;
 }
 
@@ -188,10 +236,19 @@
 .forge.run[data-beat='laser'] .fg-engrave text {
   animation: fgEtch 0.5s var(--ease-out) backwards; animation-delay: calc(2.1s + var(--i) * 0.06s);
 }
+/* Der Buchstabe gluet weiss auf und kuehlt auf die Gravur herunter.
+   Das lief bis zum 2026-09-22 ueber `fill` — eine Malfarbe, die in
+   jedem Bild neu gezeichnet werden muss, und das fuer jedes Zeichen
+   des Namens gleichzeitig. Der Baum darueber traegt eine 3D-Lage, also
+   musste mit jedem dieser Bilder auch die Karte neu gerastert werden.
+   Genau hier lag der Haenger beim Wechsel "entworfen" -> "gelasert".
+
+   Beide Farben waren Weiss, nur mit anderer Deckkraft — dieselbe
+   Bewegung geht deshalb ueber `opacity` und kostet nichts. */
 @keyframes fgEtch {
-  0% { opacity: 0; fill: #fff; }
-  30% { opacity: 1; fill: #fff; }
-  100% { opacity: 1; fill: rgba(255, 255, 255, 0.5); }
+  0% { opacity: 0; }
+  30% { opacity: 1; }
+  100% { opacity: 0.5; }
 }
 
 .forge.run[data-beat='laser'] .fg-laser { animation: fgLaser 3.05s linear backwards; }
@@ -365,10 +422,15 @@
   width: 320px; height: 260px;
   transform-origin: 50% 50%; pointer-events: none;
   transition: transform 0.9s var(--ease-out);
+  will-change: transform;
 }
 /* Laufend: gross und mittig, der Text steht darunter. */
+/* Auch hier eine Liste fuer alle Phasen — `translateY(236px)` gegen
+   `translateY(128px) scale(0.74)` sind zwei verschiedene Listen und
+   landeten in derselben Matrix-Rechnung wie die Karte. Der neutrale
+   Massstab steht deshalb ausgeschrieben da. */
 [data-phase='forge'] .jr-stage,
-[data-phase='install'] .jr-stage { transform: translateY(236px); }
+[data-phase='install'] .jr-stage { transform: translateY(236px) scale(1); }
 /* Statisch: kleiner und hoeher, sie teilt sich den Screen mit Text und Knopf. */
 [data-phase='handover'] .jr-stage { transform: translateY(128px) scale(0.74); }
 [data-phase='done'] .jr-stage { transform: translateY(77px) scale(0.58); }
@@ -421,22 +483,12 @@
    Alles Dauerlaufende steht still. Die Endzustaende muessen trotzdem
    stimmen: gezeichnete Pfade sind gezeichnet, Knoten sind verbunden.
    ============================================================ */
+/* Die Aufzaehlung ist entfallen — die globale Regel in global.css
+   haelt jede Animation dieser Datei an. Hier bleiben nur die Bilder,
+   die einen ANDEREN Zustand brauchen als den, auf dem ihre Animation
+   endet: ein Laserstrahl, eine Wischkante und ein Radarring sind
+   Bewegung und sonst nichts, sie gehoeren im Stillstand weg. */
 @media (prefers-reduced-motion: reduce) {
-  .fg-plate svg,
-  .forge.run .fg-outline, .forge.run .fg-laser,
-  .forge.run .fg-sparks circle, .forge.run .fg-wipe,
-  .forge.run .fg-cross path, .forge.run .fg-guides > *,
-  .forge.run .fg-esim-dot, .forge.run .fg-esim-sq,
-  .forge.run .fg-esim-in, .forge.run .fg-esim-e,
-  .forge.run .fg-engrave text, .forge.run .fg-print > *, .forge.run .fg-active,
-  .forge.run .fg-face,
-  .forge.run .fg-ring, .forge.run .fg-node, .forge.run .fg-ray,
-  .forge.run .fg-packet, .forge.run .fg-radar,
-  .forge.run .fg-stream circle, .forge.run .fg-dim {
-    animation: none !important;
-  }
-  .fg-plate, .fg-glow, .jr-stage { transition: none; }
-  .jr-run, .jr > .flow { animation: none !important; }
   .fg-laser, .fg-wipe, .fg-radar { opacity: 0 !important; }
   [data-beat='search'] .fg-ring, [data-beat='live'] .fg-ring { opacity: 0.3; }
 }

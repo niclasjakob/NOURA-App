@@ -25,12 +25,13 @@ ios/App/App/Assets.xcassets/AppIcon.appiconset/, den Startbildschirm, die
 Web-Icons in public/ und die SVG-Exporte in brand/. Gerendert wird mit Chrome im Headless-Modus; Assets stecken als
 data-URI in der Seite, damit keine file://-Zugriffsregeln greifen.
 """
-import argparse, base64, json, math, pathlib, subprocess, sys, tempfile
+import argparse, base64, json, math, pathlib, re, subprocess, sys, tempfile
 
 ROOT    = pathlib.Path(__file__).resolve().parents[2]
 ICONSET = ROOT / "ios/App/App/Assets.xcassets/AppIcon.appiconset"
 PUBLIC  = ROOT / "public"
 SPLASH  = ROOT / "ios/App/App/Assets.xcassets/Splash.imageset"
+SPLICON = ROOT / "ios/App/App/Assets.xcassets/SplashIcon.imageset"
 BRAND   = ROOT / "brand"
 APPIMG  = ROOT / "src/assets/img"
 CHROME  = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
@@ -41,7 +42,7 @@ CORAL_DARK = "#ef6166"   # auf dunklerem Grund einen Hauch heller
 def data_uri(rel, mime):
     return "data:" + mime + ";base64," + base64.b64encode((ROOT / rel).read_bytes()).decode()
 
-AURORA = data_uri("src/assets/img/aurora-bg.webp", "image/webp")
+AURORA = data_uri("src/assets/img/aurora-bg.png", "image/png")
 FONT   = data_uri("src/assets/fonts/GeneralSans-700.woff2", "font/woff2")
 
 # --- Die Marke -----------------------------------------------------------
@@ -178,6 +179,35 @@ def bold_ground_svg(px=1024):
         rects.append("<rect width='%d' height='%d' fill='url(#%s)'/>" % (px, px, ident))
     return "<defs>" + "".join(defs) + "</defs>" + "".join(rects)
 
+# --- Die Icon-Silhouette -------------------------------------------------
+# iOS schneidet das Icon nicht mit Kreisboegen ab, sondern mit einer
+# durchgehenden Kruemmung. Die Superellipse |x|^n+|y|^n=1 mit n=5 trifft
+# das deutlich besser als jeder border-radius — und sie ist der Grund,
+# warum das Zeichen auf dem Intro als App-Icon gelesen wird und nicht als
+# abgerundetes Quadrat.
+SQUIRCLE_N = 5.0
+
+def squircle_path(px=1024, n=SQUIRCLE_N, steps=400):
+    """Die Silhouette als Polygonzug. Gesampelt statt Bezier-genaehert:
+    bei 400 Punkten liegt die groesste Abweichung unter 0,1px auf 1024,
+    und der Pfad bleibt lesbar."""
+    a = px / 2
+    pts = []
+    for i in range(steps):
+        t = 2 * math.pi * i / steps
+        c, sn = math.cos(t), math.sin(t)
+        pts.append("%.1f %.1f" % (a + a * math.copysign(abs(c) ** (2 / n), c),
+                                  a + a * math.copysign(abs(sn) ** (2 / n), sn)))
+    return "M" + pts[0] + "L" + "L".join(pts[1:]) + "Z"
+
+def app_icon_body(px=1024):
+    """Das fertige App-Icon als SVG-Koerper: der bold-Grund in der
+    Silhouette, darauf das Zeichen. Dieselben Funktionen wie die PNG-
+    Renderei — es gibt keinen zweiten Stand des Icons."""
+    return ("<defs><clipPath id='tile'><path d='" + squircle_path(px) + "'/></clipPath></defs>"
+            "<g clip-path='url(#tile)'>" + bold_ground_svg(px) + "</g>"
+            + MARKS["beam"](WHITE_STEM, "#ffffff", "#fff3ea"))
+
 def coral_ground(overlay=""):
     return (".icon{background:linear-gradient(158deg,#ff6a5e 0%,#ee4257 46%,#c9294f 100%)}"
             + (".icon::before{content:'';position:absolute;inset:0;background:"
@@ -238,30 +268,74 @@ def variants(mark, tone):
     return out
 
 # --- Startbildschirm ------------------------------------------------------
-# Das Bild ist quadratisch (2732), die Storyboard-Ansicht zieht es mit
-# scaleAspectFill auf. Auf einem 1206x2622-Schirm bleiben davon die mittleren
-# 46 % Breite stehen — alles, was zaehlt, muss in diesem Streifen liegen.
-# Deshalb ein eigener, fast senkrechter Verlauf statt des diagonalen aus dem
-# Icon: der wuerde seine Ecken genau dort verlieren, wo die Farbe herkommt.
-SPLASH_PX   = 2732
-SPLASH_MARK = 668          # SVG-Kasten; das Zeichen darin misst 578/1024 davon
-SPLASH_GROUND = ("radial-gradient(90% 46% at 72% 4%,#ff7a4d 0%,rgba(255,122,77,0) 60%),"
-                 "radial-gradient(85% 44% at 26% 98%,#2f6bff 0%,rgba(47,107,255,0) 62%),"
-                 "linear-gradient(170deg,#f0455c 0%,#b32d7d 46%,#5b2bb0 100%)")
+# Er zeigt genau das, was der Intro-Screen im ersten Moment zeigt: den
+# Aurora-Hintergrund und darauf das App-Icon. Der Hintergrund kommt dabei
+# aus den App-Stilen selbst — zwei nachgebaute Verlaeufe waeren zwei
+# Staende, und der Unterschied faellt genau dann auf, wenn der
+# Startbildschirm in den Screen uebergeht.
+#
+# Gerendert wird der 393x852-Rahmen bei dreifacher Aufloesung, also in
+# genau den Pixeln, die ein iPhone zeigt. Das Icon liegt als eigenes Bild
+# daneben: LaunchScreen.storyboard setzt es ueber Constraints auf
+# dieselben Anteile der Bildschirmhoehe, die --intro-icon in global.css
+# rechnet. So sitzt es auf jedem Geraet an derselben Stelle — ein ins Bild
+# gebackenes Icon waere nur auf 393x852 richtig.
+DESIGN_W, DESIGN_H = 393, 852
+SPLASH_SCALE  = 3
+SPLASH_ICON_PX = 512
+ICON_FRAC = 0.176    # Kantenlaenge des Icons / Bildschirmhoehe (150px auf 852)
+ICON_CY   = 0.472    # Mitte des Icons / Bildschirmhoehe (y = 402)
 
-def splash_page(dark):
-    # Die erste Background-Ebene liegt oben: der Abdunkler gehoert nach vorn,
-    # angehaengt waere er unsichtbar hinter den Farbebenen.
-    overlay = ("linear-gradient(rgba(12,10,34,.34),rgba(12,10,34,.34))," if dark else "")
-    svg = MARKS["beam"](WHITE_STEM, "#ffffff", "#fff3ea")
-    return ("<!doctype html><html><head><meta charset='utf-8'><style>"
-            "*{margin:0;padding:0;box-sizing:border-box}"
-            "html,body{width:" + str(SPLASH_PX) + "px;height:" + str(SPLASH_PX) + "px;overflow:hidden}"
-            ".splash{position:relative;width:" + str(SPLASH_PX) + "px;height:" + str(SPLASH_PX) + "px;"
-            "display:grid;place-items:center;background:" + overlay + SPLASH_GROUND + "}"
-            "svg{width:" + str(SPLASH_MARK) + "px;height:" + str(SPLASH_MARK) + "px;display:block}"
-            "</style></head><body><div class='splash'><svg viewBox='0 0 1024 1024'>"
-            + svg + "</svg></div></body></html>")
+def app_css():
+    """Die Stile der App im Original. Der Aurora-Verweis wird auf die
+    eingebettete Datei umgebogen, weil die Seite aus einem Temp-Ordner
+    laedt; die Schriften duerfen ins Leere zeigen, der Startbildschirm
+    traegt keinen Text."""
+    css = "".join((ROOT / f).read_text() for f in
+                  ("src/styles/global.css", "src/styles/onboarding.css"))
+    return (css.replace("url('../assets/img/aurora-bg.png')", "url(" + AURORA + ")")
+            # Die Farbwolken driften 26 bis 39 Sekunden lang. Angehalten
+            # steht ihr 0%-Zustand im Bild — derselbe, den der Screen beim
+            # Aufbau zeigt.
+            + ".af{animation-play-state:paused!important}")
+
+# Dieselben zwei Zahlen stehen im CSS und im Storyboard. Auseinandergelaufen
+# springt das Icon beim Start — und das sieht man nicht im Screenshot, sondern
+# erst im Mitschnitt. Also wird beim Bauen nachgesehen.
+GEOMETRIE = (
+    ("src/styles/global.css", r"--intro-icon:\s*calc\(([\d.]+)", "ICON_FRAC"),
+    ("src/styles/global.css", r"--intro-cy:\s*calc\(([\d.]+)", "ICON_CY"),
+    ("ios/App/App/Base.lproj/LaunchScreen.storyboard",
+     r'multiplier="([\d.]+)" id="iconHeight"', "ICON_FRAC"),
+    ("ios/App/App/Base.lproj/LaunchScreen.storyboard",
+     r'multiplier="([\d.]+)" id="iconCenterY"', "ICON_CY"),
+)
+
+def check_geometry():
+    soll = {"ICON_FRAC": ICON_FRAC, "ICON_CY": ICON_CY}
+    heil = True
+    for rel, muster, name in GEOMETRIE:
+        treffer = re.search(muster, (ROOT / rel).read_text())
+        if treffer is None:
+            print("WARNUNG:", rel, "- Wert fuer", name, "nicht gefunden")
+            heil = False
+        elif abs(float(treffer.group(1)) - soll[name]) > 1e-9:
+            print("WARNUNG:", rel, "steht auf", treffer.group(1),
+                  "- hier gilt", soll[name], "(" + name + ")")
+            heil = False
+    if heil:
+        print("Geometrie stimmt ueberein: Icon %g, Mitte %g der Bildschirmhoehe"
+              % (ICON_FRAC, ICON_CY))
+    return heil
+
+def splash_bg_page():
+    return ("<!doctype html><html><head><meta charset='utf-8'><style>" + app_css() +
+            "</style></head><body><div class='stage'><div class='phone'>"
+            "<div class='bg-grad'></div><div class='bg-noise'></div>"
+            "<div class='aurora-flow tone-coral'>"
+            "<span class='af af-1'></span><span class='af af-2'></span>"
+            "<span class='af af-3'></span>"
+            "</div></div></div></body></html>")
 
 # --- SVG-Export ----------------------------------------------------------
 # Fuer Figma, Folien und alles, was Vektor braucht. Kein zweiter Stand: Grund
@@ -287,14 +361,21 @@ SVG_EXPORTS = {
     "noura-mark.svg": (
         "NOURA Zeichen",
         lambda: MARKS["beam"](WHITE_STEM, "#ffffff", "#fff3ea")),
+    # Das Icon inklusive Silhouette — das ist die Fassung, die der
+    # Intro-Screen und der Startbildschirm zeigen.
+    "noura-app-icon.svg": ("NOURA App-Icon", app_icon_body),
 }
 
+# Ein Bild, kein Hell/Dunkel-Paar: die App ist dauerhaft dunkel, ihr
+# erster Screen sieht in beiden Systemeinstellungen gleich aus. Zwei
+# Eintraege waeren zwei Kopien derselben Datei.
 SPLASH_CONTENTS = {
-    "images": [
-        {"filename": "splash-light.jpg", "idiom": "universal"},
-        {"appearances": [{"appearance": "luminosity", "value": "dark"}],
-         "filename": "splash-dark.jpg", "idiom": "universal"},
-    ],
+    "images": [{"filename": "splash.jpg", "idiom": "universal"}],
+    "info": {"author": "xcode", "version": 1},
+}
+
+SPLICON_CONTENTS = {
+    "images": [{"filename": "splash-icon.png", "idiom": "universal"}],
     "info": {"author": "xcode", "version": 1},
 }
 
@@ -309,14 +390,15 @@ CONTENTS = {
     "info": {"author": "xcode", "version": 1},
 }
 
-def render(html, out, transparent, px=1024):
+def render(html, out, transparent, px=1024, py=None, scale=1):
     if not pathlib.Path(CHROME).exists():
         sys.exit("Chrome nicht gefunden: " + CHROME)
     with tempfile.TemporaryDirectory() as tmp:
         src = pathlib.Path(tmp) / "icon.html"
         src.write_text(html)
         cmd = [CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
-               "--force-device-scale-factor=1", "--window-size=" + str(px) + "," + str(px)]
+               "--force-device-scale-factor=" + str(scale),
+               "--window-size=" + str(px) + "," + str(py or px)]
         if transparent:
             cmd.append("--default-background-color=00000000")
         cmd += ["--screenshot=" + str(out), src.as_uri()]
@@ -336,19 +418,31 @@ def main():
         print("gerendert:", out.relative_to(ROOT))
     (ICONSET / "Contents.json").write_text(json.dumps(CONTENTS, indent=2) + "\n")
 
-    # Startbildschirm: dieselbe Marke, eigener Verlauf fuer den Beschnitt.
+    # Startbildschirm, Teil 1: der Hintergrund des Intro-Screens.
+    # Als JPEG, weil der Verlauf als PNG ein Vielfaches kostet und hier
+    # keine Transparenz gebraucht wird — harte Kanten, an denen JPEG
+    # klingeln wuerde, traegt das Bild keine, die hat nur das Icon.
     SPLASH.mkdir(parents=True, exist_ok=True)
-    for dark, name in ((False, "splash-light"), (True, "splash-dark")):
-        png = SPLASH / (name + ".png")
-        render(splash_page(dark), png, False, SPLASH_PX)
-        # Als JPEG: 2732x2732 Verlauf kostet als PNG 2,4 MB, als JPEG 200 KB,
-        # und der Startbildschirm braucht keine Transparenz.
-        subprocess.run(["sips", "-s", "format", "jpeg", "-s", "formatOptions", "92",
-                        str(png), "--out", str(SPLASH / (name + ".jpg"))],
-                       check=True, capture_output=True)
-        png.unlink()
-        print("gerendert:", (SPLASH / (name + ".jpg")).relative_to(ROOT))
+    png = SPLASH / "splash.png"
+    render(splash_bg_page(), png, False, DESIGN_W, DESIGN_H, SPLASH_SCALE)
+    subprocess.run(["sips", "-s", "format", "jpeg", "-s", "formatOptions", "92",
+                    str(png), "--out", str(SPLASH / "splash.jpg")],
+                   check=True, capture_output=True)
+    png.unlink()
+    for veraltet in ("splash-light.jpg", "splash-dark.jpg"):
+        (SPLASH / veraltet).unlink(missing_ok=True)
     (SPLASH / "Contents.json").write_text(json.dumps(SPLASH_CONTENTS, indent=2) + "\n")
+    print("gerendert:", (SPLASH / "splash.jpg").relative_to(ROOT))
+
+    # Teil 2: das Icon als eigenes Bild mit Alphakanal. Das Storyboard
+    # skaliert es auf ICON_FRAC der Bildschirmhoehe.
+    SPLICON.mkdir(parents=True, exist_ok=True)
+    icon_png = SPLICON / "splash-icon.png"
+    render(page(".icon{background:transparent}", app_icon_body()), icon_png, True)
+    subprocess.run(["sips", "-Z", str(SPLASH_ICON_PX), str(icon_png), "--out", str(icon_png)],
+                   check=True, capture_output=True)
+    (SPLICON / "Contents.json").write_text(json.dumps(SPLICON_CONTENTS, indent=2) + "\n")
+    print("gerendert:", icon_png.relative_to(ROOT))
 
     # SVG: dieselbe Marke als Vektor, unabhaengig vom gewaehlten Ton.
     BRAND.mkdir(exist_ok=True)
@@ -356,13 +450,17 @@ def main():
         (BRAND / name).write_text(svg_file(build(), label))
         print("geschrieben:", (BRAND / name).relative_to(ROOT))
 
-    # Die App zeigt dasselbe Zeichen auf dem Intro — aus derselben Quelle,
-    # damit brand/ und src/assets/ nicht auseinanderlaufen.
-    (APPIMG / "noura-mark.svg").write_text(svg_file(SVG_EXPORTS["noura-mark.svg"][1](),
-                                                    SVG_EXPORTS["noura-mark.svg"][0]))
-    print("geschrieben:", (APPIMG / "noura-mark.svg").relative_to(ROOT))
+    # Der Intro-Screen zeigt das App-Icon — aus derselben Quelle wie die
+    # PNGs, damit brand/ und src/assets/ nicht auseinanderlaufen. Das nackte
+    # Zeichen bleibt in brand/, die App braucht es nicht mehr.
+    (APPIMG / "noura-app-icon.svg").write_text(
+        svg_file(SVG_EXPORTS["noura-app-icon.svg"][1](), SVG_EXPORTS["noura-app-icon.svg"][0]))
+    print("geschrieben:", (APPIMG / "noura-app-icon.svg").relative_to(ROOT))
+    (APPIMG / "noura-mark.svg").unlink(missing_ok=True)
 
     # Web: Favicon und Home-Screen-Icon aus derselben hellen Variante.
+    check_geometry()
+
     light = ICONSET / "AppIcon-1024.png"
     for size, target in ((180, "apple-touch-icon.png"), (256, "favicon.png")):
         subprocess.run(["sips", "-Z", str(size), str(light), "--out", str(PUBLIC / target)],

@@ -72,7 +72,3 @@
    die volle Breite — er misst den ganzen Ablauf, nicht die Buehne. */
 .flow-cta .beat-meter { width: 100%; margin-bottom: 16px; }
 
-@media (prefers-reduced-motion: reduce) {
-  .act-stage.beat-stage, .beat-caption, .beat-meter span.wait i { animation: none !important; }
-  .beat-meter i { transition: none; }
-}
