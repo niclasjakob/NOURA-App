@@ -94,9 +94,47 @@ wird es bei gedämpftem Text und bei der Akzentfarbe:
 |---|---|---|---|---|
 | `--noura-text-muted` `.50` (→ `#9c9cb1`) | Glaskarte `.10` (→ `#393a63`) | 4,00:1 | 4,5:1 | ~~reichte nicht~~ → `.65` = 5,59:1 |
 | `--noura-text-muted` `.50` (→ `#9192a8`) | Canvas `#232452` | 4,74:1 | 4,5:1 | → `.65` = 6,97:1 |
-| `--noura-accent` `#e15055` | Glaskarte `.10` | **2,80:1** | 3:1 (Icon) | **reicht nicht** |
+| `--noura-accent` `#e15055` | Glaskarte `.10` | **2,80:1** | 3:1 (Icon) | ~~reicht nicht~~ → Home-Icons: `--noura-accent-mark` auf Platte, 2026-09-24 |
 | `--noura-accent` `#e15055` | Canvas `#232452` | 3,79:1 | 4,5:1 Text / 3:1 Icon | nur als Icon tragfähig |
 | `#ffffff` | Aurora-Koralle `#d9686c` | **3,42:1** | 4,5:1 | **reicht nicht** für Text direkt auf dem Verlauf |
+
+> **Behoben am 2026-09-24** — Akzent als Schrift und als Chipflaeche.
+> Gemessen in Chrome, Pixel unter dem ausgeblendeten Text abgetastet:
+>
+> | Stelle | `#e15055` | jetzt |
+> |---|---|---|
+> | Onboarding-Etikett (`.ob-tag`) auf Aurora | 3,0:1 | `--noura-accent-text` `#f0a8aa`: 5,9:1 |
+> | "Abmelden" (`.list-row.danger`) im Sheet | 2,29:1 | `--noura-accent-text`: 4,55:1 |
+> | Feldfehler (`.field-err`) auf gewaehlter Zahlart | **1,84:1** | Weiss + korallener Punkt: 7,1:1 |
+> | Weiss auf Chip (`.chip`, `.trend.up`, `.drop-kind`, …) | 3,83:1 | `--noura-accent-fill` `#ca484c`: 4,62:1 |
+>
+> Fehlertexte bekommen bewusst **keinen** Akzentton: auf der hellsten
+> Glasstelle bleibt selbst `#f2b0b2` bei 3,9:1. Der rote Feldrand und der
+> Punkt sagen "Fehler", der Text ist weiss. Als Symbol, Balken, Rand und
+> Punkt bleibt der Akzent `#e15055`.
+
+> **Build-Falle (2026-09-24):** `-webkit-backdrop-filter` muss **vor**
+> `backdrop-filter` stehen. Umgekehrt verwirft Lightning CSS im
+> Tailwind-Build die ungepraefixte Zeile, sobald es gleiche Selektoren
+> zusammenfuehrt — Chrome zeigte dann Buttons, Sheets, Tarif-Linse und
+> Toast ohne Weichzeichner, die Sheets mit scharfem Home-Inhalt dahinter.
+> Auf dem iPhone unsichtbar, weil Safari die `-webkit-`-Zeile liest.
+> Pruefen: `getComputedStyle(el).backdropFilter` in Chrome, nicht nur
+> das Quell-CSS lesen.
+
+> **Entschieden 2026-09-24 (Niclas): Unendlich und Verbrauchs-Icons auf
+> Home.** `#e15055` kam dort auf 1,4–2,6:1 (Soll 3:1). Das Unendlich traegt
+> jetzt `--noura-accent-mark` `#ff8589` (3,44:1). Die drei Icons stehen
+> zusaetzlich auf einer 40px-Platte in `--noura-well` (>= 3,48:1) — ohne
+> Platte traegt kein Korallton, die Anrufe-Karte liegt ueber der
+> Aurora-Koralle (selbst `#f0a8aa` blieb dort bei 2,81:1). Abweichung von
+> Figma, bewusst: Figma zeichnet die Icons frei auf der Karte.
+
+> **Entschieden 2026-09-24 (Niclas): echte Icons im Konto-Sheet.** Figma
+> setzt dort leere Kreise als Platzhalter; im Code lasen sie sich als nicht
+> gewaehlte Optionsfelder. Jetzt Schild, Glocke, Halbkreis, Fragezeichen,
+> Dokument, Abmelden — gezeichnet wie die Verbrauchs-Icons (24er Raster,
+> Kontur 1.8, runde Enden), `ROW_ICONS` in `sheets.tsx`.
 
 Drei Konsequenzen für den nächsten Screen:
 
@@ -118,8 +156,9 @@ Safe-Area-Verrechnung (`--bar-bottom`), Glas nur auf Bedienelementen.
 ### Neue Screens ohne Figma-Vorlage
 
 Der Code ist über die Vorlage hinausgewachsen: `beats`, `esim-forge`,
-`ident-stage`, `magic-code`, `magic-pass`, `roaming`, `usage` und die Screens
-`checkout`, `esim` stehen in keinem Screen-Register. Dort gibt es nichts
+`ident-stage`, `magic-code`, `magic-pass`, `roaming`, `usage`, die Screens
+`checkout`, `esim` und die Konto-Unterseiten (`sheets/account-pages.tsx`)
+stehen in keinem Screen-Register. Dort gibt es nichts
 abzumessen — also führt `apple-design`, und diese Datei liefert nur das
 Material: Token, die drei Flächenstufen, die Schriftrollen.
 
@@ -127,6 +166,34 @@ Vorgehen nach `apple-design/SKILL.md › Design improvement mode`: Token-Plan vo
 dem Layout, ein Signature-Element je Screen, und die Selbstkritik davor —
 „wäre derselbe Entwurf auch für ein anderes Produkt herausgekommen?“ Wenn ja,
 ist er Vorgabe und kein Entwurf.
+
+**Beispiel, 2026-09-24 — die eSIM-Einrichtung (`esim-forge`, Geraeteseite).**
+Dort standen Radarkeil, Suchringe, sechs Netzknoten im Sechseck mit
+Strahlen und Datenpaketen, fallende Punkte und ein Schimmer in Schleife —
+das Stockbild „Konnektivitaet“, und im Hoehepunkt schrumpfte die Karte auf
+46 %. Niclas: „wirkt KI-generiert, nicht premium“. Ersetzt durch je eine
+ehrliche Anzeige pro Kapitel, beide aus dem iPhone-Alltag: ein bestimmter
+Fortschritt auf der SIM-Kontur (wie der Ring um ein ladendes App-Symbol),
+dann vier Empfangsbalken **ueber** der Karte (Niclas, gleicher Tag: dort,
+wo auf dem iPhone die Statusleiste steht) — leer, tastend, voll, daneben
+„5G“. Die Karte bleibt bei 90 %. **Keine Netzdiagramme, Radare oder
+Partikel wieder einfuehren**; wer dort etwas ergaenzt, erklaert zuerst,
+wofuer es im Produkt steht.
+
+Drei Bewegungsregeln aus derselben Runde („fluessiger, hochwertiger“),
+gueltig fuer jede Buehne:
+
+- **Schleifen, die hin und zurueck laufen, tragen `--ease-sway`** (Sinus),
+  nie `--ease-out`. Mit ease-out startet jede Haelfte mit dem 2,25-fachen
+  der Mittelgeschwindigkeit: an jedem Umkehrpunkt ein Zucken. Betraf das
+  Schweben der Karte und das Treiben der Aurora.
+- **Text wird nie im Bild des Wechsels ausgetauscht.** Der alte geht
+  (0,2s linear), der neue kommt, wenn er weg ist — Takt-Text
+  (`BeatCaption`) und Phasenbloecke (`.jr-leave`). Ein Schnitt mit Pause
+  dahinter liest sich als Fehler, eine Ueberlagerung zweier Titel auch.
+- **Was zusammen faehrt, faehrt mit einer Kurve.** Buehne und Karte darin
+  laufen beide 1,05s ease-out; mit 0,9s gegen 1,05s setzte sich die Karte
+  in zwei Stufen.
 
 ---
 
@@ -267,7 +334,6 @@ Aus Figma exportiert, liegen unter `src/assets/`. Insgesamt 112 KB.
 | Datei | Größe | Herkunft (Node) | Zweck |
 |---|---|---|---|
 | `img/aurora-bg.png` | 238 KB | `1330:1780` | Hintergrundverlauf, 393×852 (@1x, verlustfrei — der 150px-Weichzeichner traegt kein Detail, das @3x braeuchte; das alte 16-KB-WebP zeigte Blockartefakte und Streifen) |
-| `img/avatar-marcel.webp` | 6 KB | `1330:1860` | Profilbild Home |
 | `img/connected-by-vodafone.png` | 9 KB | `1330:1951` | Logo-Lockup auf dem Intro, 61px breit |
 | `img/noura-app-icon.svg` | 6,3 KB | erzeugt | App-Icon auf dem Intro, aus `build-icon.py` |
 | `fonts/GeneralSans-{500,600,700}.woff2` | 67 KB | Fontshare | Schrift |
@@ -550,7 +616,7 @@ Gepflegt an zwei Stellen: `.home-brand` in `global.css` und die Zeile in
 `Home()` in `screens.tsx`.
 
 **Die Kopfhoehe haengt jetzt an drei Werten**, nicht mehr an einem: 54px
-Profilbild + 21px Wortmarkenzeile + 6px Abstand. Der Versatz der
+Monogramm + 21px Wortmarkenzeile + 6px Abstand. Der Versatz der
 Scrollflaeche (`.home-scroll`) steht deshalb auf **171px** statt 144px. Wer
 die Zeile wieder entfernt, zieht dort 27px ab — sonst klafft ueber der
 SIM-Karte eine Luecke.
@@ -733,9 +799,157 @@ L320.50 21.03L339.79 38.66C343.11 41.69 345 45.98 345 50.47
 V157C345 165.84 337.84 173 329 173H16C7.16 173 0 165.84 0 157V16Z
 ```
 
-Umsetzung per `clip-path: path(...)` oder SVG-Maske. Innen: Plan-Name
-(Bold 20px), Vodafone-Logo, optional Chip ("Beliebt"/"Aktiv", Akzentfarbe,
-Radius 1000px), unten Preis (Bold 20px) und eSIM-Chip-Icon rechts.
+Umsetzung als SVG-Maske (`--sim-shape`). Innen: Plan-Name (Bold 20px),
+optional Chip (`.chip`, `--noura-accent-fill`, Pille), unten Preis und
+Unterzeile, eSIM-Chip-Icon rechts. **Kein** Vodafone- und kein NOURA-Zeichen
+(siehe Kasten unter „Erledigte Abweichungen").
+
+### Konto-Unterseiten (Stand 2026-09-24)
+
+Die fuenf Zeilen im Konto-Sheet fuehren jetzt auf Seiten
+(`sheets/account-pages.tsx`, Inhalte in `data/settings.ts`). Figma zeichnet
+keine davon.
+
+- **Im Sheet, nicht als zweites Sheet.** Die Seite schiebt sich von rechts
+  herein, Zurueck oben links auf Hoehe des Schliessen-Knopfs, Wischen vom
+  linken Rand (28px) geht zurueck. `sheets.md`: „Display only one sheet at a
+  time“. Was aus einer Seite in ein anderes Sheet fuehrt (Chat, Plan),
+  schliesst das Konto-Sheet zuerst.
+- **„Ansichtsmodus“ heisst jetzt „Darstellung“ und hat keinen
+  Hell/Dunkel-Schalter.** NOURA ist dauerhaft dunkel, und `dark-mode.md`
+  raet von App-eigenen Umschaltern ab. Die Seite sagt das in einem Satz und
+  traegt nur den Haptik-Schalter (`setHapticsOn` in `lib/haptics.ts`).
+  **Vorschlag, von Niclas zu bestaetigen** — wer doch einen Hell-Modus will,
+  braucht dafuer erst eine helle Palette.
+- **Der Schalter** (`.switch`, 51x31): aus = Mulde `--noura-well`, an = Glas
+  `--noura-glass-active`, Zustand ueber die Lage des weissen Knopfs. Kein
+  Akzentrot — Akzent fuellt nur den Chip.
+- **Gruppen sind Mulden, nicht Glas.** Gemessen (Chrome, dunkelster Kontrast
+  unter jedem Textfeld): Glas 10 % im Glas-Sheet ueber der Aurora-Koralle gab
+  den Notizen 3,19:1. Als `--noura-well`: Notizen >= 5,97:1, Titel >= 11,66:1.
+  **Merksatz: Inhalt IM Sheet ist dunkler als das Sheet.** Zwei weisse
+  Glasschichten uebereinander hellen den Grund auf.
+- **Werbung und Auswertung stehen ab Werk auf aus**, Werbung in einem eigenen
+  Abschnitt (`managing-notifications.md`). Sicherheitsmeldungen sind kein
+  gesperrter Schalter, sondern ein Wert: „Immer an“.
+
+### Support-Chat (Stand 2026-09-24)
+
+Figma (`1330:2679`) zeichnet nur den Anfang: Begruessung, zwei Knoepfe
+rechts, Eingabefeld. Der Rest steht in `sheets/support-chat.tsx`, Themen,
+Erkennung und Antworttexte in `data/support.ts`.
+
+- **Der Assistent antwortet mit den Zahlen des Kunden**, aus denselben
+  Quellen wie Home und Reisen (`usageSummary`, `roamingState`, `plans.ts`).
+  Keine Zahl als Text in `support.ts` — sie widerspraeche beim naechsten
+  Tarifwechsel der Karte daneben. Was er nicht erkennt, gibt er ans Team ab,
+  statt zu raten.
+- **Wer antwortet, steht immer da:** Kopf (Assistent / Lea) und Absender
+  ueber der ersten Blase jedes Sprechers (`generative-ai.md › Transparency`).
+- **Rechts steht, was Du sagst oder sagen kannst** — eigene Blasen und
+  Antwortknoepfe. Die Rueckruf-Zeiten sind Antwortknoepfe: ein Tipp bucht,
+  absagen geht in der Karte danach.
+- **Karten unter Antworten sind Mulden** (`--noura-well`, Radius 16), wie
+  die Gruppen der Kontoseiten.
+- **Warten** ist ein Satz, was gerade nachgesehen wird, plus `hairlineSweep`.
+  Keine huepfenden Punkte.
+- **Spruenge** (Reisen, Plan, Magic Code) schliessen den Chat und oeffnen das
+  Ziel-Sheet — eines zur Zeit. Der Verlauf bleibt, das Sheet ist nur geparkt.
+
+Gemessen (Chrome, dunkelster Pixel unter dem Text): Blasen Weiss 4,06:1 →
+4,53:1 mit `--glass-refract` statt reinem Blur; Nebenzeilen im Chat
+5,06–6,40:1; „Rueckruf absagen“ in `--noura-accent-text` auf der Mulde
+6,52:1.
+
+> **Vorschlag, von Niclas zu bestaetigen: das Eingabefeld ist eine Mulde.**
+> Figma zeichnet Glas 20 %. Im Glas-Sheet ueber der Aurora kam der
+> Platzhalter damit auf **2,77:1**. Eine dunklere Beugung half in Chrome
+> nicht — das Sheet ist mit seinem eigenen `backdrop-filter` Backdrop Root,
+> der Filter des Felds erreicht die Aurora nicht. Als `--noura-well`: 6,21:1.
+> Der Sendeknopf bleibt Glas. Dieselbe Lage wie die Tarifleiste und die
+> Kontoseiten: zwei weisse Schichten uebereinander hellen den Grund auf.
+
+**Groessen (2026-09-24, von Niclas: „Blasen und Text zu klein“).** Neuer
+Token `--fs-read` = 17px, die iOS-Grundgroesse (`typography.md`: „iOS,
+iPadOS | 17 pt“) — nur fuer Lesetext: Blasen, Termin, Eingabefeld (unter 16px
+zoomt Safari beim Fokus). Nebenzeilen im Chat 14 statt 12, der Kopf 20/700
+wie jeder Sheet-Titel. Blasen 80 % breit, Innenabstand 16/20 statt 20.
+Die Antwortknoepfe bleiben Figma-Button (16px).
+
+**Takt und Bewegung.** Drei Schritte je Antwort: ankommen (350ms), nachsehen
+(1,2–2,2s, waechst mit Text und Karte; Lea tippt 1,6–3s), anbieten (Vorschlaege
+450ms nach der Antwort). Jede Animation sagt, woher etwas kommt:
+
+| Was | Bewegung | Warum |
+|---|---|---|
+| Gewaehlter Antwortknopf | fliegt an die Stelle seiner Blase (FLIP, Feder, 460ms); die anderen blenden vorher aus | er WIRD die eigene Nachricht |
+| Getippte Nachricht | steigt aus der Eingabeleiste, Ursprung rechts unten | dort wurde sie abgeschickt |
+| Karte | 120ms nach der Blase | erst der Satz, dann der Beleg |
+| Balken, Schritte | Balken fuellt sich einmal; Schritte nacheinander | Anteil als Anteil lesen; Schritte sind eine Folge |
+| Vorschlaege | von rechts, 60ms versetzt | die Seite, auf der sie zu Deinen Worten werden |
+| Buchung | Karte mit der Feder, Haekchen zeichnet sich, Erfolgs-Haptik | der eine folgenreiche Moment |
+| Absage | Linie zieht sich durch den Termin | dieser Termin faellt weg |
+| Uebergabe | Kopf wechselt (Zeile von oben, Bild mit Feder) | das Gegenueber ist ein anderes |
+
+Nur transform, opacity und einmal `stroke-dashoffset`. Im Leerlauf laeuft im
+Chat keine Animation. Unter „Bewegung reduzieren“ entfaellt der Flug (JS
+prueft das selbst, die globale Regel greift nur fuer CSS); die Reihenfolge
+bleibt, die Bewegung nicht.
+
+### Entschieden: Monogramm statt Profilfoto
+
+**Gilt seit 2026-09-24**, von Niclas beauftragt. Figma `1330:1860` zeigt auf
+Home ein Foto; fuer einen Mobilfunkvertrag ergibt ein Gesicht keinen Sinn,
+und der Kunde hat nie eins hochgeladen. Jetzt steht dort der Anfangsbuchstabe
+(`Monogram` in `components/ui.tsx`, aus `HOLDER.first`).
+
+- **Home:** Knopf, also Stufe 3 — Liquid Glass wie `.btn`, mit Kantenreflex,
+  gedrueckt dunkler. `aria-label="Account öffnen"`, wie das Sheet heisst.
+  Weiss auf dem Glas: >= 4,95:1 unter dem Buchstaben (gemessen, Chrome).
+- **Konto-Sheet-Kopf:** dasselbe Zeichen, flach auf `--noura-glass-strong`
+  wie `.event-avatar` — nicht tippbar, also kein Kantenreflex.
+- **54px bleiben.** Daran haengt die Kopfhoehe und der Versatz 171px von
+  `.home-scroll`.
+- `avatar-marcel.webp` ist geloescht.
+
+**Der Vorfuehrkunde heisst Marcel de Groot** (`HOLDER` in `data/account.ts`,
+einzige Stelle). Die Laserfahrt der Gravur rechnet ihr Ende jetzt aus der
+Namenslaenge (`--engrave-end`, `--etch-step` am `.forge`-Element); vorher
+stand sie fest auf dem zwoelften Zeichen, also auf „MARCEL WEBER“.
+
+### Entschieden: eine Karte durch den ganzen Ablauf
+
+**Gilt seit 2026-09-24**, von Niclas beauftragt. Vorher sah der Kunde vier
+Gegenstaende: im Onboarding und beim Login ein graues Figma-Bild
+(`onboard-simcard.webp`, mit NOURA- und Vodafone-Zeichen), bei Tarifwahl und
+auf Home die CSS-Karte, dazwischen die SVG-Karte der Fertigung mit flacher
+Fuellung, heller 40-%-Kontur, zweiter Innenkontur, `#e15055`-Chip in 500 —
+und dem gravierten Namen, der auf Home wieder fehlte.
+
+Jetzt ist es **ein Objekt in vier Zustaenden**, gebaut aus `SimCard`
+(`components/ui.tsx`):
+
+| Zustand | Wo | Was die Karte traegt |
+|---|---|---|
+| Rohling | Onboarding Schritt 1 | Koerper + eSIM-Zeichen (`plan` weglassen) |
+| Tarif | Tarifwahl | + Name, Preis, Etikett des Tarifs („Premium") |
+| seine | Fertigung (`esim-forge.tsx`) | + graviertes Namensfeld |
+| aktiv | Home, Plan-Sheet, Login | „Aktiv" loest das Etikett ab, Name bleibt |
+
+- **Die 3D-Lage ist die der Werkbank:** `Card3D` legt die echte `SimCard` in
+  `rotateX(56deg) rotateZ(-24deg)` — dieselbe Lage wie die Fertigung in den
+  Takten 1–3. Glanz und Scan sind auf `--sim-shape` maskiert; der Scan ist
+  der Schreibbalken aus `fgWipe`.
+- **Die SVG-Karte der Fertigung zeichnet die CSS-Karte nach, nicht umgekehrt.**
+  Die CSS-Winkelverlaeufe sind in `userSpaceOnUse` umgerechnet (135deg auf
+  345x173 = Linie von 43,-43 nach 302,216; 118deg = 2,-4 nach 343,177; der
+  elliptische Eckschein als Kreis r=414 mit y-Stauchung 0,376). Wer an
+  `.sim-card` ein Material aendert, zieht die Verlaeufe dort mit.
+- **Der Name** steht in beiden als 13,5-px-Zellen je Zeichen, 600/16px, Weiss
+  @50 %, Grundlinie y=95. Gemessen (Chrome, 2026-09-24): Name 0,1px, Titel
+  0,24px, Preis 0,14px Versatz zwischen HTML- und SVG-Karte.
+- **Chips werden gemessen** (`getComputedTextLength`), nicht geschaetzt:
+  „Aktiv" = 46,5px, wie `.chip` in CSS.
 
 ### Button
 
@@ -838,10 +1052,12 @@ Der Kantenreflex zahlt sich zusätzlich aus: die Grenze Linse↔Spur steht auf
 Flächendifferenz sinkt dabei (1,35:1 links), das ist bewusst: bei Glas trägt
 die Kante die Form, nicht die Füllung.
 
-**Offen:** das Etikett des *nicht* gewählten Reiters steht mit
-`--noura-text-muted` auf der Spur bei **4,18:1** — unter 4,5:1 bei 14px/600.
-Unberührt von dieser Änderung und älter als sie. Niclas entscheidet, ob die
-Spur dunkler wird oder das Etikett heller.
+**Entschieden 2026-09-24 (Niclas): die Spur wird dunkler.** Sie traegt
+`--noura-well` (Schwarz @25 %) statt Weiss @10 %. Das nicht gewaehlte
+Etikett stand vorher bei 3,91:1 (Name) und 3,28:1 (Preis, dazu `.85`
+Deckkraft); jetzt >= 5,9:1 und >= 4,7:1 an beiden Positionen, am dunkelsten
+Pixel gemessen. Eine Mulde ist dunkler als ihr Grund — das passt zur
+Bauart oben, die Innenkante bleibt.
 
 ### Aurora-Hintergrund
 
@@ -861,9 +1077,9 @@ Referenz, was jeweils die Fehlerquelle war:
 | 1 | Schriftart | Plus Jakarta Sans | General Sans, lokal eingebettet |
 | 2 | SIM-Karte | Glaskarte, drei Farbverläufe | einheitlich dunkel, abgeschnittene Ecke |
 | 3 | Verbrauchs-Icons | weiß | Akzentrot `#e15055` |
-| 4 | Profilbild | leerer CSS-Kreis | echtes Foto |
+| 4 | Profilbild | leerer CSS-Kreis | Monogramm „M“ statt Foto (seit 2026-09-24, siehe unten) |
 | 5 | Intro-Logo | Poppins-Text + CSS-Kreis | App-Icon + echtes Lockup-Bild (Stand 2026-09-21) |
-| 6 | Onboarding-Karte | CSS-Perspektive | 3D-Karte als Bild |
+| 6 | Onboarding-Karte | CSS-Perspektive | echte SimCard in 3D-Lage (seit 2026-09-24, vorher Bild) |
 | 7 | Hintergrund | 4 CSS-Flächen, 150px Blur | Verlaufsbild (16 KB) |
 | 8 | Verbrauchsring | roter Fortschrittsbogen | heller Ring, ∞ in Akzentfarbe |
 | 9 | Buttons | rot gefüllt, Glanzverläufe | Glas @20%, schlicht |
@@ -899,6 +1115,32 @@ hat eine Abweichung gefunden.
 Vodafone-Zeichen auf der Home-SIM-Karte. Im Zweifel per Textsuche über die
 Knotendaten prüfen, bevor etwas gebaut wird.
 
+## Leistung (Stand 2026-09-24)
+
+Gemessen in Chrome bei vierfach gedrosselter CPU, Leerlauf je Screen über
+drei Sekunden. Vorher lief auf **jedem** Screen ein Layout je Bild (181 in
+3 s) und 500–700 ms Hauptthread-Arbeit; jetzt 0 Layouts und rund 110 ms.
+Drei Ursachen, jede eine Regel:
+
+1. **Unsichtbares wird geparkt.** Alle acht Screens und fünf Sheets bleiben
+   gemountet; `visibility: hidden` hält ihre Endlos-Animationen nicht an.
+   `.screen:not(.active):not(.leaving)` und `.sheet.parked` tragen
+   `content-visibility: hidden` — Zustand bleibt, Rendern entfällt. Wer
+   einen Screen baut, nimmt `Screen` aus `ui.tsx`; wer ein Sheet baut, die
+   `Sheet`-Hülle in `sheets.tsx`. Dann gilt das von selbst.
+2. **Keine Animation auf SVG-Elementen.** Weder Chrome noch WebKit bewegen
+   SVG im Compositor — auch nicht das `<svg>` selbst. Eine Endlosschleife
+   darauf kostet ein Layout je Bild. Drehen, schweben, pulsen: auf einer
+   HTML-Hülle. Einmalige Zeichnungen (`stroke-dashoffset`) sind in Ordnung.
+3. **Nur transform und opacity, auch für Leuchten.** Ein pulsierender
+   `box-shadow` zeichnet je Bild neu. Stattdessen ein Ring oder Schein auf
+   eigener Ebene, dessen Deckkraft und Größe sich ändern (`.ob-next.final`,
+   `.mcode-flare`).
+
+Prüfen: `document.getAnimations()` auf dem aktiven Screen, dazu
+`Performance.getMetrics` per CDP — `LayoutCount` muss im Leerlauf stehen
+bleiben.
+
 ## Geräte-Realität vs. Figma-Maße
 
 Figma zeichnet für **393×852** (iPhone 15). Echte Geräte weichen ab — das
@@ -924,8 +1166,8 @@ Richtig ist der Token `--bar-bottom`:
 Auf dem iPhone (34px Inset) ergibt das 48px — der Figma-Wert. Im Browser
 ohne Inset greift der Mindestwert 24px. Verwendet von `.navbar`,
 `.fab-stack` (`calc(var(--bar-bottom) + 73px)` — 61px Knopf + 12px Abstand),
-`.plan-cta` und `.intro-nav`. `.ob-bottom` (Figma 34px) und `.chat-input`
-folgen noch dem alten Muster.
+`.plan-cta`, `.intro-nav` und seit dem 2026-09-24 `.chat-input`. `.ob-bottom`
+(Figma 34px) folgt noch dem alten Muster.
 
 ### Entschieden: CREATE-Preis ist 40 €
 

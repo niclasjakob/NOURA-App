@@ -98,9 +98,15 @@ export default function App() {
     setScreen(next)
   }
 
+  /* Ein neuer Toast startet die Uhr neu. Vorher lief der Zeitgeber des
+     vorigen weiter und nahm den neuen nach Restzeit mit weg — zwei
+     Zubuchungen kurz hintereinander, und die zweite Meldung stand nur
+     einen Augenblick. */
+  const toastTimer = useRef<number>()
   const showToast = (text: string) => {
     setToast(text)
-    window.setTimeout(() => setToast(null), 2600)
+    window.clearTimeout(toastTimer.current)
+    toastTimer.current = window.setTimeout(() => setToast(null), 2600)
   }
 
   /* Vorfuehr-Abkuerzung: ueberspringt Onboarding, Tarifwahl, Bestellung,
@@ -132,7 +138,7 @@ export default function App() {
         {/* On the native build iOS draws the real status bar, so skip the mock one */}
         {!Capacitor.isNativePlatform() && <StatusBar />}
 
-        <div ref={screensRef} className="screens" data-dir={dir}>
+        <div ref={screensRef} className={`screens${sheet ? ' behind-sheet' : ''}`} data-dir={dir}>
           <Intro
             active={screen === 'intro'}
             onStart={() => go('onboarding')}
@@ -170,6 +176,7 @@ export default function App() {
           <Activation
             active={screen === 'activation'}
             messages={actMessages}
+            plan={PLANS[planIdx]}
             onDone={() => go('home')}
           />
           {/* Anmeldung und Einrichtung in einem Ablauf: die Karte
@@ -179,8 +186,8 @@ export default function App() {
             plan={PLANS[planIdx]}
             numberLabel={
               numberMode === 'port'
-                ? 'Bis Deine alte Nummer umgezogen ist, erreichen wir Dich unter +49 170 5550123.'
-                : 'Deine neue Nummer: +49 170 5550123'
+                ? `Bis Deine alte Nummer umgezogen ist, erreichen wir Dich unter ${HOLDER.phone}.`
+                : `Deine neue Nummer: ${HOLDER.phone}`
             }
             onDone={() => go('home')}
           />
@@ -198,10 +205,22 @@ export default function App() {
         </div>
 
         <div className={`sheet-backdrop${sheet ? ' on' : ''}`} onClick={() => setSheet(null)} />
-        <SupportSheet open={sheet === 'support'} onClose={() => setSheet(null)} />
+        {/* Der Chat kennt Tarif und Standort, damit er mit echten Zahlen
+            antwortet — und springt in das Sheet, das eine Antwort
+            weiterfuehrt. Ein Sheet zur Zeit: der Sprung schliesst ihn. */}
+        <SupportSheet
+          open={sheet === 'support'}
+          onClose={() => setSheet(null)}
+          plan={PLANS[planIdx]}
+          roaming={roaming}
+          onJump={(to) => (to === 'magic' ? openMagic() : setSheet(to))}
+        />
         <ProfileSheet
           open={sheet === 'profile'}
           onClose={() => setSheet(null)}
+          onOpenSupport={() => setSheet('support')}
+          onOpenPlan={() => setSheet('plan')}
+          planIdx={planIdx}
           roamZone={roamZone}
           onRoamZone={setRoamZone}
           onLogout={() => {

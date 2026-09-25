@@ -75,7 +75,7 @@ const SPECS: PlanSpec[] = [
   {
     key: 'connect',
     name: 'CONNECT',
-    price: '25€ / Monat',
+    price: '25 € / Monat',
     chip: null,
     desc: 'Der unbegrenzte Tarif für alle, deren soziales Leben online stattfindet – mit Magic Codes für gemeinsame Erlebnisse.',
     tagline: 'Für alle, deren soziales Leben online stattfindet.',
@@ -93,7 +93,7 @@ const SPECS: PlanSpec[] = [
   {
     key: 'create',
     name: 'CREATE',
-    price: '40€ / Monat',
+    price: '40 € / Monat',
     chip: 'Premium',
     desc: 'Der Premium-Tarif für alle, die lernen, entdecken und gestalten – Highspeed und Magic Codes, die weiterbringen.',
     tagline: 'Für alle, die lernen, entdecken und gestalten.',
@@ -115,6 +115,10 @@ export const PLANS: Plan[] = SPECS.map((p) => ({
   ...p,
   features: [...PLAN_SHARED, ...p.distinct],
 }))
+
+/** Der Tarifname im Fliesstext und auf kleinen Flaechen: "Connect"
+    statt "CONNECT". Die Versalform bleibt der Karte vorbehalten. */
+export const planTitle = (p: Plan) => p.name.charAt(0) + p.name.slice(1).toLowerCase()
 
 /* ---- Die Vergleichszeilen ----
    Drei Zeilen, und mehr gibt es nicht zu vergleichen. Jede rechnet

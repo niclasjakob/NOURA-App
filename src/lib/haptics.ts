@@ -34,8 +34,17 @@ import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics'
    Aufrufer wartet, waere ein Zeitgeber im Bedienpfad. */
 const enabled = Capacitor.isPluginAvailable('Haptics')
 
+/* Der Schalter im Konto (Darstellung → Haptik). Er ergaenzt Regel 4,
+   er ersetzt sie nicht: der Systemschalter gilt weiter, dieser nimmt
+   nur NOURA zusaetzlich heraus. Modulzustand statt Kontext — die
+   Aufrufer sind Ereignisbehandler, keine Komponenten. */
+let userOn = true
+export const setHapticsOn = (on: boolean) => {
+  userOn = on
+}
+
 function fire(run: () => Promise<unknown>) {
-  if (!enabled) return
+  if (!enabled || !userOn) return
   try {
     void run().catch(() => {})
   } catch {

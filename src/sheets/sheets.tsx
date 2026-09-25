@@ -1,6 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
-import avatarMarcel from '../assets/img/avatar-marcel.webp'
-import { PLANS } from '../data/plans'
+import { PLANS, planTitle, type Plan } from '../data/plans'
 import {
   HOLDER,
   ROAMING_ADDONS,
@@ -22,11 +21,23 @@ import {
   type RedeemFail,
   type RedeemResult,
 } from '../data/magic'
-import { Button, Close, FeatureList, SimCard } from '../components/ui'
+import { Button, Close, FeatureList, Monogram, SimCard } from '../components/ui'
 import { MagicTicket } from '../components/magic-pass'
 import { AllowanceRing } from '../components/roaming'
 import { useDialog, useDragToDismiss, useInert } from '../hooks/a11y'
-import { hapticError, hapticSelection, hapticSuccess } from '../lib/haptics'
+import { hapticError, hapticSelection, hapticSuccess, setHapticsOn } from '../lib/haptics'
+import { ACCT_PAGE_TITLE, DEFAULT_SETTINGS, type AcctPage } from '../data/settings'
+import {
+  AppearancePage,
+  DocsPage,
+  HelpPage,
+  NotificationsPage,
+  SecurityPage,
+  type DocKey,
+  type Settings,
+} from './account-pages'
+import { SupportChat } from './support-chat'
+import type { ChatJump } from '../data/support'
 
 export type SheetId = 'support' | 'profile' | 'plan' | 'roaming' | 'magic' | null
 
@@ -53,10 +64,24 @@ function Sheet({
   useInert(ref, !open)
   const drag = useDragToDismiss(ref, onClose)
 
+  /* Geparkt, sobald das Sheet unten angekommen ist. Fuenf Sheets liegen
+     dauerhaft im DOM, nur aus dem Bild geschoben — und damit auch ihre
+     34 Glasflaechen samt Weichzeichner und die Schleifen darin (der
+     Puls im Magic-Sheet lief ohne Unterbrechung). Beim Oeffnen faellt
+     die Markierung im selben Render, das Sheet faehrt also ungeparkt
+     herein; beim Schliessen erst nach dem Abgang (--dur-move, 320ms). */
+  const [parked, setParked] = useState(!open)
+  if (open && parked) setParked(false)
+  useEffect(() => {
+    if (open) return
+    const t = window.setTimeout(() => setParked(true), 360)
+    return () => window.clearTimeout(t)
+  }, [open])
+
   return (
     <div
       ref={ref}
-      className={`sheet${open ? ' on' : ''}`}
+      className={`sheet${open ? ' on' : ''}${parked ? ' parked' : ''}`}
       id={id}
       role="dialog"
       aria-modal="true"
@@ -76,80 +101,25 @@ function Sheet({
   )
 }
 
-/* ================= Support (chat) ================= */
-interface ChatMsg {
-  text: string
-  me: boolean
-}
-
-export function SupportSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [messages, setMessages] = useState<ChatMsg[]>([
-    { text: `Hey ${HOLDER.first}!\nWie möchtest Du Hilfe erhalten?`, me: false },
-  ])
-  const [showQuick, setShowQuick] = useState(true)
-  const [input, setInput] = useState('')
-
-  const reply = (text: string, delay = 850) =>
-    window.setTimeout(() => setMessages((m) => [...m, { text, me: false }]), delay)
-
-  const pick = (label: string) => {
-    setShowQuick(false)
-    setMessages((m) => [...m, { text: label, me: true }])
-    reply(
-      label.includes('Anruf')
-        ? 'Alles klar! Wir rufen Dich heute zwischen 16–18 Uhr zurück. Passt das für Dich?'
-        : 'Super! Ich bin für Dich da. Worum geht es denn?',
-    )
-  }
-
-  const send = () => {
-    const v = input.trim()
-    if (!v) return
-    setShowQuick(false)
-    setMessages((m) => [...m, { text: v, me: true }])
-    setInput('')
-    reply('Danke für Deine Nachricht! Ein Mitarbeiter meldet sich in wenigen Minuten bei Dir. 💬')
-  }
-
+/* ================= Support (chat) =================
+   Die Huelle hier, das Gespraech in support-chat.tsx — wie bei den
+   Kontoseiten. */
+export function SupportSheet({
+  open,
+  onClose,
+  plan,
+  roaming,
+  onJump,
+}: {
+  open: boolean
+  onClose: () => void
+  plan: Plan
+  roaming: RoamingState
+  onJump: (to: ChatJump) => void
+}) {
   return (
     <Sheet id="supportSheet" open={open} label="Support" onClose={onClose}>
-      <div className="sheet-body">
-        <div className="chat-area" role="log" aria-label="Chatverlauf" aria-live="polite">
-          {messages.map((m, i) => (
-            <div key={i} className={`bubble${m.me ? ' me' : ''}`}>
-              {m.text}
-            </div>
-          ))}
-          {showQuick && (
-            /* Figma: rechtsbuendig untereinander, wie eigene Nachrichten */
-            <div className="quick-replies">
-              <Button onClick={() => pick('Einen Anruf anfordern')}>
-                Einen Anruf anfordern
-              </Button>
-              <Button onClick={() => pick('Chatte mit uns')}>
-                Chatte mit uns
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="chat-input">
-        <input
-          type="text"
-          aria-label="Nachricht schreiben"
-          placeholder="Nachricht schreiben..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && send()}
-        />
-        <button className="send" aria-label="Senden" onClick={send}>
-          {/* Figma: Papierflieger-Symbol, 18x18 */}
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 2L11 13" />
-            <path d="M22 2l-7 20-4-9-9-4 20-7z" />
-          </svg>
-        </button>
-      </div>
+      <SupportChat open={open} plan={plan} roaming={roaming} onJump={onJump} />
     </Sheet>
   )
 }
@@ -159,54 +129,260 @@ function ListRow({
   icon,
   label,
   danger,
+  nav,
+  page,
   onClick,
 }: {
   icon: React.ReactNode
   label: string
   danger?: boolean
+  /** Fuehrt auf eine Seite: dann steht rechts der Pfeil. Bis zum
+      2026-09-24 fuehrte keine Zeile irgendwohin, und keine sagte es. */
+  nav?: boolean
+  /** Die Seite, die sie oeffnet — daran findet Zurueck die Zeile wieder. */
+  page?: AcctPage
   onClick?: () => void
 }) {
   return (
-    <button className={`list-row${danger ? ' danger' : ''}`} onClick={onClick}>
+    <button className={`list-row${danger ? ' danger' : ''}`} data-page={page} onClick={onClick}>
       <span className="ic">{icon}</span>
       {label}
+      {nav && (
+        <span className="chev" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </span>
+      )}
     </button>
   )
 }
 
 /* Figma: schlichter leerer Kreis vor jedem Listeneintrag */
-const ic = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-    <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" />
+/* Zeichen der Kontozeilen. Figma setzt hier leere Kreise als Platzhalter —
+   im Code lasen die sich als nicht gewaehlte Optionsfelder. Gezeichnet in
+   derselben Sprache wie die Verbrauchskarten auf Home: 24er Raster,
+   Kontur 1.8, runde Enden. */
+const ROW_ICONS = {
+  security: (
+    <>
+      <path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z" />
+      <path d="M9 12l2 2 4-4" />
+    </>
+  ),
+  bell: (
+    <>
+      <path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z" />
+      <path d="M10 20.5a2 2 0 0 0 4 0" />
+    </>
+  ),
+  appearance: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" />
+    </>
+  ),
+  help: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.6 9.4a2.5 2.5 0 1 1 3.3 2.5c-.6.2-.9.7-.9 1.3v.6" />
+      <path d="M12 17h.01" strokeWidth="2.4" />
+    </>
+  ),
+  docs: (
+    <>
+      <path d="M6 3h8l4 4v14H6z" />
+      <path d="M14 3v4h4M9 12h6M9 16h6" />
+    </>
+  ),
+  logout: (
+    <>
+      <path d="M9 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h3" />
+      <path d="M14 8l4 4-4 4M18 12H9" />
+    </>
+  ),
+}
+
+const ic = (name: keyof typeof ROW_ICONS) => (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    {ROW_ICONS[name]}
   </svg>
 )
+
+/* ---------- Navigation im Konto-Sheet ----------
+   Die Unterseiten schieben sich von rechts herein, die Liste weicht
+   nach links — der iOS-Stapel, im Sheet statt als zweites Sheet
+   (Begruendung in account-pages.tsx). Zurueck geht per Knopf oder
+   per Wischen vom linken Rand.
+
+   `page` ist, was gerade zu sehen ist; `shown` ist, was im rechten
+   Fach gezeichnet wird. Die beiden trennen sich beim Zurueckgehen:
+   die Seite muss noch zu sehen sein, waehrend sie hinausgleitet. */
+const EDGE = 28 /* Breite der Randzone, in der Wischen zurueck beginnt */
+const SWIPE_BACK = 90
 
 export function ProfileSheet({
   open,
   onClose,
   onLogout,
+  onOpenSupport,
+  onOpenPlan,
+  planIdx,
   roamZone,
   onRoamZone,
 }: {
   open: boolean
   onClose: () => void
   onLogout: () => void
+  /** Schliesst dieses Sheet und oeffnet den Chat — ein Sheet zur Zeit. */
+  onOpenSupport: () => void
+  onOpenPlan: () => void
+  planIdx: number
   roamZone: RoamZone
   onRoamZone: (z: RoamZone) => void
 }) {
+  const [page, setPage] = useState<AcctPage | null>(null)
+  const [shown, setShown] = useState<AcctPage | null>(null)
+  const [doc, setDoc] = useState<DocKey | null>(null)
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
+
+  const rootRef = useRef<HTMLDivElement>(null)
+  const subRef = useRef<HTMLDivElement>(null)
+  const subBody = useRef<HTMLDivElement>(null)
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  /* Die Zeile, ueber die der Stapel betreten wurde. Nicht aus
+     document.activeElement: Safari fokussiert Knoepfe beim Tippen
+     nicht, dort stuende sonst das Sheet selbst. */
+  const entry = useRef<AcctPage | null>(null)
+  useInert(rootRef, page !== null)
+  useInert(subRef, page === null)
+
+  const set = (key: string, on: boolean) => {
+    setSettings((s) => ({ ...s, [key]: on }))
+    if (key === 'haptics') {
+      setHapticsOn(on)
+      /* Beim Einschalten einmal tippen: so fuehlt man, was man gerade
+         eingeschaltet hat. Beim Ausschalten nicht — das waere das
+         Gegenteil dessen, was gewuenscht ist. */
+      if (on) hapticSelection()
+    }
+  }
+
+  /* Wer eine Seite oeffnet, landet auf ihrem Titel — der Screenreader
+     sagt, wo er ist. preventScroll aus demselben Grund wie in
+     useDialog: die Seite gleitet noch herein. */
+  const go = (p: AcctPage, openDoc: DocKey | null = null) => {
+    if (page === null) entry.current = p
+    setShown(p)
+    setPage(p)
+    setDoc(openDoc)
+    if (subBody.current) subBody.current.scrollTop = 0
+    window.setTimeout(() => titleRef.current?.focus({ preventScroll: true }), 60)
+  }
+  const back = () => {
+    setPage(null)
+    window.setTimeout(
+      () =>
+        rootRef.current
+          ?.querySelector<HTMLElement>(`[data-page="${entry.current}"]`)
+          ?.focus({ preventScroll: true }),
+      60,
+    )
+  }
+
+  /* Geschlossen beginnt das Sheet wieder bei der Liste — aber erst,
+     wenn es unten ist. Sonst springt es waehrend des Abgangs um. */
+  useEffect(() => {
+    if (open) return
+    const t = window.setTimeout(() => {
+      setPage(null)
+      setDoc(null)
+    }, 340)
+    return () => window.clearTimeout(t)
+  }, [open])
+
+  /* ---- Wischen zurueck ----
+     Nur vom linken Rand aus und nur, wenn die Bewegung eher waagerecht
+     ist: senkrecht gehoert der Finger der Liste, die scrollt. */
+  const swipe = useRef<{ x: number; y: number; dx: number; live: boolean } | null>(null)
+  const drag = (dx: number | null) => {
+    const el = subRef.current
+    if (!el) return
+    el.style.transition = dx === null ? '' : 'none'
+    el.style.transform = dx === null ? '' : `translateX(${dx}px)`
+  }
+  const onSwipeDown = (e: React.PointerEvent) => {
+    const left = subRef.current?.getBoundingClientRect().left ?? 0
+    if (page && e.clientX - left < EDGE) swipe.current = { x: e.clientX, y: e.clientY, dx: 0, live: false }
+  }
+  const onSwipeMove = (e: React.PointerEvent) => {
+    const g = swipe.current
+    if (!g) return
+    const dx = e.clientX - g.x
+    const dy = e.clientY - g.y
+    if (!g.live) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) swipe.current = null
+      else if (dx > 10) {
+        g.live = true
+        ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+      }
+      return
+    }
+    g.dx = Math.max(0, dx)
+    drag(g.dx)
+  }
+  const onSwipeUp = () => {
+    const g = swipe.current
+    swipe.current = null
+    if (!g?.live) return
+    drag(null)
+    if (g.dx > SWIPE_BACK) back()
+  }
+
+  const plan = PLANS[planIdx]
+  const content =
+    shown === 'security' ? (
+      <SecurityPage
+        settings={settings}
+        set={set}
+        onOpenSupport={onOpenSupport}
+        onOpenPrivacy={() => go('docs', 'privacy')}
+      />
+    ) : shown === 'notifications' ? (
+      <NotificationsPage settings={settings} set={set} />
+    ) : shown === 'appearance' ? (
+      <AppearancePage settings={settings} set={set} />
+    ) : shown === 'help' ? (
+      <HelpPage onOpenSupport={onOpenSupport} />
+    ) : shown === 'docs' ? (
+      <DocsPage plan={plan} open={doc} onOpen={setDoc} onOpenSecurity={() => go('security')} />
+    ) : null
+
   return (
     <Sheet id="profileSheet" open={open} label="Dein Account" onClose={onClose}>
+      <div className={`acct-nav${page ? ' deep' : ''}`}>
+      <div className="acct-pane root" ref={rootRef}>
       <div className="sheet-body">
         <div className="acct-head">
           <div className="tx">
             <h2>Dein Account</h2>
             <p>Nächste Zahlung am 08.08.2026</p>
           </div>
-          <img src={avatarMarcel} className="avatar" alt="" />
+          <Monogram name={HOLDER.first} />
         </div>
         {/* Figma: zwei Karten mit Karten-Symbol, Label oben klein, Wert darunter */}
         <div className="quick-cards">
-          <button className="qc">
+          <button className="qc" onClick={onOpenPlan}>
             <span className="qc-icon">
               <svg width="28" height="20" viewBox="0 0 28 20" fill="none" aria-hidden="true">
                 <rect x="0.5" y="0.5" width="27" height="19" rx="3" fill="rgba(255,255,255,.35)" />
@@ -215,7 +391,7 @@ export function ProfileSheet({
               </svg>
             </span>
             <span className="qc-label">Dein Plan</span>
-            <span className="qc-value">Create</span>
+            <span className="qc-value">{planTitle(PLANS[planIdx])}</span>
           </button>
           <button className="qc">
             <span className="qc-icon">
@@ -231,15 +407,15 @@ export function ProfileSheet({
         </div>
         <div className="list-section">
           <h3>Sonstiges</h3>
-          <ListRow icon={ic()} label="Sicherheit und Datenschutz" />
-          <ListRow icon={ic()} label="Benachrichtigungen" />
-          <ListRow icon={ic()} label="Ansichtsmodus" />
+          <ListRow icon={ic('security')} label={ACCT_PAGE_TITLE.security} nav page="security" onClick={() => go('security')} />
+          <ListRow icon={ic('bell')} label={ACCT_PAGE_TITLE.notifications} nav page="notifications" onClick={() => go('notifications')} />
+          <ListRow icon={ic('appearance')} label={ACCT_PAGE_TITLE.appearance} nav page="appearance" onClick={() => go('appearance')} />
         </div>
         <div className="list-section">
           <h3>Service</h3>
-          <ListRow icon={ic()} label="Hilfe" />
-          <ListRow icon={ic()} label="Dokumente" />
-          <ListRow icon={ic()} label="Abmelden" danger onClick={onLogout} />
+          <ListRow icon={ic('help')} label={ACCT_PAGE_TITLE.help} nav page="help" onClick={() => go('help')} />
+          <ListRow icon={ic('docs')} label={ACCT_PAGE_TITLE.docs} nav page="docs" onClick={() => go('docs')} />
+          <ListRow icon={ic('logout')} label="Abmelden" danger onClick={onLogout} />
         </div>
 
         {/* ---- Vorfuehr-Schalter ----
@@ -275,6 +451,31 @@ export function ProfileSheet({
           </div>
         </div>
         <div style={{ height: 40 }} />
+      </div>
+      </div>
+
+      <div
+        className="acct-pane sub"
+        ref={subRef}
+        onPointerDown={onSwipeDown}
+        onPointerMove={onSwipeMove}
+        onPointerUp={onSwipeUp}
+        onPointerCancel={onSwipeUp}
+      >
+        <div className="sheet-body" ref={subBody}>
+          <button type="button" className="acct-back" onClick={back}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M15 6l-6 6 6 6" />
+            </svg>
+            Account
+          </button>
+          <h2 className="acct-title" ref={titleRef} tabIndex={-1}>
+            {shown && ACCT_PAGE_TITLE[shown]}
+          </h2>
+          {content}
+          <div style={{ height: 40 }} />
+        </div>
+      </div>
       </div>
     </Sheet>
   )
@@ -880,7 +1081,7 @@ export function PlanSheet({
           <h2>Dein aktueller Plan</h2>
           <p>Wechsel oder kündige Deinen Plan</p>
         </div>
-        <SimCard plan={plan} chipText="Aktiv" />
+        <SimCard plan={plan} chipText="Aktiv" holder={HOLDER.full} />
         <div className="features-block" style={{ marginTop: 32, paddingBottom: 0 }}>
           <h3>Deine Features</h3>
           <p className="desc">{plan.desc}</p>

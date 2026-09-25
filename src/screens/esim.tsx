@@ -79,6 +79,23 @@ export function EsimJourney({
   const [idx, setIdx] = useState(0)
   const [manual, setManual] = useState(false)
 
+  /* ---------- Der Block unter der Buehne ----------
+     Folgt der Phase mit 200ms Abstand: so lange blendet der alte aus
+     (.jr-leave), erst dann kommt der neue. Die Buehne haengt direkt an
+     `phase` und setzt sich im selben Moment in Bewegung — Text raeumt
+     das Feld, waehrend die Karte schon faehrt.
+
+     Vorher tauschte React den Block im Bild des Phasenwechsels aus: der
+     alte war sofort weg, der neue kam erst nach seiner Verzoegerung, und
+     dazwischen stand die Karte ueber einem leeren Screen. */
+  const [shown, setShown] = useState<Phase>('forge')
+  useEffect(() => {
+    if (shown === phase) return
+    const t = window.setTimeout(() => setShown(phase), 200)
+    return () => window.clearTimeout(t)
+  }, [phase, shown])
+  const leave = shown !== phase ? ' jr-leave' : ''
+
   /* ---------- Abgang ----------
      Beim Verlassen muss zurueckgesetzt werden, sonst steht der Ablauf
      beim zweiten Durchgang mitten im Fortschritt. Aber NICHT sofort:
@@ -101,6 +118,7 @@ export function EsimJourney({
     const t = window.setTimeout(() => {
       setWarm(false)
       setPhase('forge')
+      setShown('forge')
       setIdx(0)
       setManual(false)
     }, 700)
@@ -123,8 +141,8 @@ export function EsimJourney({
   useEffect(() => {
     if (phase !== 'install') return
     setIdx(0)
-    /* Beim letzten Takt stehenbleiben: in diesen 700ms soll das Netz
-       sichtbar halten, was es gerade erreicht hat. */
+    /* Beim letzten Takt stehenbleiben: in dieser Sekunde stehen die
+       vollen Balken und "Aktiv", bevor der Screen umbaut. */
     timers.current = runActs(ESIM_INSTALL_ACTS, setIdx, () => setPhase('done'), 1000)
     return () => timers.current.forEach(window.clearTimeout)
   }, [phase])
@@ -179,7 +197,15 @@ export function EsimJourney({
     const key = `${phase}:${idx}`
     if (key === beaten.current) return
     beaten.current = key
-    if (phase === 'install' && idx === last) hapticLand()
+    /* Der schwere Schlag faellt auf den vierten Empfangsbalken, nicht auf
+       den Taktwechsel: 0,1s Anlauf + 3 x 0,08s Versatz + rund 0,22s, bis
+       der Balken seine Spur gefuellt hat (esim-forge.css, fgBar). Auf dem
+       Wechsel lag er vor dem Bild — man spuerte die Anmeldung, bevor man
+       sie sah.
+       Bewusst ohne Aufraeumen: StrictMode loescht im Entwicklungsbau den
+       Zeitgeber des ersten Laufs, und die Sperre oben verhindert den
+       zweiten — der Schlag fiele dort still aus. */
+    if (phase === 'install' && idx === last) window.setTimeout(hapticLand, 560)
     else hapticPress()
   }, [active, phase, idx])
 
@@ -223,18 +249,18 @@ export function EsimJourney({
           <EsimStage beat={act.beat} run={warm} plan={plan} holder={HOLDER.full} />
         </div>
 
-        {phase === 'forge' || phase === 'install' ? (
-        <div className="jr-run">
+        {shown === 'forge' || shown === 'install' ? (
+        <div className={`jr-run${leave}`}>
           <BeatCaption title={act.title} text={act.text} />
           {meter()}
         </div>
-      ) : phase === 'handover' ? (
+      ) : shown === 'handover' ? (
         /* Die Uebergabe. Die Karte bleibt stehen und dreht sich zum
            Kunden — sie ist das Argument, nicht die Ueberschrift. Der
            Rueckweg fuer den Fall, dass es klemmt, gehoert auf denselben
            Screen und nicht in ein Hilfe-Center: wer hier haengt, hat
            gerade kein Netz, um danach zu suchen. */
-        <div className="flow esim-hand">
+        <div className={`flow esim-hand${leave}`}>
           <div className="flow-head">
             <FlowSteps current={3} />
             {/* Haelt den Platz frei, ueber dem die Buehne schwebt. */}
@@ -297,7 +323,7 @@ export function EsimJourney({
            Karte, die gerade ins Netz gegangen ist — kleiner, mit den
            eingerasteten Ringen. Sie ist dieselbe, die gleich auf dem
            Dashboard liegt. */
-        <div className="flow">
+        <div className={`flow esim-done${leave}`}>
           <div className="flow-head">
             <div className="jr-gap" aria-hidden="true" />
             <h1>Du bist im Netz.</h1>

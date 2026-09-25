@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Plan } from '../data/plans'
 import { hapticPress } from '../lib/haptics'
 import { useInert } from '../hooks/a11y'
@@ -71,28 +71,32 @@ export function Screen({ active, children }: { active: boolean; children: React.
      abtretende Screen zoege dorthin zurueck, woher der neue kommt —
      beide liefen aufeinander zu. Nach einem Screenwechsel (dur-screen)
      faellt die Markierung wieder weg, damit ein spaeter erneut
-     geoeffneter Screen wieder von vorn einlaeuft. */
-  const wasActive = useRef(active)
+     geoeffneter Screen wieder von vorn einlaeuft.
+
+     Die Markierung entsteht im Render, nicht in einem Effekt danach.
+     Bis zum 2026-09-24 kam sie ein Bild zu spaet: fuer dieses Bild lief
+     der abtretende Screen in die falsche Richtung los, und seit Screens
+     ohne Markierung geparkt werden (siehe `.screen` in global.css),
+     waere er in diesem Bild ganz verschwunden. Wer zurueckkommt, bevor
+     die 460ms um sind, verliert sie sofort wieder. */
+  const [wasActive, setWasActive] = useState(active)
   const [leaving, setLeaving] = useState(false)
+  if (wasActive !== active) {
+    setWasActive(active)
+    setLeaving(!active)
+  }
   useEffect(() => {
-    const left = wasActive.current && !active
-    wasActive.current = active
-    if (!left) {
-      /* Wer zurueckkommt, bevor die 460ms um sind, traegt die
-         Markierung sonst weiter — sichtbar waere das erst beim
-         uebernaechsten Wechsel, und dann nicht mehr erklaerbar. */
-      setLeaving(false)
-      return
-    }
-    setLeaving(true)
+    if (!leaving) return
     const t = window.setTimeout(() => setLeaving(false), 460)
     return () => window.clearTimeout(t)
-  }, [active])
+  }, [leaving])
 
   /* Beim Betreten oben anfangen. Alle Screens bleiben gemountet, damit
      die Ueberblendung laeuft — ohne diesen Griff zeigt ein Screen, der
-     schon einmal offen war, noch die Scrollposition von damals. */
-  useEffect(() => {
+     schon einmal offen war, noch die Scrollposition von damals.
+     Layout-Effekt: sonst steht das erste Bild noch an der alten Stelle
+     und springt dann. */
+  useLayoutEffect(() => {
     if (!active || !ref.current) return
     ref.current
       .querySelectorAll<HTMLElement>('.home-scroll, .flow-scroll, .plan-slide')
@@ -405,6 +409,20 @@ export function EsimIcon() {
   )
 }
 
+/* ---------- Monogramm ----------
+   Der Anfangsbuchstabe statt eines Profilfotos (seit 2026-09-24, von
+   Niclas beauftragt). Ein Mobilfunkvertrag braucht kein Gesicht — und
+   ein Foto, das der Kunde nie hochgeladen hat, waere ein erfundenes
+   Detail. Derselbe Buchstabe steht auf Home (als Knopf) und im Kopf
+   des Konto-Sheets (als Zeichen): es ist dieselbe Person. */
+export function Monogram({ name }: { name: string }) {
+  return (
+    <span className="monogram" aria-hidden="true">
+      {name.charAt(0).toUpperCase()}
+    </span>
+  )
+}
+
 /* ---------- eSIM card (Figma "E-Sim Card") ----------
    Ohne Zeichen im Kopf. Hier stand bis zum 2026-07-27 ein Vodafone-
    Kreis (raus, weil Figma ihn nicht hat) und am 2026-09-17 kurz das
@@ -419,28 +437,66 @@ export function EsimIcon() {
 
    Die Marke steht auf diesem Screen ohnehin schon: als Wortmarke im
    Kopf von Home und als Zeichen auf dem Intro. Eine dritte Stelle
-   braucht sie nicht. */
+   braucht sie nicht.
+
+   ---------------------------------------------------------------
+   EINE Karte durch den ganzen Ablauf (2026-09-24). Vorher gab es
+   vier: ein graues Figma-Bild mit NOURA- und Vodafone-Zeichen im
+   Onboarding und beim Login, diese Karte bei Tarifwahl und auf Home,
+   und dazwischen die SVG-Karte der Fertigung mit eigenem Material,
+   heller Kontur und dem Namen des Inhabers — den sie auf Home dann
+   wieder verlor. Der Kunde sah vier Gegenstaende statt einem.
+
+   Jetzt ist es ein Objekt in vier Zustaenden:
+
+     Rohling      Onboarding           nur Koerper und eSIM-Zeichen
+     Tarif        Tarifwahl            + Name, Preis, Etikett
+     seine        Fertigung            + graviertes Namensfeld
+     aktiv        Home, Plan, Login    + "Aktiv" statt Etikett
+
+   Die SVG-Karte in esim-forge.tsx zeichnet dieselben Masse nach —
+   wer hier etwas aendert, zieht sie mit. */
 export function SimCard({
   plan,
   chipText,
+  holder,
   onClick,
 }: {
-  plan: Plan
+  /** Ohne Tarif: der Rohling — die Karte, bevor sie jemandem gehoert. */
+  plan?: Plan
   chipText?: string | null
+  /** Der Inhaber. Graviert, wie ihn die Fertigung eingebrannt hat. */
+  holder?: string
   onClick?: () => void
 }) {
   const Tag = onClick ? 'button' : 'div'
   return (
-    <Tag className={`sim-card ${plan.key}`} onClick={onClick}>
-      <div className="head">
-        <span className="name">{plan.name}</span>
-        {chipText && <span className="chip">{chipText}</span>}
-      </div>
-      <div className="foot">
-        <div>
-          <div className="price">{plan.price}</div>
-          <div className="sub">Deine 5G eSIM, jeden Monat kündbar</div>
+    <Tag className={`sim-card ${plan?.key ?? 'blank'}`} onClick={onClick}>
+      {plan && (
+        <div className="head">
+          <span className="name">{plan.name}</span>
+          {chipText && <span className="chip">{chipText}</span>}
         </div>
+      )}
+      {holder && (
+        /* Gleiche Zellenbreite je Zeichen wie die Gravur der Fertigung
+           (ENGRAVE_CELL) — sonst saesse der Name nach der Landung auf
+           Home anders als dort, wo er eingebrannt wurde. Vorgelesen
+           wird er einmal am Stueck, nicht Buchstabe fuer Buchstabe. */
+        <span className="holder">
+          <span className="sr-only">{holder}</span>
+          {holder.toUpperCase().split('').map((c, i) => (
+            <i key={i} aria-hidden="true">{c === ' ' ? '\u00a0' : c}</i>
+          ))}
+        </span>
+      )}
+      <div className="foot">
+        {plan && (
+          <div>
+            <div className="price">{plan.price}</div>
+            <div className="sub">Deine 5G eSIM, jeden Monat kündbar</div>
+          </div>
+        )}
         <EsimIcon />
       </div>
     </Tag>

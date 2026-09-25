@@ -33,6 +33,31 @@
    Name sagt, wem sie gehoert.
    ---------------------------------------------------------------
 
+   ---------------------------------------------------------------
+   Die Einrichtung auf dem Geraet (seit dem 2026-09-24).
+
+   Hier standen ein Radarkeil, drei Suchringe, sechs Netzknoten im
+   Sechseck mit Strahlen und Datenpaketen, davor fallende Punkte und ein
+   Schimmer im Schleifenlauf. Jeder Takt sprach eine andere Bildsprache,
+   keine davon kam aus dem Produkt — das Stockbild "Konnektivitaet". Und
+   im Hoehepunkt schrumpfte die Karte auf 46 %, ausgerechnet der
+   Gegenstand, um den es geht.
+
+   Jetzt bleibt die Karte gross, und jedes Kapitel hat genau EINE
+   ehrliche Anzeige, beide aus dem Alltag eines iPhones:
+
+     geladen · eingerichtet   der Fortschritt laeuft auf der Kontur der
+                              Karte um — wie der Ring um ein App-Symbol,
+                              das gerade geladen wird. Bestimmt, nicht
+                              kreisend (progress-indicators.md).
+     gesucht · im Netz        vier Empfangsbalken ueber der Karte: leer,
+                              dann tastend, dann voll — der Moment, den
+                              jeder kennt, der je eine SIM eingelegt hat.
+
+   Koralle bleibt dem Chip und dem Etikett "Aktiv" vorbehalten. Die
+   Balken sind weiss wie die Statusleiste, die sie zitieren.
+   ---------------------------------------------------------------
+
    Zwei Regeln aus dem uebrigen Onboarding gelten unveraendert:
    animiert wird nur transform und opacity, und Weichheit entsteht aus
    Radial-Verlaeufen statt aus filter:blur — Safari auf dem iPhone
@@ -103,26 +128,18 @@ const ICON_DOTS: [number, number][] = [
    gesperrten Satz einer Pragung und macht nebenbei die Verzoegerungen
    des Lasers berechenbar. Ein einzelner Textknoten koennte nicht
    Zeichen fuer Zeichen geschrieben werden. */
-const ENGRAVE_CELL = 13.5
+const ENGRAVE_CELL = 13.5 /* = .sim-card .holder i in global.css */
 const ENGRAVE_Y = 95
+
+/* ---------- Das Etikett ----------
+   Masse aus .chip in global.css: 8px Abstand zum Namen, 8px
+   Innenabstand je Seite, 18px hoch, mittig auf der 27px-Zeile des
+   Namens (24 + 27/2 = 37,5). */
+const CHIP_GAP = 8
+const CHIP_PAD = 8
+const CHIP_H = 18
+const CHIP_CY = PAD + 27 / 2
 const engraveX = (i: number) => PAD + i * ENGRAVE_CELL + ENGRAVE_CELL / 2
-
-/* Netzknoten im Sechseck um die Karte. Radius 104 liegt ausserhalb der
-   geschrumpften Karte, die Strahlen laufen bis 70 nach innen und
-   verschwinden dort hinter ihr — sie enden nicht, sie gehen hinein. */
-const NODE_ANGLES = [30, 90, 150, 210, 270, 330]
-const NODE_R = 104
-const RAY_R = 70
-
-/* Radarkeil fuer die Netzsuche. Von oben im Uhrzeigersinn, 38 Grad —
-   schmal genug, dass er als Strahl liest und nicht als Tortenstueck. */
-const RADAR_R = 124
-const rad = (d: number) => (d * Math.PI) / 180
-const RADAR_PATH = (() => {
-  const [ax, ay] = [160 + RADAR_R * Math.cos(rad(-90)), 130 + RADAR_R * Math.sin(rad(-90))]
-  const [bx, by] = [160 + RADAR_R * Math.cos(rad(-52)), 130 + RADAR_R * Math.sin(rad(-52))]
-  return `M160 130 L${ax.toFixed(1)} ${ay.toFixed(1)} A${RADAR_R} ${RADAR_R} 0 0 1 ${bx.toFixed(1)} ${by.toFixed(1)} Z`
-})()
 
 export function EsimStage({
   beat,
@@ -143,9 +160,10 @@ export function EsimStage({
   const clip = `c-${uid}`
   const heat = `h-${uid}`
   const wipe = `w-${uid}`
-  const radar = `r-${uid}`
   const gloss = `g-${uid}`
   const corner = `k-${uid}`
+  const body = `b-${uid}`
+  const sheen = `s-${uid}`
 
   const chars = holder.toUpperCase().split('')
 
@@ -165,76 +183,59 @@ export function EsimStage({
      ersten Messung traegt die alte Schaetzung, damit das erste Bild
      nicht bei x=0 steht. */
   const titleRef = useRef<SVGTextElement>(null)
-  const [titleW, setTitleW] = useState(0)
+  const tagRef = useRef<SVGTextElement>(null)
+  const activeRef = useRef<SVGTextElement>(null)
+  const [w, setW] = useState({ title: 0, tag: 0, active: 0 })
   useLayoutEffect(() => {
     let alive = true
     const measure = () => {
-      if (alive) setTitleW(titleRef.current?.getComputedTextLength() ?? 0)
+      if (alive)
+        setW({
+          title: titleRef.current?.getComputedTextLength() ?? 0,
+          tag: tagRef.current?.getComputedTextLength() ?? 0,
+          active: activeRef.current?.getComputedTextLength() ?? 0,
+        })
     }
     measure()
     document.fonts?.ready.then(measure)
     return () => {
       alive = false
     }
-  }, [plan.name])
+  }, [plan.name, plan.chip])
 
-  const chipX = PAD + (titleW || plan.name.length * 13) + 10
+  const chipX = PAD + (w.title || plan.name.length * 13) + CHIP_GAP
+  const chipW = (textW: number, label: string) => (textW || label.length * 6.5) + CHIP_PAD * 2
+  /* Etikett des Tarifs bis zur Aktivierung, danach der Zustand — wie
+     auf der Tarifwahl und auf Home. */
+  const chip = (cls: string, label: string, textW: number, ref: React.Ref<SVGTextElement>) => (
+    <g className={cls}>
+      <rect x={chipX} y={CHIP_CY - CHIP_H / 2} width={chipW(textW, label)} height={CHIP_H} rx={CHIP_H / 2} />
+      <text ref={ref} x={chipX + chipW(textW, label) / 2} y={CHIP_CY} textAnchor="middle" dominantBaseline="central">
+        {label}
+      </text>
+    </g>
+  )
 
   return (
-    <div className={`forge${run ? ' run' : ''}`} data-beat={beat} data-plan={plan.key} aria-hidden="true">
+    <div
+      className={`forge${run ? ' run' : ''}`}
+      data-beat={beat}
+      data-plan={plan.key}
+      aria-hidden="true"
+      style={
+        {
+          /* Wo der Laser die Gravur beendet und wie schnell er dabei von
+             Zelle zu Zelle faehrt. Stand bis zum 2026-09-24 als feste
+             179.25px im CSS — die Mitte des zwoelften Zeichens, also
+             genau "MARCEL WEBER". Bei jedem anderen Namen hoerte der
+             Kopf mitten im Wort auf oder fuhr ins Leere. Die Fahrt
+             dauert 26 % von 3,05s, geteilt durch die Zellen dazwischen. */
+          '--engrave-end': `${engraveX(chars.length - 1)}px`,
+          '--etch-step': `${(0.793 / Math.max(1, chars.length - 1)).toFixed(4)}s`,
+        } as React.CSSProperties
+      }
+    >
       <span className="fg-glow" />
-
-      {/* ---- Netzschicht: liegt HINTER der Karte, damit die Strahlen
-              unter ihr verschwinden statt auf ihr zu enden. ---- */}
-      <svg className="fg-net" viewBox="0 0 320 260">
-        <defs>
-          <radialGradient id={radar} gradientUnits="userSpaceOnUse" cx="160" cy="130" r={RADAR_R}>
-            <stop offset="0%" stopColor="#fff" stopOpacity=".20" />
-            <stop offset="70%" stopColor="#fff" stopOpacity=".06" />
-            <stop offset="100%" stopColor="#fff" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-
-        {/* Der Suchstrahl dreht sich nur waehrend der Netzsuche — er ist
-            die Handlung, nicht die Verzierung. */}
-        <g className="fg-radar">
-          <path d={RADAR_PATH} fill={`url(#${radar})`} />
-          <line className="fg-radar-edge" x1="160" y1="130" x2="160" y2={130 - RADAR_R} />
-        </g>
-
-        {[72, 98, 124].map((r, i) => (
-          <circle key={r} className={`fg-ring r${i + 1}`} cx="160" cy="130" r={r} />
-        ))}
-
-        {NODE_ANGLES.map((deg, i) => {
-          const [cos, sin] = [Math.cos(rad(deg)), Math.sin(rad(deg))]
-          const [nx, ny] = [160 + cos * NODE_R, 130 + sin * NODE_R]
-          return (
-            <g key={deg} className="fg-node" style={{ '--i': i } as React.CSSProperties}>
-              <line className="fg-ray" x1={nx} y1={ny} x2={160 + cos * RAY_R} y2={130 + sin * RAY_R} />
-              <circle className="fg-dot" cx={nx} cy={ny} r="3.5" />
-              {/* Datenpakete laufen vom Knoten nach innen: das Netz kommt
-                  zur Karte, nicht umgekehrt. Richtung und Weg stehen als
-                  Variablen am Element — im CSS waeren es sechs Regeln. */}
-              <circle
-                className="fg-packet" cx={nx} cy={ny} r="2.4"
-                style={{
-                  '--i': i,
-                  '--px': `${(cos * (RAY_R - NODE_R)).toFixed(1)}px`,
-                  '--py': `${(sin * (RAY_R - NODE_R)).toFixed(1)}px`,
-                } as React.CSSProperties}
-              />
-            </g>
-          )
-        })}
-
-        {/* Das Profil faellt von oben auf die Karte — nur im Takt "geladen". */}
-        <g className="fg-stream">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <circle key={i} cx="160" cy="0" r="2.6" style={{ '--i': i } as React.CSSProperties} />
-          ))}
-        </g>
-      </svg>
 
       {/* ---- Die Karte. Der viewBox ist bewusst groesser als 345x173:
               die Masszeichen des Entwurfs liegen ausserhalb der
@@ -250,16 +251,35 @@ export function EsimStage({
               <stop offset="35%" stopColor="var(--noura-accent)" stopOpacity=".55" />
               <stop offset="100%" stopColor="var(--noura-accent)" stopOpacity="0" />
             </radialGradient>
-            {/* Die Spiegelung der polierten Flaeche — derselbe Streifen
-                wie in global.css, hier ueber den Vektor gelegt statt
-                ueber einen Winkel. */}
-            <linearGradient id={gloss} gradientUnits="userSpaceOnUse" x1="36" y1="-46" x2="248" y2="196">
+            {/* ---------- Material ----------
+                Die vier Verlaeufe von .sim-card in global.css, als Vektor
+                nachgerechnet. CSS-Winkel laufen ueber die ganze Box, Ecke
+                zu Ecke: bei 135deg auf 345x173 ist die Verlaufslinie
+                (345+173)/sqrt2 = 366 lang und steht auf der Mitte. Vorher
+                lagen hier eine flache Fuellung, ein um 20 Grad verdrehter
+                Glanz und ein runder statt elliptischer Eckschein — die
+                Karte der Fertigung war eine andere als die auf Home. */}
+            <linearGradient id={body} gradientUnits="userSpaceOnUse" x1="43" y1="-43" x2="302" y2="216">
+              <stop offset="0" stopColor="var(--sim-body)" />
+              <stop offset="1" stopColor="var(--sim-body-deep)" />
+            </linearGradient>
+            <linearGradient id={sheen} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="72">
+              <stop offset="0" stopColor="#fff" stopOpacity={plan.key === 'create' ? 0.11 : 0.09} />
+              <stop offset="1" stopColor="#fff" stopOpacity="0" />
+            </linearGradient>
+            {/* 118deg: Richtung (0.883, 0.469), Laenge 386. */}
+            <linearGradient id={gloss} gradientUnits="userSpaceOnUse" x1="2.2" y1="-4" x2="342.8" y2="177">
               <stop offset=".14" stopColor="#fff" stopOpacity="0" />
               <stop offset=".30" stopColor="#fff" stopOpacity=".085" />
               <stop offset=".42" stopColor="#fff" stopOpacity=".02" />
               <stop offset=".56" stopColor="#fff" stopOpacity="0" />
             </linearGradient>
-            <radialGradient id={corner} gradientUnits="userSpaceOnUse" cx="304" cy="4" r="200">
+            {/* 120% 90% at 88% 2%: Ellipse 414 x 155,7 um (303,6 | 3,5) —
+                SVG kennt nur Kreise, also Kreis plus y-Stauchung. */}
+            <radialGradient
+              id={corner} gradientUnits="userSpaceOnUse" cx="303.6" cy="3.5" r="414"
+              gradientTransform="translate(0 3.5) scale(1 0.376) translate(0 -3.5)"
+            >
               <stop offset="0%" stopColor="var(--noura-accent)" stopOpacity=".18" />
               <stop offset="58%" stopColor="var(--noura-accent)" stopOpacity="0" />
             </radialGradient>
@@ -286,8 +306,8 @@ export function EsimStage({
             </g>
 
             <g className="fg-guides">
-              <rect x={PAD} y="26" width={plan.name.length * 13} height="26" rx="3" />
-              <rect x={chipX} y="30" width="50" height="18" rx="9" />
+              <rect x={PAD} y="26" width={w.title || plan.name.length * 13} height="26" rx="3" />
+              <rect x={chipX} y={CHIP_CY - CHIP_H / 2} width={chipW(w.tag || w.active, plan.chip ?? 'Aktiv')} height={CHIP_H} rx={CHIP_H / 2} />
               <rect x={PAD} y={ENGRAVE_Y - 13} width={chars.length * ENGRAVE_CELL} height="17" rx="3" />
               <rect x={PAD} y={FOOT - 36} width="152" height="36" rx="3" />
               <rect x={ICON.x} y={ICON.y} width={ICON.s} height={ICON.s} rx="3" />
@@ -311,10 +331,11 @@ export function EsimStage({
             </g>
           </g>
 
-          {/* Flaeche, Kontur und eine zweite Kontur knapp darin: die
-              innere Linie gibt der Karte Dicke, ohne einen Schatten zu
-              brauchen. */}
-          <path className="fg-fill" d={SIM_PATH} />
+          {/* Koerper und Lichtsaum, wie .sim-card. */}
+          <g className="fg-fill">
+            <path d={SIM_PATH} fill={`url(#${body})`} />
+            <path d={SIM_PATH} fill={`url(#${sheen})`} />
+          </g>
 
           {/* ---------- Das Gesicht des Tarifs ----------
               Dieselben zwei Materialien wie .sim-card auf Home: CONNECT
@@ -329,8 +350,14 @@ export function EsimStage({
             </g>
           )}
 
-          <path className="fg-outline" d={SIM_PATH} />
-          <path className="fg-edge" d={SIM_PATH} />
+          {/* Die Kante von .sim-card::before: 2px gestrichen, von der
+              Silhouette auf 1px innen beschnitten. Im Entwurf zeichnet
+              dieselbe Linie die Kontur in Akzentfarbe. Die zweite,
+              innere Kontur, die hier bis zum 2026-09-24 lag, hatte die
+              Karte auf Home nie. */}
+          <g clipPath={`url(#${clip})`}>
+            <path className="fg-outline" d={SIM_PATH} />
+          </g>
 
           <g clipPath={`url(#${clip})`}>
             <rect className="fg-wipe" x="-140" y="0" width="140" height="173" fill={`url(#${wipe})`} />
@@ -383,12 +410,11 @@ export function EsimStage({
             <text className="fg-sub" x={PAD} y="145">Deine 5G eSIM, jeden Monat kündbar</text>
           </g>
 
-          {/* Der Chip sagt "Aktiv" — und erscheint deshalb erst, wenn sie
-              es ist: im letzten Takt, nicht vorher. */}
-          <g className="fg-active">
-            <rect x={chipX} y="30" width="50" height="18" rx="9" />
-            <text x={chipX + 25} y="39" textAnchor="middle" dominantBaseline="central">Aktiv</text>
-          </g>
+          {/* Das Etikett des Tarifs kommt mit dem Aufdruck — so, wie der
+              Kunde die Karte gewaehlt hat. "Aktiv" loest es ab, und zwar
+              erst, wenn sie es ist: im letzten Takt, nicht vorher. */}
+          {plan.chip && chip('fg-tag', plan.chip, w.tag, tagRef)}
+          {chip('fg-active', 'Aktiv', w.active, activeRef)}
 
           {/* ---------- Laserkopf ----------
               Zwei Aufgaben nacheinander: einmal um das eSIM-Zeichen
@@ -409,6 +435,47 @@ export function EsimStage({
             </g>
           </g>
         </svg>
+
+        {/* ---------- Fortschritt ----------
+            Laeuft beim Laden und Einrichten einmal im Uhrzeigersinn um die
+            Silhouette, oben links beginnend — die Form der Karte ist die
+            Spur. pathLength 100 macht aus der Kontur eine Prozentskala.
+
+            Eigenes SVG, deckungsgleich ueber der Karte: der Strich wird
+            ueber stroke-dashoffset gezeichnet, und das malt sein SVG in
+            jedem Bild neu. Laege er im Karten-SVG, waere das die ganze
+            Karte mit Verlaeufen, Text und Chip — 3,8 Sekunden lang. */}
+        <svg className="fg-progress-layer" viewBox="-16 -16 377 205">
+          {/* Die Abdunklung waehrend der Netzsuche liegt hier und nicht als
+              Deckkraft auf der Karte: eine durchscheinende Karte laesst die
+              Aurora durch und wirkt verwaschen statt gedimmt. Und im
+              eigenen SVG malt ihr Uebergang nur diese Ebene neu. */}
+          <path className="fg-shade" d={SIM_PATH} />
+          <path className="fg-progress" d={SIM_PATH} pathLength={100} />
+        </svg>
+      </div>
+
+      {/* ---------- Empfang ----------
+          Ueber der Karte, wo auf dem iPhone die Statusleiste sitzt. Sie
+          schwebt mit der Karte — gleiche Schleife, gleicher Start —, damit
+          der Abstand zwischen beiden steht: eine Anzeige, die gegen ihren
+          Gegenstand pendelt, liest sich als zwei Dinge. Aussen das
+          Schweben, innen die Sichtbarkeit je Takt; auf einem Element
+          wuerden sich die beiden Animationen gegenseitig ersetzen.
+
+          "5G" rueckt erst im letzten Takt dazu, die Balken machen ihm
+          Platz — vorher stehen sie allein auf der Mitte. */}
+      <div className="fg-signal">
+        <div className="fg-sig">
+          <span className="fg-bars">
+            {[0, 1, 2, 3].map((i) => (
+              <i key={i}>
+                <b style={{ '--i': i } as React.CSSProperties} />
+              </i>
+            ))}
+          </span>
+          <span className="fg-5g">5G</span>
+        </div>
       </div>
     </div>
   )

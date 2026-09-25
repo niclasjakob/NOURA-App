@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import appIcon from '../assets/img/noura-app-icon.svg'
 import lockup from '../assets/img/connected-by-vodafone.png'
-import avatarMarcel from '../assets/img/avatar-marcel.webp'
-import { ONBOARDING, PLAN_DIFF, PLAN_SHARED, PLANS } from '../data/plans'
+import { ONBOARDING, PLAN_DIFF, PLAN_SHARED, PLANS, planTitle, type Plan } from '../data/plans'
 import {
   ArrowLeft,
   ArrowRight,
   BackgroundGradient,
   ChevronDown,
   DemoSkip,
+  Monogram,
   Plus,
   Screen,
   SimCard,
@@ -211,7 +211,7 @@ export function Onboarding({
           ))}
         </div>
 
-        <div className="ob-next">
+        <div className={`ob-next${lastStep ? ' final' : ''}`}>
           <svg className="next-ring" viewBox="0 0 64 64" aria-hidden="true">
             <circle cx="32" cy="32" r="29" fill="none" stroke="rgba(255,255,255,.16)" strokeWidth="2.5" />
             <circle
@@ -353,7 +353,7 @@ export function SelectPlan({
               {/* Der Preis gehoert an den Reiter. Sonst muss man
                   zwischen den Karten wischen, um zwei Zahlen zu
                   vergleichen. */}
-              <span className="t-name">{p.name.charAt(0) + p.name.slice(1).toLowerCase()}</span>
+              <span className="t-name">{planTitle(p)}</span>
               <span className="t-price">{p.monthly} €</span>
             </button>
           ))}
@@ -450,7 +450,8 @@ export function SelectPlan({
         <Button onClick={onChoose}>{PLANS[planIdx].name} auswählen</Button>
         {/* Preisangabenverordnung: bei Endkundenpreisen muss dabei
             stehen, dass die Umsatzsteuer enthalten ist. */}
-        <p className="cta-fine">Preis inkl. MwSt. · keine Mindestlaufzeit · keine Anschlussgebühr</p>
+        {/* &nbsp; vor dem Punkt: umbrochen wird nach dem Trenner, nie davor. */}
+        <p className="cta-fine">Preis inkl. MwSt.&nbsp;· keine Mindestlaufzeit&nbsp;· keine Anschlussgebühr</p>
       </div>
     </Screen>
   )
@@ -468,7 +469,12 @@ export function SelectPlan({
 const STEP_MS = 1500
 const FINALE_MS = 3050
 
-export function Activation({ active, messages, onDone }: ScreenProps & { messages: string[]; onDone: () => void }) {
+export function Activation({
+  active,
+  messages,
+  plan,
+  onDone,
+}: ScreenProps & { messages: string[]; plan: Plan; onDone: () => void }) {
   const [idx, setIdx] = useState(0)
 
   /* Der Ruecksprung auf den ersten Schritt wartet, bis der Screen
@@ -502,13 +508,14 @@ export function Activation({ active, messages, onDone }: ScreenProps & { message
     <Screen active={active}>
       <AuroraFlow tone={done ? 'coral' : 'violet'} />
       {/* Figma 1330:1775: dieselbe 3D-SIM-Karte wie im Onboarding, der
-          Statustext steht mittig darunter. */}
+          Statustext steht mittig darunter. Beim Login ist es die Karte,
+          die der Kunde schon hat — sein Tarif, sein Name, aktiv. */}
       <div className="act-stage">
         <div className="act-visual">
           {/* Die Karte raeumt zum Schluss den Platz fuer den Haken — beides
               uebereinander kollidiert mit dem Kartenaufdruck. */}
           <div className={`act-card${done ? ' gone' : ''}`}>
-            <Card3D scanning={!done} />
+            <Card3D scanning={!done} plan={plan} holder={HOLDER.full} chipText="Aktiv" />
           </div>
           {done && <SuccessBurst />}
         </div>
@@ -605,8 +612,9 @@ export function Home({
         <span className="home-brand">NOURA</span>
         <div className="home-head-row">
           <h1>Hey {HOLDER.first} 👋🏼</h1>
-          <button className="avatar-btn" aria-label="Profil öffnen" onClick={onOpenProfile}>
-            <img src={avatarMarcel} className="avatar" alt="" />
+          {/* Der Name des Knopfs ist der des Sheets, das er oeffnet. */}
+          <button className="avatar-btn" aria-label="Account öffnen" onClick={onOpenProfile}>
+            <Monogram name={HOLDER.first} />
           </button>
         </div>
       </div>
@@ -615,7 +623,7 @@ export function Home({
             dasselbe Objekt, das gerade ins Netz gegangen ist, und landet
             hier. Ein Glanzstreifen laeuft einmal darueber — quittiert die
             Ankunft, ohne einen zweiten Haken zu brauchen. */}
-        <SimCard plan={plan} chipText="Aktiv" onClick={onOpenPlan} />
+        <SimCard plan={plan} chipText="Aktiv" holder={HOLDER.full} onClick={onOpenPlan} />
 
         <MagicCodeCard run={active} onOpen={onOpenMagic} />
 
@@ -644,11 +652,14 @@ export function Home({
 
           <div className="usage">
           <div className="card col-l">
-            {/* Icons in Akzentrot (Figma), nicht weiss */}
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21M12 3c-2.5 2.6-3.8 5.7-3.8 9s1.3 6.4 3.8 9" />
-            </svg>
+            {/* Icons in Akzentrot (Figma), nicht weiss — auf einer dunklen
+                Platte, sonst traegt Koralle ueber der Aurora-Koralle nicht. */}
+            <span className="use-ic" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21M12 3c-2.5 2.6-3.8 5.7-3.8 9s1.3 6.4 3.8 9" />
+              </svg>
+            </span>
             <div className="ring-wrap">
               {/* Figma: nur ein heller Kreisumriss, kein Fortschrittsbogen */}
               <svg width="126" height="126" viewBox="0 0 126 126">
@@ -663,18 +674,22 @@ export function Home({
           </div>
           <div className="col-r">
             <div className="card">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
+              <span className="use-ic" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </span>
               <div>
                 <div className="label">Nachrichten</div>
                 <div className="val">{MESSAGES}</div>
               </div>
             </div>
             <div className="card">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z" />
-              </svg>
+              <span className="use-ic" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z" />
+                </svg>
+              </span>
               <div>
                 <div className="label">Anrufe</div>
                 <div className="val">{CALLS_MIN} min</div>

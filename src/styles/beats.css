@@ -44,9 +44,26 @@
 /* Feste Hoehe: der Text wechselt mit jedem Takt seine Laenge, und ein
    springender Block unter einer stehenden Buehne liest sich wie ein
    Ruckeln der Buehne. */
-.beat-status { width: 100%; min-height: 78px; display: flex; justify-content: center; }
-.beat-caption { text-align: center; max-width: 290px; animation: beatIn 0.65s var(--spring) backwards; }
-@keyframes beatIn { from { opacity: 0; transform: translateY(10px); } }
+.beat-status { position: relative; width: 100%; min-height: 78px; display: flex; justify-content: center; }
+/* Durchblenden statt Schnitt: der alte Text geht in 0,2s, der neue kommt
+   erst, wenn er weg ist (0,18s), von 8px darunter. Zwei Texte an
+   derselben Stelle duerfen sich nicht lesbar ueberlagern — mit ease-in
+   im Abgang blieb der alte fast bis zuletzt deckend, und fuer einen
+   Moment standen beide Titel ineinander.
+
+   Der Abgang ist linear: bei 0,2s und reiner Deckkraft ist das die
+   Kurve, die den alten am schnellsten aus dem Blick nimmt. Keine Feder
+   auf Text — Schrift, die nachschwingt, wirkt verspielt, nicht praezise. */
+.beat-caption { text-align: center; max-width: 290px; animation: beatIn 0.5s var(--ease-out) backwards; }
+/* Die Wartezeit nur, wenn wirklich ein alter Text geht. Beim ersten
+   Erscheinen kaeme sie zu jeder anderen Verzoegerung dazu. */
+.beat-caption.leaving + .beat-caption { animation-delay: 0.18s; }
+@keyframes beatIn { from { opacity: 0; transform: translateY(8px); } }
+.beat-caption.leaving {
+  position: absolute; top: 0; left: 0; right: 0; margin: 0 auto;
+  animation: beatOut 0.2s linear forwards;
+}
+@keyframes beatOut { to { opacity: 0; transform: translateY(-4px); } }
 .beat-caption b { display: block; font-weight: 700; font-size: var(--fs-screen); line-height: 1.35; }
 .beat-caption p {
   margin-top: 6px; font-weight: 500; font-size: var(--fs-label); line-height: 1.43;

@@ -411,7 +411,7 @@ export const ESIM_REQUIREMENTS = [
     im Markup; seit die Karte seinen Namen traegt, waeren es sechs —
     und die Karte koennte dem Screen widersprechen, auf dem sie liegt.
     Der Nachname ist Vorfuehrdatum wie die Rufnummer und die IBAN. */
-export const HOLDER = { first: 'Marcel', full: 'Marcel Weber' }
+export const HOLDER = { first: 'Marcel', full: 'Marcel de Groot', phone: '+49 170 5550123' }
 
 /* ---------- Die Entstehung der eSIM ----------
    Zwei Screens, eine Geschichte. Beim Anbieter wird die Karte gebaut,

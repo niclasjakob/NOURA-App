@@ -26,9 +26,9 @@
   width: 460px; height: 460px; border-radius: 50%;
   opacity: 0.4; transition: opacity 1.1s var(--ease-out);
 }
-.af-1 { top: -170px; left: -160px; background: radial-gradient(circle, rgba(225, 80, 85, 0.55), transparent 66%); animation: afDrift1 26s var(--ease-out) infinite; }
-.af-2 { top: 38%; right: -200px; background: radial-gradient(circle, rgba(109, 69, 154, 0.55), transparent 66%); animation: afDrift2 33s var(--ease-out) infinite; }
-.af-3 { bottom: -210px; left: -110px; background: radial-gradient(circle, rgba(77, 125, 172, 0.5), transparent 66%); animation: afDrift3 39s var(--ease-out) infinite; }
+.af-1 { top: -170px; left: -160px; background: radial-gradient(circle, rgba(225, 80, 85, 0.55), transparent 66%); animation: afDrift1 26s var(--ease-sway) infinite; }
+.af-2 { top: 38%; right: -200px; background: radial-gradient(circle, rgba(109, 69, 154, 0.55), transparent 66%); animation: afDrift2 33s var(--ease-sway) infinite; }
+.af-3 { bottom: -210px; left: -110px; background: radial-gradient(circle, rgba(77, 125, 172, 0.5), transparent 66%); animation: afDrift3 39s var(--ease-sway) infinite; }
 
 .tone-coral .af-1 { opacity: 0.75; }
 .tone-coral .af-2 { opacity: 0.4; }
@@ -45,36 +45,40 @@
 @keyframes afDrift3 { 0%, 100% { transform: none; } 50% { transform: translate(80px, -60px) scale(1.14); } }
 
 /* ---------- Die 3D-Karte ----------
-   Das Figma-Bild traegt einen Alphakanal, deshalb koennen Glanz und
-   Scanbalken exakt auf die Kartenflaeche maskiert werden statt auf ein
-   Rechteck darum. */
+   Die echte SimCard in der Werkbank-Lage der Fertigung: dieselbe
+   Kippung (56 Grad) und Drehung (-24 Grad) wie
+   [data-beat='design'] .fg-plate in esim-forge.css. Gerechnet wird
+   auf dem Figma-Mass 345x173 und dann skaliert — so stehen Schrift,
+   Innenabstand und eSIM-Zeichen im selben Verhaeltnis wie auf Home. */
 .card3d {
   position: relative; width: 300px; height: 175px;
   display: flex; align-items: center; justify-content: center;
   animation: cardFloat 6.5s var(--ease-out) infinite;
 }
-.card3d img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.card3d-body {
+  position: relative; flex-shrink: 0; width: 345px; height: 173px;
+  transform: perspective(1000px) rotateX(56deg) rotateZ(-24deg) scale(0.84);
+}
 .card3d-glow {
   position: absolute; inset: -22% -14%; pointer-events: none;
   background: radial-gradient(ellipse at 50% 55%, rgba(225, 80, 85, 0.35), transparent 62%);
   animation: glowPulse 5s var(--ease-out) infinite;
 }
 .card3d-sheen, .card3d-scan {
-  position: absolute; inset: 0; pointer-events: none;
-  -webkit-mask: url('../assets/img/onboard-simcard.webp') center / contain no-repeat;
-  mask: url('../assets/img/onboard-simcard.webp') center / contain no-repeat;
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+  -webkit-mask: var(--sim-shape) center / 100% 100% no-repeat;
+  mask: var(--sim-shape) center / 100% 100% no-repeat;
 }
 .card3d-sheen::after {
   content: ''; position: absolute; top: -40%; bottom: -40%; left: -80%; width: 55%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.28), transparent);
   animation: sheenSweep 5.2s var(--ease-out) infinite;
 }
-/* Der Balken laeuft um 19 Grad gedreht — parallel zur kurzen Kante der
-   perspektivischen Karte. Waagerecht wuerde er quer zur Karte schneiden. */
+/* Der Schreibbalken aus fgWipe: 140 von 345 breit, laeuft 485 weit. */
 .card3d-scan::after {
-  content: ''; position: absolute; top: 0; left: -40%; right: -40%; height: 30%;
-  background: linear-gradient(180deg, transparent, rgba(225, 80, 85, 0.45), rgba(255, 255, 255, 0.7), rgba(225, 80, 85, 0.45), transparent);
-  animation: scanSweep 1.8s linear infinite;
+  content: ''; position: absolute; top: 0; bottom: 0; left: -40.6%; width: 40.6%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0));
+  animation: scanSweep 1.65s var(--ease-out) infinite;
 }
 @keyframes cardFloat {
   0%, 100% { transform: translateY(-7px) rotate(-0.7deg); }
@@ -84,10 +88,7 @@
   0%, 12% { transform: translateX(0) skewX(-16deg); }
   62%, 100% { transform: translateX(560%) skewX(-16deg); }
 }
-@keyframes scanSweep {
-  0% { transform: rotate(-19deg) translateY(-210%); }
-  100% { transform: rotate(-19deg) translateY(350%); }
-}
+@keyframes scanSweep { from { transform: translateX(0); } to { transform: translateX(345%); } }
 @keyframes glowPulse {
   0%, 100% { opacity: 0.7; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.08); }
@@ -109,44 +110,94 @@
 .orb {
   position: absolute; width: 32px; height: 32px; border-radius: 50%;
   background: rgba(255, 255, 255, 0.12); border: 1.5px solid rgba(255, 255, 255, 0.32);
-  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card));
+  -webkit-backdrop-filter: blur(var(--noura-blur-card)); backdrop-filter: blur(var(--noura-blur-card));
 }
 .orb.o1 { top: 4%; left: 10%; }
 .orb.o2 { bottom: 6%; right: 8%; width: 22px; height: 22px; }
 .orb.o3 { top: 44%; right: -6px; width: 14px; height: 14px; background: rgba(225, 80, 85, 0.55); border-color: rgba(225, 80, 85, 0.7); }
 
-/* Schritt 2 — Magic Code: vier Kacheln, darunter die drei Tueren */
+/* Schritt 2 — Magic Code: vier Kacheln, darunter die drei Tueren
+
+   Drei Schlaege, zeitlich allein ueber CSS gestaffelt — das Skript
+   setzt nur den Schluessel neu, alles Weitere ergibt sich aus Dauer und
+   Verzoegerung:
+
+     0 – 1,26s  Walzen laufen aus, Stelle i landet bei 0,78s + i x 0,16s
+     1,30s      Funke laeuft den Strich hinab (0,5s)
+     1,66s      Tueren leuchten nacheinander auf, je 0,12s versetzt
+
+   Animiert werden nur transform und opacity. Das Leuchten ist ein
+   stehender Schatten auf eigener Ebene, dessen Deckkraft sich aendert —
+   kein animierter box-shadow. */
 .mcode { position: relative; display: flex; flex-direction: column; align-items: center; }
 .mcode-row { display: flex; gap: 8px; }
 .mcode-tile {
-  width: 60px; height: 74px; display: flex; align-items: center; justify-content: center;
+  --cell: 74px;
+  --land: calc(0.78s + var(--i) * 0.16s);
+  position: relative; width: 60px; height: var(--cell);
   border-radius: var(--noura-radius-tile);
   background: var(--noura-glass); border: 1.5px solid rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(var(--noura-blur-control)); -webkit-backdrop-filter: blur(var(--noura-blur-control));
+  -webkit-backdrop-filter: blur(var(--noura-blur-control)); backdrop-filter: blur(var(--noura-blur-control));
   font-weight: 700; font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums;
   animation: tileIn 0.5s var(--ease-out) backwards;
   animation-delay: calc(var(--i) * 70ms);
 }
-/* Waehrend der Code laeuft, sitzt das Leuchten auf den Kacheln — es
-   markiert den Moment, in dem die Stellen einrasten. */
-.mcode-row.rolling .mcode-tile { animation: tileIn 0.5s var(--ease-out) backwards, tileRoll 0.22s var(--ease-out) infinite; }
 @keyframes tileIn { from { opacity: 0; transform: translateY(14px) scale(0.9); } }
-@keyframes tileRoll {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(225, 80, 85, 0); }
-  50% { box-shadow: 0 0 18px 0 rgba(225, 80, 85, 0.45); }
+
+/* Das Fenster schneidet die Walze ab und blendet sie oben und unten
+   weich aus — die Zeichen tauchen aus der Tiefe auf, statt an einer
+   Kante abzureissen. Das stehende Zeichen (Mitte, ~20–54px) liegt
+   vollstaendig im deckenden Band. */
+.mcode-window {
+  position: absolute; inset: 0; overflow: hidden; border-radius: inherit;
+  -webkit-mask-image: linear-gradient(transparent, #000 24%, #000 76%, transparent);
+  mask-image: linear-gradient(transparent, #000 24%, #000 76%, transparent);
+}
+/* Walze und Rast stehen in global.css (.reel) — hier nur Zellhoehe
+   und Landezeit, beide am Kachelelement. */
+
+/* Aufleuchten beim Einrasten: innen ein warmer Schein, aussen ein
+   Hof, der Rand zieht kurz auf Koralle. Einmal je Stelle, im Moment
+   der Landung, dann ein langes Abklingen. */
+.mcode-flare {
+  position: absolute; inset: -1.5px; border-radius: inherit; pointer-events: none;
+  border: 1.5px solid rgba(225, 80, 85, 0.75);
+  box-shadow: 0 0 22px 0 rgba(225, 80, 85, 0.38), inset 0 0 18px 0 rgba(225, 80, 85, 0.22);
+  opacity: 0;
+  animation: flare 1.1s var(--ease-out) calc(var(--land) - 0.06s) both;
+}
+@keyframes flare {
+  0%   { opacity: 0; }
+  14%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 /* Der Strich sagt, in welche Richtung gelesen wird: Code oben, was er
-   oeffnet darunter. Ohne ihn stehen zwei Gruppen unverbunden da. */
+   oeffnet darunter. Der Funke macht daraus eine Bewegung — erst wenn
+   die letzte Stelle sitzt, geht etwas nach unten weiter. */
 .mcode-stem {
-  width: 1.5px; height: 26px; margin: 10px 0;
+  position: relative; width: 1.5px; height: 26px; margin: 10px 0;
   background: linear-gradient(to bottom, rgba(225, 80, 85, 0.85), rgba(225, 80, 85, 0.15));
   animation: stemIn 0.45s var(--ease-out) 0.34s backwards;
 }
 @keyframes stemIn { from { opacity: 0; transform: scaleY(0); } }
+.mcode-spark {
+  position: absolute; left: 50%; top: 0; width: 6px; height: 12px; margin-left: -3px;
+  border-radius: 3px; pointer-events: none;
+  background: radial-gradient(50% 50% at 50% 50%, #fff, rgba(255, 176, 178, 0.6) 45%, transparent);
+  opacity: 0;
+  animation: spark 0.5s ease-in-out 1.3s both;
+}
+@keyframes spark {
+  0%   { opacity: 0; transform: translateY(-6px); }
+  25%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(24px); }
+}
 
 .mcode-doors { display: flex; gap: 6px; }
 .mcode-door {
+  position: relative; isolation: isolate;
   padding: 7px 12px; border-radius: var(--noura-radius-pill);
   background: var(--noura-glass); border: 1px solid rgba(255, 255, 255, 0.28);
   font-weight: 600; font-size: var(--fs-caption); line-height: 1.333;
@@ -154,6 +205,24 @@
   animation-delay: calc(0.44s + var(--i) * 90ms);
 }
 @keyframes doorIn { from { opacity: 0; transform: translateY(10px); } }
+.mcode-door-label { position: relative; }
+/* Die Tuer geht auf: warme Fuellung und Korallrand blenden ein, halten
+   kurz und klingen aus. Der Text bleibt weiss auf der Glasflaeche —
+   Koralle traegt auf Glas keinen Text (Kontrastliste im Skill). */
+.mcode-door-lit {
+  position: absolute; inset: -1px; z-index: -1; border-radius: inherit; pointer-events: none;
+  background: rgba(225, 80, 85, 0.22);
+  border: 1px solid rgba(225, 80, 85, 0.8);
+  box-shadow: 0 0 16px 0 rgba(225, 80, 85, 0.3);
+  opacity: 0;
+  animation: doorLit 1.3s var(--ease-out) calc(1.66s + var(--i) * 0.12s) both;
+}
+@keyframes doorLit {
+  0%   { opacity: 0; }
+  18%  { opacity: 1; }
+  45%  { opacity: 1; }
+  100% { opacity: 0; }
+}
 
 /* Schritt 3 — die zugesicherte Rate
    Eine Kurve, ein Boden, sonst nichts. Die frueheren zwei Spuren
@@ -245,7 +314,7 @@
 }
 .ob-tag {
   font-weight: 700; font-size: var(--fs-caption); line-height: 1.333;
-  letter-spacing: 0.16em; text-transform: uppercase; color: var(--noura-accent);
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--noura-accent-text);
 }
 .ob-text h1 { font-weight: 700; font-size: 1.647rem; line-height: 1.286; }
 .ob-text p { font-weight: 600; font-size: var(--fs-label); line-height: 1.5; color: var(--noura-text-muted); max-width: 330px; }
@@ -274,13 +343,23 @@
 .btn.icon-btn { width: 64px; height: 64px; padding: 0; border-radius: var(--noura-radius-pill); }
 .next-ring { position: absolute; inset: 0; width: 64px; height: 64px; pointer-events: none; z-index: 2; }
 .next-ring circle + circle { transition: stroke-dashoffset var(--dur-screen) var(--ease-out); }
-.btn.icon-btn.final { animation: finalPulse 2.4s var(--ease-out) infinite; }
-/* Der Puls legt sich auf die Grundschatten des Glases, statt sie zu
-   ersetzen — sonst verliert der Knopf waehrend der Animation Kante und
-   Abhebung. */
+/* Auf dem letzten Schritt laeuft vom Knopf eine korallene Welle aus.
+   Sie ist ein eigener Ring hinter dem Knopf, der waechst und
+   verblasst — nur transform und opacity. Bis zum 2026-09-24 pulste
+   stattdessen der box-shadow des Knopfs selbst, und das hiess: ein
+   Neuzeichnen je Bild, solange der Schritt offen stand (gemessen
+   ~175ms Stilarbeit je drei Sekunden bei vierfach gedrosselter CPU).
+   Am Knopf selbst ist kein Platz dafuer, ::before und ::after tragen
+   Kantenreflex und Glanz des Glases. */
+.ob-next.final::before {
+  content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  box-shadow: 0 0 0 3px rgba(225, 80, 85, 0.45);
+  opacity: 0;
+  animation: finalPulse 2.4s var(--ease-out) infinite;
+}
 @keyframes finalPulse {
-  0%, 100% { box-shadow: var(--lg-inner), var(--lg-lift), 0 0 0 0 rgba(225, 80, 85, 0.4); }
-  60% { box-shadow: var(--lg-inner), var(--lg-lift), 0 0 0 16px rgba(225, 80, 85, 0); }
+  0%   { opacity: 1; transform: scale(1); }
+  60%, 100% { opacity: 0; transform: scale(1.45); }
 }
 
 /* ---------- Aktivierung ----------

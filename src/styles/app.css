@@ -31,7 +31,6 @@
   touch-action: none; display: flex; justify-content: center;
 }
 .sheet-grip:active { cursor: grabbing; }
-.sheet .handle { margin: 0 auto; }
 
 /* Sichtbarer Schliessen-Knopf. Vorher liess sich ein Sheet nur
    ueber den Hintergrund schliessen — der bei fast voller Hoehe
@@ -44,7 +43,7 @@
   display: flex; align-items: center; justify-content: center;
   background: var(--lg-tint); border: none; cursor: pointer;
   color: var(--noura-text); isolation: isolate;
-  backdrop-filter: var(--lg-refract); -webkit-backdrop-filter: var(--lg-refract);
+  -webkit-backdrop-filter: var(--lg-refract); backdrop-filter: var(--lg-refract);
   box-shadow: var(--lg-inner), var(--lg-lift);
   transition: transform var(--dur-screen) var(--spring), background var(--dur-screen) var(--spring);
 }
@@ -104,8 +103,12 @@ button.sim-card:active {
   transition: transform var(--dur-tap) var(--ease-out), filter var(--dur-tap) var(--ease-out);
   transform: scale(0.985); filter: brightness(0.88);
 }
-.avatar-btn { transition: transform var(--dur-screen) var(--spring); }
-.avatar-btn:active { transition: transform var(--dur-tap) var(--ease-out); transform: scale(0.94); }
+.avatar-btn { transition: transform var(--dur-screen) var(--spring), background var(--dur-screen) var(--spring); }
+/* Gedrueckt dunkler, nicht heller — wie jeder Glasknopf (20 % auf 15 %). */
+.avatar-btn:active {
+  transition: transform var(--dur-tap) var(--ease-out), background var(--dur-tap) var(--ease-out);
+  transform: scale(0.94); background: var(--lg-tint-pressed);
+}
 .section-toggle { transition: opacity var(--dur-tap) var(--ease-out); }
 .section-toggle:active { opacity: 0.6; }
 
@@ -184,7 +187,7 @@ button.sim-card:active {
   font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
   padding: 1px 8px; border-radius: var(--noura-radius-pill);
 }
-.trend.up { background: var(--noura-accent); }
+.trend.up { background: var(--noura-accent-fill); }
 .trend.down { background: var(--noura-glass-strong); }
 /* ---- Tagesverlauf ----
    Die Linie zeichnet sich beim Betreten des Screens von links nach
@@ -271,7 +274,7 @@ button.sim-card:active {
   min-height: var(--tap);
   background: var(--noura-glass-strong); border: none;
   border-radius: var(--noura-radius-tile); color: var(--noura-text);
-  backdrop-filter: blur(var(--noura-blur-control)); -webkit-backdrop-filter: blur(var(--noura-blur-control));
+  -webkit-backdrop-filter: blur(var(--noura-blur-control)); backdrop-filter: blur(var(--noura-blur-control));
   transition: transform var(--dur-screen) var(--spring);
 }
 .addons .addon:active { transition: transform var(--dur-tap) var(--ease-out); transform: scale(0.96); }
@@ -365,6 +368,19 @@ button.sim-card:active {
   overflow-y: auto; padding: 16px 24px 0; scrollbar-width: none;
 }
 .flow-scroll::-webkit-scrollbar { display: none; }
+
+/* Weiche Scrollkante. Vorher lief der Inhalt an der Oberkante gegen
+   eine harte Linie und stand dort halb angeschnitten — mitten durch
+   eine Textzeile. 16px sind der kleinste obere Innenabstand der drei
+   Behaelter: im Ruhezustand blendet die Kante also nichts aus.
+   `scroll-views.md › Scroll edge effects`: bei eigenen Leisten "add
+   this effect manually". Die Maske macht den Behaelter nicht zum
+   Backdrop Root, der das Glas der Karten abschneidet — am 2026-09-24
+   in Chrome pixelgleich geprueft. */
+.plan-scroll, .flow-scroll, .home-scroll {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 16px);
+  mask-image: linear-gradient(to bottom, transparent, #000 16px);
+}
 .flow-sec { margin-top: 32px; }
 .flow-sec h2 { font-weight: 700; font-size: var(--fs-title); line-height: 1.35; margin-bottom: 12px; }
 .flow-cta {
@@ -386,8 +402,8 @@ button.sim-card:active {
   60% { transform: translateX(3px); }
 }
 .field-err {
-  font-style: normal; font-weight: 500; font-size: var(--fs-caption);
-  line-height: 1.4; color: var(--noura-accent);
+  font-style: normal; font-weight: 600; font-size: var(--fs-caption);
+  line-height: 1.4; color: var(--noura-text);
   animation: optOpen var(--dur-quick) var(--ease-out);
 }
 
@@ -407,7 +423,7 @@ button.sim-card:active {
 .opt {
   border-radius: var(--noura-radius-tile); margin-bottom: 8px;
   background: var(--noura-glass); overflow: hidden;
-  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card));
+  -webkit-backdrop-filter: blur(var(--noura-blur-card)); backdrop-filter: blur(var(--noura-blur-card));
   transition: box-shadow var(--dur-quick) var(--ease-out);
 }
 .opt.on { box-shadow: inset 0 0 0 1.5px var(--noura-accent); }
@@ -513,7 +529,7 @@ button.sim-card:active {
    "bedienbar". */
 .card {
   background: var(--noura-glass);
-  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card));
+  -webkit-backdrop-filter: blur(var(--noura-blur-card)); backdrop-filter: blur(var(--noura-blur-card));
   border-radius: var(--noura-radius-tile); padding: 20px;
   display: flex; flex-direction: column; border: none;
 }
@@ -563,7 +579,7 @@ button.sim-card:active {
 .magic-steps .n {
   flex-shrink: 0; width: 26px; height: 26px; border-radius: var(--noura-radius-pill);
   display: flex; align-items: center; justify-content: center;
-  background: var(--noura-accent); color: var(--noura-text);
+  background: var(--noura-accent-fill); color: var(--noura-text);
   font-weight: 700; font-size: var(--fs-caption); line-height: 1;
 }
 .magic-steps b { font-weight: 700; font-size: var(--fs-label); line-height: 1.357; }
@@ -588,7 +604,7 @@ button.sim-card:active {
 .magic-creator { gap: 8px; margin-top: 24px; align-items: flex-start; }
 .magic-creator .chip {
   display: inline-flex; align-items: center; padding: 4px 10px;
-  border-radius: var(--noura-radius-pill); background: var(--noura-accent);
+  border-radius: var(--noura-radius-pill); background: var(--noura-accent-fill);
   font-weight: 700; font-size: var(--fs-caption); line-height: 1.35;
 }
 .magic-creator b { font-weight: 700; font-size: var(--fs-body); line-height: 1.312; }
@@ -669,7 +685,7 @@ button.sim-card:active {
    Etikett, nie Flaeche fuer eine Aktion. */
 .drop-kind {
   display: inline-flex; align-items: center; padding: 3px 9px;
-  border-radius: var(--noura-radius-pill); background: var(--noura-accent);
+  border-radius: var(--noura-radius-pill); background: var(--noura-accent-fill);
   font-weight: 700; font-size: var(--fs-caption); line-height: 1.35;
 }
 .drop-left {
@@ -739,7 +755,7 @@ button.sim-card:active {
    Aurora-Zone bei 2,90:1. */
 .plan-diff {
   padding: 16px;
-  backdrop-filter: var(--glass-refract); -webkit-backdrop-filter: var(--glass-refract);
+  -webkit-backdrop-filter: var(--glass-refract); backdrop-filter: var(--glass-refract);
 }
 
 /* Zwei gleich breite Wertspalten. Das Merkmal steht als Zeile
@@ -835,16 +851,11 @@ button.sim-card:active {
    liegen jetzt auf einem ::before, der Knopf bleibt unangetastet.
    Deckend bis 80 %, damit die Kante oberhalb des Knopfes verlaeuft und
    nicht mitten hindurch. */
-.plan-cta {
-  background: none;
-  backdrop-filter: none; -webkit-backdrop-filter: none;
-  -webkit-mask-image: none; mask-image: none;
-  padding-top: 40px;
-}
+.plan-cta { padding-top: 40px; }
 .plan-cta::before {
   content: ''; position: absolute; inset: 0; z-index: -1;
   background: linear-gradient(to top, rgba(20, 15, 35, 0.94) 80%, transparent);
-  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card));
+  -webkit-backdrop-filter: blur(var(--noura-blur-card)); backdrop-filter: blur(var(--noura-blur-card));
   -webkit-mask-image: linear-gradient(to top, #000 80%, transparent);
   mask-image: linear-gradient(to top, #000 80%, transparent);
 }
@@ -897,7 +908,7 @@ button.sim-card:active {
   display: flex; align-items: flex-start; gap: 12px; cursor: pointer;
   padding: 14px 16px; border-radius: var(--noura-radius-tile);
   background: var(--noura-glass);
-  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card));
+  -webkit-backdrop-filter: blur(var(--noura-blur-card)); backdrop-filter: blur(var(--noura-blur-card));
   min-height: var(--tap);
 }
 .consent.invalid label { box-shadow: inset 0 0 0 1.5px var(--noura-accent); }
@@ -925,7 +936,7 @@ button.sim-card:active {
    darf den Ablauf nicht zuschuetten. */
 .disclosure {
   border-radius: var(--noura-radius-tile); background: var(--noura-glass);
-  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card)); overflow: hidden;
+  -webkit-backdrop-filter: blur(var(--noura-blur-card)); backdrop-filter: blur(var(--noura-blur-card)); overflow: hidden;
 }
 .disclosure-btn {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -979,7 +990,17 @@ button.sim-card:active {
    soll beim Fehlschlag nicht wachsen, sondern die Auskunft tauschen. */
 .magic-error {
   font-weight: 600; font-size: var(--fs-caption); line-height: 1.45;
-  color: var(--noura-accent);
+  color: var(--noura-text);
+}
+/* Fehler tragen Weiss und einen korallenen Punkt, nicht korallene
+   Schrift: auf der hellsten Glasstelle (ausgewaehlte Zahlart ueber der
+   Aurora-Koralle) kam #e15055 auf 1,84:1, und selbst ein aufgehellter
+   Akzent bleibt dort unter 4,5:1. Der Punkt und der rote Feldrand
+   sagen "Fehler", der Text muss nur lesbar sein. */
+.field-err, .magic-error { display: flex; gap: 8px; }
+.field-err::before, .magic-error::before {
+  content: ''; flex-shrink: 0; width: 6px; height: 6px; margin-top: 0.5em;
+  border-radius: 50%; background: var(--noura-accent);
 }
 /* Der Rand ist hier ausnahmsweise Farbe statt Verlauf: das Feld muss
    auch dann als fehlerhaft lesbar sein, wenn die Meldung darunter
@@ -1073,7 +1094,7 @@ button.sim-card:active {
 .pass-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .pass-kind {
   font-weight: 600; font-size: var(--fs-caption); line-height: 1.333;
-  color: var(--noura-accent);
+  color: var(--noura-accent-text);
 }
 .pass-tx b {
   font-weight: 700; font-size: var(--fs-label); line-height: 1.357;
@@ -1141,3 +1162,116 @@ button.sim-card:active {
   animation: homeCard var(--dur-move) var(--spring) var(--stagger) backwards;
 }
 @keyframes homeCard { from { opacity: 0; transform: translateY(36px) scale(1.07); } }
+
+/* ============================================================
+   Konto-Sheet: Unterseiten (seit 2026-09-24)
+   Aufbau und Begruendung in sheets/account-pages.tsx.
+   ============================================================ */
+
+/* ---- Der Stapel ----
+   Zwei Faecher uebereinander. Die Liste weicht um ein Drittel nach
+   links und blendet aus, die Seite kommt von rechts — dieselbe
+   Bewegung wie der iOS-Stapel, auf der Kurve der Sheets. */
+.acct-nav { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.acct-pane {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  transition: transform var(--dur-move) var(--ease-out), opacity var(--dur-move) var(--ease-out);
+}
+.acct-pane.sub { transform: translateX(100%); touch-action: pan-y; }
+.acct-nav.deep .acct-pane.root { transform: translateX(-30%); opacity: 0; }
+.acct-nav.deep .acct-pane.sub { transform: none; }
+
+/* Zeilen, die eine Seite oeffnen, tragen rechts den Pfeil. */
+.list-row .chev { margin-left: auto; color: var(--noura-text-muted); line-height: 0; }
+
+/* ---- Kopf der Unterseite ----
+   Zurueck steht auf derselben Hoehe wie Schliessen (top 12, 44 hoch):
+   das Sheet-Innere beginnt 24px tiefer, daher -12. Links 16 statt 24,
+   damit der Pfeil auf der Kante der iOS-Zurueck-Taste sitzt. */
+.acct-back {
+  display: inline-flex; align-items: center; gap: 2px;
+  min-height: var(--tap); margin: -12px 0 4px -8px; padding: 0 12px 0 0;
+  background: none; border: none; cursor: pointer;
+  color: var(--noura-text); font-weight: 600; font-size: var(--fs-label); line-height: 1.357;
+  transition: opacity var(--dur-tap) var(--ease-out);
+}
+.acct-back:active { opacity: var(--press-dim); }
+.acct-title { font-weight: 700; font-size: var(--fs-title); line-height: 1.35; padding-right: 48px; }
+.acct-title:focus { outline: none; }
+
+/* ---- Einstellungsgruppen ----
+   Radius 16 wie jede Inhaltsflaeche, aber als Mulde (--noura-well)
+   statt Glas. Gemessen am 2026-09-24 (Chrome, dunkelster Kontrast
+   unter jedem Textfeld): auf Glas 10 % im Glas-Sheet kamen die
+   Notizen ueber der Aurora-Koralle auf 3,19:1, die weissen Titel auf
+   5,11:1 — zwei weisse Schichten uebereinander hellen den Grund auf,
+   genau wie bei der Tarifleiste. Dieselbe Antwort wie dort: die
+   Gruppe ist dunkler als ihr Grund, nicht heller. */
+.set-sec { margin-top: 24px; }
+.set-sec h3 {
+  font-weight: 600; font-size: var(--fs-label); line-height: 1.357;
+  color: var(--noura-text-muted); margin: 0 4px 8px;
+}
+.set-group { border-radius: var(--noura-radius-tile); background: var(--noura-well); overflow: hidden; }
+/* Die Fragen und Dokumente sind dieselbe Rolle — dieselbe Mulde. */
+.faq .disclosure { background: var(--noura-well); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.set-row {
+  position: relative; display: flex; align-items: center; gap: 16px;
+  width: 100%; min-height: var(--tap); padding: 14px 16px;
+  background: none; border: none; cursor: pointer; text-align: left; color: var(--noura-text);
+  transition: background var(--dur-tap) var(--ease-out);
+}
+.set-row:not(.static):active { background: var(--press-wash); }
+.set-row.static { cursor: default; }
+/* Trennlinie ab dem Text, nicht ueber die volle Breite — wie in iOS. */
+.set-row + .set-row::before {
+  content: ''; position: absolute; top: 0; left: 16px; right: 0; height: 1px;
+  background: var(--noura-line);
+}
+.set-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.set-label { font-weight: 600; font-size: var(--fs-label); line-height: 1.357; }
+.set-note { font-weight: 500; font-size: var(--fs-caption); line-height: 1.4; color: var(--noura-text-muted); }
+.set-value { flex-shrink: 0; font-weight: 500; font-size: var(--fs-label); color: var(--noura-text-muted); }
+.set-chev { flex-shrink: 0; line-height: 0; color: var(--noura-text-muted); }
+.set-foot {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.4;
+  color: var(--noura-text-muted); margin: 8px 4px 0;
+}
+.set-lead {
+  font-weight: 500; font-size: var(--fs-label); line-height: 1.45;
+  color: var(--noura-text-muted); margin: 8px 0 16px;
+}
+
+/* ---- Der Schalter ----
+   iOS-Mass 51x31. Aus: Mulde mit Innenkante, wie die Spur der
+   Tarifleiste. An: Glas `glass-active`, wie deren gewaehlte Pille.
+   Der weisse Knopf traegt den Zustand ueber seine Lage — Farbe allein
+   reicht nach toggles.md nicht. */
+.switch {
+  position: relative; flex-shrink: 0; width: 51px; height: 31px;
+  border-radius: var(--noura-radius-pill); background: var(--noura-well);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22), inset 0 0 0 1px var(--noura-line);
+  transition: background var(--dur-quick) var(--ease-out);
+}
+.switch i {
+  position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%;
+  background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+  transition: transform var(--dur-quick) var(--spring);
+}
+.switch.on { background: var(--noura-glass-active); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22); }
+.switch.on i { transform: translateX(20px); }
+.set-row:focus-visible { outline: 2px solid var(--noura-text); outline-offset: -2px; }
+
+/* ---- Hilfe und Dokumente ----
+   Die Fragen sind Disclosures (components/ui.tsx), untereinander mit
+   8px Luft — jede ist eine eigene Karte, weil jede fuer sich aufgeht. */
+.faq { display: flex; flex-direction: column; gap: 8px; }
+.faq-a { font-weight: 500; font-size: var(--fs-label); line-height: 1.5; }
+.doc-list { display: flex; flex-direction: column; gap: 8px; padding-left: 18px; font-weight: 500; font-size: var(--fs-label); line-height: 1.45; }
+.doc-link {
+  display: block; min-height: var(--tap); margin-top: 4px; padding: 12px 0 0;
+  background: none; border: none; cursor: pointer; text-align: left;
+  color: var(--noura-text); font-weight: 600; font-size: var(--fs-label);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.set-sec .btn { width: 100%; }

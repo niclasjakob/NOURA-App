@@ -478,7 +478,7 @@ export function Ident({
                 Schritt wie eine Huerde, mit ihm wie eine Formalie. */}
             <p className="flow-lead">
               Für die Aktivierung einer SIM-Karte sind wir gesetzlich verpflichtet, Deine Identität zu prüfen
-              (§ 172 TKG). Halte Deinen Ausweis bereit — Name und Anschrift übernehmen wir daraus.
+              (§&nbsp;172 TKG). Halte Deinen Ausweis bereit — Name und Anschrift übernehmen wir daraus.
             </p>
           </div>
 

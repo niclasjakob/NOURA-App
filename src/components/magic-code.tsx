@@ -13,17 +13,23 @@
    einrastet. Antippen loest denselben Vorgang sofort aus — das
    ist die Belohnung, die zum Antippen einlaedt.
 
-   Die Wolke ist ein SVG mit eigenem Koordinatensystem
-   (345x148 = die Kartenflaeche in Figma-Punkten). Dadurch laesst
-   sich jedes Fragment ueber `transform: translate()` in genau
-   diesen Punkten setzen — kein Layout je Bild, und die Wolke
-   skaliert trotzdem mit der echten Geraetebreite mit.
+   Die Wolke rechnet in Figma-Punkten (345x112 = die Kartenflaeche)
+   und setzt jedes Fragment per `transform: translate()` in
+   Containereinheiten (cqw/cqh) — sie skaliert also mit der echten
+   Kartengroesse mit, ohne Layout je Bild.
+
+   Bis zum 2026-09-24 war sie ein SVG mit <text>-Fragmenten. Das sah
+   gleich aus, lief aber komplett auf dem Hauptthread: SVG-Elemente
+   bewegt weder Chrome noch WebKit im Compositor, also kostete jedes
+   Bild der Drift und jeder Uebergang ein Layout. Als HTML laufen
+   beide im Compositor.
    ============================================================ */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 /* Alphabet und Laenge kommen aus der Datenschicht: die Wolke, das
    Eingabefeld und die Pruefung muessen sich zwangslaeufig einig sein,
    welche Zeichen es ueberhaupt gibt. */
-import { ALPHABET, CODE_LEN, randomCode } from '../data/magic'
+import { randomCode } from '../data/magic'
+import { Reel, prefersReducedMotion, useCodeReels } from './code-reel'
 
 /* Koordinatensystem der Wolke (Figma-Punkte) */
 const BOX_W = 345
@@ -49,10 +55,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
    ein Einatmen, dann ein langes Ausatmen. */
 const GATHER_MS = 480
 const CYCLE_MS = 5200
-const ROLL_MS = 55        /* Bildabstand des Ziffernlaufs */
-const ROLL_FRAMES = 4     /* so viele Bilder, bis eine Stelle einrastet */
 
-const pick = () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]
 const jitter = (v: number, r: number) => v + (Math.random() * 2 - 1) * r
 
 type Mote = { id: number; code: string; x: number; y: number; o: number; s: number }
@@ -82,42 +85,16 @@ const gatherMotes = (motes: Mote[]): Mote[] =>
   }))
 
 export function MagicCodeCard({ run, onOpen }: { run: boolean; onOpen?: () => void }) {
-  const reduced = useMemo(
-    () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches,
-    [],
-  )
+  const reduced = useMemo(prefersReducedMotion, [])
 
   const [motes, setMotes] = useState<Mote[]>(spreadMotes)
   const [phase, setPhase] = useState<'spread' | 'gather'>('spread')
-  const [digits, setDigits] = useState<string[]>(() => randomCode().split(''))
-  const [rolling, setRolling] = useState(false)
+  /* Der Code laeuft auf Walzen, wie im Onboarding (code-reel.tsx).
+     Vorher flackerte er alle 55ms durchs Alphabet — 16 Renders je
+     Durchgang, jetzt einer. */
+  const { cycle, reels, advance: roll } = useCodeReels(reduced)
 
-  const rollRef = useRef<number>(0)
   const gatherRef = useRef<number>(0)
-
-  /* Ziffernlauf: die Stellen rasten von links nach rechts ein, jede
-     nach vier Bildern. Bis dahin flackert sie durch das Alphabet. */
-  const roll = useCallback(() => {
-    const target = randomCode().split('')
-    window.clearInterval(rollRef.current)
-    if (reduced) {
-      setDigits(target)
-      return
-    }
-    setRolling(true)
-    let frame = 0
-    rollRef.current = window.setInterval(() => {
-      frame += 1
-      const locked = Math.floor(frame / ROLL_FRAMES)
-      if (locked >= CODE_LEN) {
-        window.clearInterval(rollRef.current)
-        setDigits(target)
-        setRolling(false)
-        return
-      }
-      setDigits(target.map((c, i) => (i < locked ? c : pick())))
-    }, ROLL_MS)
-  }, [reduced])
 
   /* Ein Durchgang: Wolke einatmen, dann mit neuen Fragmenten und neuem
      Code wieder ausatmen. */
@@ -145,15 +122,13 @@ export function MagicCodeCard({ run, onOpen }: { run: boolean; onOpen?: () => vo
     return () => {
       window.clearInterval(iv)
       window.clearTimeout(gatherRef.current)
-      window.clearInterval(rollRef.current)
-      setRolling(false)
     }
   }, [run, reform])
 
   return (
     <button
       type="button"
-      className={`card magic${rolling ? ' rolling' : ''}`}
+      className="card magic"
       /* Der Code wandert staendig — vorgelesen waere er nur Laerm.
          VoiceOver hoert deshalb genau den Satz, um den es geht. */
       aria-label="NOURA Magic Code einlösen"
@@ -162,30 +137,31 @@ export function MagicCodeCard({ run, onOpen }: { run: boolean; onOpen?: () => vo
         onOpen?.()
       }}
     >
-      <svg
-        className={`magic-cloud${phase === 'gather' ? ' gathering' : ''}`}
-        viewBox={`0 0 ${BOX_W} ${BOX_H}`}
-        preserveAspectRatio="xMidYMid slice"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <g className="magic-drift">
-          {motes.map((m) => (
-            <text
-              key={m.id}
-              textAnchor="middle"
-              style={{ transform: `translate(${m.x}px, ${m.y}px) scale(${m.s})`, opacity: m.o }}
-            >
-              {m.code}
-            </text>
-          ))}
-        </g>
-      </svg>
+      <span className={`magic-cloud${phase === 'gather' ? ' gathering' : ''}`} aria-hidden="true">
+        {motes.map((m) => (
+          <span
+            key={m.id}
+            className="mote"
+            style={
+              {
+                '--x': m.x / BOX_W,
+                '--y': m.y / BOX_H,
+                '--s': m.s,
+                opacity: m.o,
+              } as React.CSSProperties
+            }
+          >
+            {m.code}
+          </span>
+        ))}
+      </span>
 
       <span className="magic-body">
         <span className="magic-code" aria-hidden="true">
-          {digits.map((d, i) => (
-            <i key={i}>{d}</i>
+          {reels.map((reel, i) => (
+            <i key={i} style={{ '--i': i } as React.CSSProperties}>
+              <Reel key={cycle} reel={reel} />
+            </i>
           ))}
         </span>
         <span className="magic-label">

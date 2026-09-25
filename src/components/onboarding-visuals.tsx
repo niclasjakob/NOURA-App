@@ -7,9 +7,10 @@
    filter:blur oder backdrop-filter — Safari auf dem iPhone rendert
    grossflaechige Filter traege (siehe Aurora-Entscheidung in global.css).
    ============================================================ */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import onboardCard from '../assets/img/onboard-simcard.webp'
-import { randomCode } from '../data/magic'
+import { useEffect, useMemo } from 'react'
+import { SimCard } from './ui'
+import type { Plan } from '../data/plans'
+import { Reel, prefersReducedMotion, useCodeReels } from './code-reel'
 
 /* ---------- Driftende Farbwolken ----------
    Liegt ueber dem statischen Aurora-Bild und haelt den Hintergrund in
@@ -25,16 +26,38 @@ export function AuroraFlow({ tone = 'coral' }: { tone?: 'coral' | 'violet' | 'bl
 }
 
 /* ---------- Die 3D-Karte ----------
-   Das Figma-Bild traegt einen Alphakanal. Der Glanzstreifen wird damit
-   maskiert, laeuft also exakt ueber die Kartenflaeche statt ueber ein
-   Rechteck. Gleiches gilt fuer den Scanbalken der Aktivierung. */
-export function Card3D({ scanning = false }: { scanning?: boolean }) {
+   Hier stand bis zum 2026-09-24 ein Figma-Bild: eine graue Karte mit
+   NOURA- und Vodafone-Zeichen und dem Satz "Die Mobilfunk-App". Keines
+   davon kam spaeter im Ablauf wieder vor — Tarifwahl, Fertigung und
+   Home zeigen eine andere Karte, und das Vodafone-Zeichen gehoert nach
+   dem Design-System auf keine.
+
+   Jetzt ist es dieselbe SimCard, in der Lage, in der die Fertigung sie
+   auf die Werkbank legt (esim-forge.css, Takte 1-3). Ohne Tarif ist es
+   der Rohling; beim Login die Karte, die der Kunde schon hat.
+
+   Glanz und Scanbalken liegen in der gekippten Ebene und sind auf die
+   Silhouette maskiert (--sim-shape), laufen also genau ueber die Karte.
+   Der Scan ist derselbe Schreibbalken wie im Takt "eingerichtet". */
+export function Card3D({
+  scanning = false,
+  plan,
+  holder,
+  chipText,
+}: {
+  scanning?: boolean
+  plan?: Plan
+  holder?: string
+  chipText?: string | null
+}) {
   return (
-    <div className={`card3d${scanning ? ' scanning' : ''}`}>
+    <div className={`card3d${scanning ? ' scanning' : ''}`} aria-hidden="true">
       <span className="card3d-glow" />
-      <img src={onboardCard} alt="" />
-      <span className="card3d-sheen" />
-      {scanning && <span className="card3d-scan" />}
+      <div className="card3d-body">
+        <SimCard plan={plan} holder={holder} chipText={chipText} />
+        <span className="card3d-sheen" />
+        {scanning && <span className="card3d-scan" />}
+      </div>
     </div>
   )
 }
@@ -56,10 +79,16 @@ export function VisualDigital() {
 }
 
 /* ================= Schritt 2 — Magic Codes =================
-   Vier Zeichen, drei Tueren. Der Code rollt und rastet ein wie die
-   Kachel auf Home — und wechselt alle paar Sekunden, weil genau das
-   seine Aussage ist: er ist nie derselbe, ein abfotografierter Code
-   ist eine Stunde spaeter wertlos.
+   Vier Zeichen, drei Tueren. Der Code wechselt alle paar Sekunden,
+   weil genau das seine Aussage ist: er ist nie derselbe, ein
+   abfotografierter Code ist eine Stunde spaeter wertlos.
+
+   Erzaehlt wird in drei Schlaegen: die Walzen laufen aus und rasten
+   von links nach rechts ein, ein Funke laeuft den Strich hinab, die
+   Tueren gehen nacheinander auf. Der Code oeffnet etwas — das ist das
+   Bild, nicht das Wuerfeln. Bis zum 2026-09-24 flackerten die Stellen
+   zufaellig durchs Alphabet, unter einem roten Puls im 0,22s-Takt;
+   das las sich als Stoerung, nicht als Schluessel.
 
    Hier stand bis zum 2026-09-21 ein Kalenderblatt fuer "monatlich
    kuendbar". Ein Kalender ist kein Bauteil dieser App; die Magic Codes
@@ -67,55 +96,25 @@ export function VisualDigital() {
    Creator-Werkzeug — und kamen im Onboarding nirgends vor. */
 const DOORS = ['Festival', 'Konzert', 'Meet-up'] as const
 
-/* Zeitmass des Ziffernlaufs — dieselben Werte wie in magic-code.tsx,
-   damit Onboarding und Home denselben Rhythmus haben. */
-const ROLL_MS = 55
-const ROLL_FRAMES = 4
-const CODE_CYCLE_MS = 3600
-
-const prefersReduced = () =>
-  typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+/* Takt: alle 4,6s ein neuer Code. Ein Durchgang braucht rund 2,8s —
+   Walzen, Funke, Tueren — und laesst danach Ruhe zum Lesen. */
+const CODE_CYCLE_MS = 4600
 
 export function VisualMagic({ run }: { run: boolean }) {
-  const reduced = useMemo(prefersReduced, [])
-  const [digits, setDigits] = useState<string[]>(() => randomCode().split(''))
-  const [rolling, setRolling] = useState(false)
-  const rollRef = useRef(0)
-
-  /* Die Stellen rasten von links nach rechts ein, jede nach vier
-     Bildern. Bis dahin flackert sie durch das Alphabet. */
-  const roll = useCallback(() => {
-    const target = randomCode().split('')
-    window.clearInterval(rollRef.current)
-    if (reduced) {
-      setDigits(target)
-      return
-    }
-    setRolling(true)
-    let frame = 0
-    rollRef.current = window.setInterval(() => {
-      frame += 1
-      const locked = Math.floor(frame / ROLL_FRAMES)
-      if (locked >= target.length) {
-        window.clearInterval(rollRef.current)
-        setDigits(target)
-        setRolling(false)
-        return
-      }
-      setDigits(target.map((c, i) => (i < locked ? c : randomCode(1))))
-    }, ROLL_MS)
-  }, [reduced])
+  const reduced = useMemo(prefersReducedMotion, [])
+  /* Die Kacheln selbst bleiben stehen, wenn der Code wechselt — nur
+     Walzen, Funke und Tuerlicht haengen an `cycle`. Sonst liefe der
+     Auftritt der Kacheln bei jedem Code von vorn. */
+  const { cycle, reels, advance } = useCodeReels(reduced)
 
   /* Nur laufen, solange der Screen sichtbar ist. */
   useEffect(() => {
     if (!run) return
-    const iv = window.setInterval(roll, CODE_CYCLE_MS)
-    return () => {
-      window.clearInterval(iv)
-      window.clearInterval(rollRef.current)
-      setRolling(false)
-    }
-  }, [run, roll])
+    const iv = window.setInterval(advance, CODE_CYCLE_MS)
+    return () => window.clearInterval(iv)
+  }, [run, advance])
+
+  const moving = cycle > 0 && !reduced
 
   return (
     /* Der Text unter dem Bild nennt Festival, Konzert und Meet-up
@@ -123,18 +122,24 @@ export function VisualMagic({ run }: { run: boolean }) {
     <div className="viz" aria-hidden="true">
       <span className="viz-glow glow-violet" />
       <div className="mcode">
-        <div className={`mcode-row${rolling ? ' rolling' : ''}`}>
-          {digits.map((d, i) => (
+        <div className="mcode-row">
+          {reels.map((reel, i) => (
             <span key={i} className="mcode-tile" style={{ '--i': i } as React.CSSProperties}>
-              {d}
+              <span className="mcode-window">
+                <Reel key={cycle} reel={reel} />
+              </span>
+              {moving && <span key={cycle} className="mcode-flare" />}
             </span>
           ))}
         </div>
-        <span className="mcode-stem" />
+        <span className="mcode-stem">
+          {moving && <span key={cycle} className="mcode-spark" />}
+        </span>
         <div className="mcode-doors">
           {DOORS.map((d, i) => (
             <span key={d} className="mcode-door" style={{ '--i': i } as React.CSSProperties}>
-              {d}
+              {moving && <span key={cycle} className="mcode-door-lit" />}
+              <span className="mcode-door-label">{d}</span>
             </span>
           ))}
         </div>

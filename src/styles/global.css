@@ -45,11 +45,36 @@
   --noura-glass-strong: rgba(255, 255, 255, 0.2);   /* Stufe 3 — Bedienelement */
   --noura-glass-active: rgba(255, 255, 255, 0.28);  /* gewaehltes Bedienelement */
   --noura-line: rgba(255, 255, 255, 0.16);          /* Trennlinien, Fortschrittsspuren */
+  /* Die einzige dunkle Stufe: eine Mulde, in der eine Linse reist (Spur
+     der Tarifleiste). Weiss @10 % hob den Grund an, das nicht gewaehlte
+     Etikett stand auf 3,91:1 (Name) und 3,28:1 (Preis). Schwarz @25 %
+     traegt beide an beiden Positionen: >= 5,9:1 und >= 4,7:1, am
+     2026-09-24 am dunkelsten Pixel gemessen. Dieselbe Mulde traegt die
+     Verbrauchs-Icons auf Home (siehe --noura-accent-mark). */
+  --noura-well: rgba(0, 0, 0, 0.25);
   /* --noura-border (Figma #ffffff, 104x) ist entfallen: er war
      deklariert und hatte keinen einzigen Verwender. Karten sind
      randlos, die Kante der Bedienelemente ist ein Verlauf statt einer
      Volltonfarbe (siehe .btn::before). Figma-Wert im Skill. */
   --noura-accent: #e15055;
+  /* Zwei Ableitungen fuer die Stellen, an denen #e15055 Text traegt oder
+     selbst Text ist — gemessen am 2026-09-24 (Chrome, Pixel unter dem
+     Text abgetastet, nicht geschaetzt):
+     - accent-fill: Chipflaeche unter weissem Text. #e15055 gibt 3,83:1,
+       10 % tiefer 4,62:1 — mit dem Auge kaum vom Akzent zu trennen.
+     - accent-text: Akzent als Schrift auf Aurora und Glas. #e15055 lag
+       dort bei 2,3–3,0:1; dieser Ton (Akzent zu 50 % aufgehellt) bei
+       4,55:1 (Sheet-Zeile) bis 5,9:1 (Onboarding-Etikett).
+     Als Symbol, Balken, Rand und Punkt bleibt es #e15055. */
+  --noura-accent-fill: #ca484c;
+  --noura-accent-text: #f0a8aa;
+  /* accent-mark: Akzent als Zeichen auf Glas — Verbrauchs-Icons und das
+     Unendlich-Zeichen auf Home. #e15055 kam dort auf 1,4–2,6:1; dieser
+     hellere, gesaettigte Ton traegt das Unendlich (24px fett) mit 3,44:1,
+     die Icons auf ihrer --noura-well-Platte mit >= 3,48:1. Ohne Platte
+     reicht kein Korallton: die Anrufe-Karte liegt ueber der Aurora-
+     Koralle, dort blieb selbst #f0a8aa bei 2,81:1. */
+  --noura-accent-mark: #ff8589;
   --noura-vodafone: #e60000;       /* nur im Logo-Kontext */
   --noura-canvas: #232452;
   --noura-card-fill: rgba(29, 29, 29, 0.75);
@@ -76,6 +101,12 @@
   --noura-blur-card: 7px;
   --noura-blur-control: 12px;
   --noura-blur-bar: 40px;
+  /* Reihenfolge an jeder Verwendung: ERST -webkit-backdrop-filter, DANN
+     backdrop-filter. Umgekehrt verwirft Lightning CSS (Tailwind-Build)
+     beim Zusammenfuehren gleicher Selektoren die ungepraefixte Zeile —
+     bis zum 2026-09-24 hatten dadurch alle Buttons, Sheets, die
+     Tarif-Linse und der Toast in Chrome gar keinen Weichzeichner. Safari
+     liest die -webkit-Zeile, auf dem iPhone fiel es deshalb nicht auf. */
 
   /* ---- Stufe 2, Material (2026-09-22) ----
      Die Fuellung bleibt `glass` nach Figma, der gebeugte Hintergrund
@@ -187,6 +218,11 @@
   --fs-caption: 0.706rem;   /* 12px */
   --fs-label: 0.824rem;     /* 14px — haeufigste Rolle, 123x in Figma */
   --fs-body: 0.941rem;      /* 16px */
+  /* 17px — die iOS-Grundgroesse (typography.md: "iOS, iPadOS | 17 pt").
+     Nur fuer Lesetext, den man Zeile fuer Zeile liest: die Blasen im
+     Support-Chat. Figma kennt die Stufe nicht; dort ist Body 16. Seit
+     2026-09-24, weil der Chat bei 16/12 als zu klein auffiel. */
+  --fs-read: 1rem;
   --fs-title: 1.176rem;     /* 20px */
   --fs-screen: 1.412rem;    /* 24px */
 
@@ -232,6 +268,11 @@
   --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
   /* Nur Abgaenge. Was geht, beschleunigt weg; nichts kommt mit ease-in an. */
   --ease-in: cubic-bezier(0.4, 0, 0.9, 0.2);
+  /* Nur Schleifen, die hin und zurueck laufen (Schweben, Treiben): Sinus,
+     symmetrisch. ease-out startet jede Haelfte mit dem 2,25-fachen der
+     mittleren Geschwindigkeit — an jedem Umkehrpunkt kam die Karte zur
+     Ruhe und schnellte dann los, ein Zucken alle fuenf Sekunden. */
+  --ease-sway: cubic-bezier(0.37, 0, 0.63, 1);
   /* Der eine Ueberschwinger. Ein echter gedaempfter Schwinger
      (Antwort 0,42s, Daempfung 0,72, 25 Stuetzstellen ueber 460ms),
      keine Bezier-Nachahmung davon: kreuzt das Ziel bei 230ms,
@@ -303,6 +344,10 @@ body {
   overflow: hidden;
 }
 button, input { font-family: var(--font); }
+/* Keine Einzelwoerter in der letzten Zeile. Das Kleingedruckte unter
+   der Tarifwahl brach vorher als "… keine" / "Anschlussgebühr" um. */
+h1, h2, h3, .cta-fine { text-wrap: balance; }
+p, li, small { text-wrap: pretty; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* Nur fuer Screenreader — traegt Meldungen, die visuell schon als
@@ -388,6 +433,22 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
 .screens { --screen-enter: 24px; --screen-exit: -24px; }
 .screens[data-dir='back'] { --screen-enter: -24px; --screen-exit: 24px; }
 
+/* Hinter einem Sheet tritt der Screen zurueck — wie unter einem
+   iOS-Sheet: er wird ein wenig kleiner, waehrend der Schleier ihn
+   abdunkelt. Ohne das lag das Sheet flach auf dem Screen, nur der
+   Schleier sagte "dahinter". Mit dem Rueckzug entsteht Tiefe: das Sheet
+   kommt nach vorn, der Screen geht nach hinten.
+
+   Gleiche Dauer und Kurven wie das Sheet selbst (--dur-move, hinein
+   ease-out, hinaus ease-in), damit beides eine Bewegung ist. Nur
+   transform — der Hintergrund liegt ausserhalb von .screens und bleibt
+   stehen, der Rueckzug ist also Tiefe, kein Zoom der ganzen Welt. */
+.screens {
+  transform-origin: 50% 30%;
+  transition: transform var(--dur-move) var(--ease-in);
+}
+.screens.behind-sheet { transform: scale(0.94); transition-timing-function: var(--ease-out); }
+
 .screen {
   position: absolute; inset: 0;
   opacity: 0; pointer-events: none; visibility: hidden;
@@ -409,6 +470,20 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
    der Mitte. */
 .screen.leaving { --screen-enter: var(--screen-exit); }
 
+/* Geparkt: weder zu sehen noch im Abgang. Alle acht Screens bleiben
+   gemountet, und `visibility: hidden` allein haelt nichts an — ihre
+   Dauerschleifen (Farbwolken, Schein, kreisende Punkte, schwebende
+   Karten) liefen weiter, jede mit Stilberechnung je Bild. Gemessen am
+   2026-09-24 in Chrome bei vierfach gedrosselter CPU: 24 von 28
+   Endlos-Animationen liefen auf unsichtbaren Screens, im Leerlauf
+   200–360ms Hauptthread-Arbeit je drei Sekunden. Geparkt: 2ms.
+
+   `content-visibility: hidden` ueberspringt den Inhalt beim Rendern,
+   haelt aber seinen Zustand (Scrollstand, Formularinhalte) fest.
+   Messungen per Skript (Textbreiten in der Fertigung) erzwingen das
+   Layout weiterhin, sie liefern also auch geparkt echte Werte. */
+.screen:not(.active):not(.leaving) { content-visibility: hidden; }
+
 /* ---------- Buttons (Liquid Glass) ---------- */
 /* Geometrie und Fuellung nach Figma 301:1461: Radius 24px, Hoehe 61px,
    Innenabstand 20px, Label General Sans Semibold 16px/1.3, #ffffff@20%.
@@ -420,7 +495,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
   min-height: 61px; padding: 16px 20px; border-radius: var(--noura-radius-card); cursor: pointer;
   font-weight: 600; font-size: var(--fs-body); line-height: 1.312; color: var(--noura-text);
   background: var(--lg-tint);
-  backdrop-filter: var(--lg-refract); -webkit-backdrop-filter: var(--lg-refract);
+  -webkit-backdrop-filter: var(--lg-refract); backdrop-filter: var(--lg-refract);
   box-shadow: var(--lg-inner), var(--lg-lift);
   border: none; isolation: isolate;
   width: 100%;
@@ -484,7 +559,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
    Falle: wer sie spaeter setzt, bekommt lautlos eine Abweichung. */
 .btn.ghost {
   background: transparent; box-shadow: none;
-  backdrop-filter: none; -webkit-backdrop-filter: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
 }
 .btn.ghost::before, .btn.ghost::after { display: none; }
 .btn.ghost:active { background: var(--press-wash); box-shadow: none; }
@@ -627,13 +702,26 @@ button.sim-card { cursor: pointer; }
    darf — und er ist eine Pille. `radius-card` (24) heisst im
    Flaechensystem "bedienbar"; ein Etikett ist es nicht. */
 .chip {
-  background: var(--noura-accent); border-radius: var(--noura-radius-pill);
+  background: var(--noura-accent-fill); border-radius: var(--noura-radius-pill);
   padding: 1px 8px; min-height: 17px; display: inline-flex; align-items: center;
   /* 600, nicht 500: das Etikett steht auf einer gesaettigten Flaeche
      und braucht mehr Strich als eine Nebenzeile auf Glas. */
   font-weight: 600; font-size: var(--fs-caption); line-height: 1.333;
 }
-.sim-card .foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.sim-card .foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: auto; }
+/* Der Rohling traegt nur das eSIM-Zeichen, und das sitzt rechts —
+   wie auf jeder anderen Karte. */
+.sim-card.blank .foot { justify-content: flex-end; }
+/* Das Namensfeld der Fertigung: gesperrt, gedaempft, eingebrannt statt
+   aufgedruckt. Absolut gesetzt, damit die Karte mit und ohne Namen
+   gleich hoch bleibt; die Grundlinie liegt wie in der SVG-Karte bei
+   y=95 (ENGRAVE_Y in esim-forge.tsx). */
+.sim-card .holder {
+  position: absolute; left: 24px; top: 79px; display: flex;
+  font-weight: 600; font-size: 16px; line-height: 20px; color: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+.sim-card .holder i { font-style: normal; width: 13.5px; text-align: center; flex-shrink: 0; }
 .sim-card .price { font-weight: 700; font-size: var(--fs-body); line-height: 1.375; }
 .sim-card .sub { font-weight: 500; font-size: var(--fs-caption); line-height: 1.333; color: var(--noura-text-muted); margin-top: 0; }
 
@@ -649,7 +737,6 @@ button.sim-card { cursor: pointer; }
 .esim-icon .dots.right { right: 0; top: 8px; flex-direction: column; }
 
 /* ---------- Select plan ---------- */
-.plan-header { position: absolute; top: 130px; left: 0; right: 0; padding: 0 24px 12px; z-index: 10; }
 .plan-header h1 { font-weight: 700; font-size: var(--fs-title); }
 .plan-header p { font-weight: 600; font-size: var(--fs-label); line-height: 1.429; color: var(--noura-text-muted); margin-top: 4px; }
 /* Figma: Tab-Leiste 277x35 bei y=225, aktive Pille in Akzentrot r24. */
@@ -666,7 +753,7 @@ button.sim-card { cursor: pointer; }
      Seit darunter Karte UND Vergleich stehen, zaehlt jeder Punkt: 20px
      halten die Leiste noch deutlich vom Absatz getrennt. */
   display: flex; gap: 4px; margin-top: 20px; position: relative;
-  background: var(--noura-glass); border-radius: var(--noura-radius-pill); padding: 3px;
+  background: var(--noura-well); border-radius: var(--noura-radius-pill); padding: 3px;
   /* Die Spur ist eine Mulde, kein Glas. Seit die Wahl darueber das
      Material traegt (2026-09-22), braucht sie eine Kante nach innen —
      sonst liegen zwei helle Raender nebeneinander und die Linse
@@ -709,7 +796,7 @@ button.sim-card { cursor: pointer; }
 .tabs .pill {
   position: absolute; top: 0; bottom: 0; border-radius: var(--noura-radius-pill);
   background: var(--noura-glass-active);
-  backdrop-filter: var(--lg-refract-dim); -webkit-backdrop-filter: var(--lg-refract-dim);
+  -webkit-backdrop-filter: var(--lg-refract-dim); backdrop-filter: var(--lg-refract-dim);
   /* Nicht --lg-lift: der ist fuer den 61px hohen Knopf gerechnet und
      wuerfe hier 26px Unschaerfe weit ueber die 3px schmale Spur hinaus.
      Dieselbe Richtung, auf die Hoehe der Linse gebracht. */
@@ -740,16 +827,15 @@ button.sim-card { cursor: pointer; }
 }
 .tabs button {
   position: relative; z-index: 1; background: none; border: none; cursor: pointer;
-  min-height: var(--tap); padding: 8px 16px; border-radius: var(--noura-radius-pill);
+  min-height: var(--tap); border-radius: var(--noura-radius-pill);
   font-weight: 600; font-size: var(--fs-label); line-height: 1.357;
   color: var(--noura-text-muted);
   transition: color var(--dur-quick) var(--ease-out), opacity var(--dur-tap) var(--ease-out);
 }
 .tabs button.on { color: var(--noura-text); }
-.plan-track-wrap { position: absolute; top: 276px; bottom: 0; left: 0; right: 0; overflow: hidden; }
 .plan-track { display: flex; transition: transform var(--dur-move) var(--ease-out); touch-action: pan-y; }
 .plan-track.dragging { transition: none; }
-.plan-slide { width: 393px; flex-shrink: 0; padding: 24px; }
+.plan-slide { width: 393px; flex-shrink: 0; }
 @media (max-width: 480px) { .plan-slide { width: 100vw; } }
 /* Die Leistungsliste steht seit dem 2026-09-22 nur noch im Plan-Sheet:
    auf dem Auswahl-Screen hat sie der Vergleich abgeloest. Die Regeln
@@ -762,7 +848,7 @@ button.sim-card { cursor: pointer; }
 /* Figma: schlichter weisser Punkt, kein Ring */
 .feat .ic { width: 24px; height: 24px; flex-shrink: 0; color: var(--noura-text); display: flex; align-items: center; justify-content: center; }
 .feat .ic svg { display: block; }
-.plan-cta { position: absolute; bottom: 0; left: 0; right: 0; padding: 24px 24px var(--bar-bottom); z-index: 10; background: linear-gradient(to top, rgba(20, 15, 35, 0.94) 62%, transparent); backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card)); -webkit-mask-image: linear-gradient(to top, #000 62%, transparent); mask-image: linear-gradient(to top, #000 62%, transparent); }
+.plan-cta { position: absolute; bottom: 0; left: 0; right: 0; padding: 24px 24px var(--bar-bottom); z-index: 10; }
 
 /* ---------- Home ---------- */
 .home-header { position: absolute; top: 54px; left: 0; right: 0; padding: 24px 24px 12px; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
@@ -780,12 +866,41 @@ button.sim-card { cursor: pointer; }
    (6px) — deshalb steht der Versatz der Scrollflaeche auf 171px, nicht
    mehr auf 144px. Wer die Zeile entfernt, zieht dort 27px ab. */
 .home-header h1 { font-weight: 700; font-size: var(--fs-screen); flex: 1; }
-.avatar-btn { width: 54px; height: 54px; padding: 0; border: none; background: none; cursor: pointer; flex-shrink: 0; border-radius: var(--noura-radius-pill); overflow: hidden; display: block; }
-/* Figma 1330:1860: echtes Profilfoto, 54x54, voll rund. */
-.avatar {
-  width: 54px; height: 54px; border-radius: var(--noura-radius-pill);
-  cursor: pointer; border: none; flex-shrink: 0; padding: 0;
-  overflow: hidden; display: inline-block; object-fit: cover;
+/* ---------- Monogramm statt Profilfoto (seit 2026-09-24) ----------
+   Figma 1330:1860 zeigt ein Foto, 54x54. Die Groesse bleibt — an ihr
+   haengt die Kopfhoehe und damit der Versatz von .home-scroll (171px).
+
+   Auf Home ist es ein schwebender Knopf, also Stufe 3: dasselbe Liquid
+   Glass wie .btn und .sheet-close, mit Kantenreflex. Im Kopf des
+   Konto-Sheets ist es nur ein Zeichen und traegt die flache Glasflaeche
+   wie .event-avatar — derselbe Buchstabe, ohne zu behaupten, man
+   koenne darauf tippen. */
+.monogram {
+  width: 54px; height: 54px; flex-shrink: 0; border-radius: var(--noura-radius-pill);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--noura-glass-strong); color: var(--noura-text);
+  font-weight: 700; font-size: var(--fs-title); line-height: 1;
+}
+.avatar-btn {
+  position: relative; width: 54px; height: 54px; padding: 0; flex-shrink: 0; display: block;
+  border: none; border-radius: var(--noura-radius-pill); cursor: pointer; color: var(--noura-text);
+  background: var(--lg-tint); isolation: isolate;
+  -webkit-backdrop-filter: var(--lg-refract); backdrop-filter: var(--lg-refract);
+  box-shadow: var(--lg-inner), var(--lg-lift);
+}
+.avatar-btn .monogram { background: none; }
+/* Kantenreflex wie .btn::before. */
+.avatar-btn::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: linear-gradient(150deg,
+    rgba(255, 255, 255, 0.75) 0%,
+    rgba(255, 255, 255, 0.18) 32%,
+    rgba(255, 255, 255, 0.06) 58%,
+    rgba(255, 255, 255, 0.42) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  pointer-events: none; z-index: -1;
 }
 /* Ein Abstand traegt die Spalte: 24px zwischen den Bloecken, 12px
    innerhalb (siehe .usage-panel-in). Vorher standen hier sechs Werte,
@@ -847,21 +962,62 @@ button.sim-card { cursor: pointer; }
   50%      { opacity: 1;   transform: translate(-50%, -50%) scale(1.08); }
 }
 
+/* ---------- Code-Walze (components/code-reel.tsx) ----------
+   Geteilt von der Home-Karte und dem Onboarding. Der Verwender setzt
+   `--cell` (Hoehe einer Zeichenzelle) und `--land` (wann Stelle i
+   einrastet) und liefert ein Fenster, das die Walze abschneidet.
+
+   Die Walze bremst lang aus, faehrt ein Zwanzigstel Zelle ueber das
+   Ziel und setzt zurueck — die Rast eines mechanischen Zaehlwerks.
+   fill forwards: steht die Bewegung (auch bei reduzierter Bewegung,
+   1ms), zeigt das Fenster das neue Zeichen. */
+.reel { display: flex; flex-direction: column; }
+.reel-glyph {
+  height: var(--cell); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.reel.spin {
+  --end: calc(var(--steps) * var(--cell) * -1);
+  animation: reelSpin var(--land) linear forwards;
+}
+/* Nach der Landung bleibt nur das neue Zeichen stehen. Die Nachbarn
+   der Walze lagen sonst weiter im weichen Rand des Fensters — auf der
+   Home-Karte, deren Fenster fuer den Schein hoeher ist als die Zelle,
+   stand das vorige Zeichen blass ueber dem Code. */
+.reel.spin .reel-glyph:not(:last-child) {
+  animation: reelRest 0.24s var(--ease-out) calc(var(--land) - 0.08s) forwards;
+}
+@keyframes reelRest { to { opacity: 0; } }
+@keyframes reelSpin {
+  0%   { transform: translateY(0); animation-timing-function: cubic-bezier(0.1, 0.62, 0.22, 1); }
+  90%  { transform: translateY(calc(var(--end) - var(--cell) / 18)); animation-timing-function: cubic-bezier(0.45, 0, 0.3, 1); }
+  100% { transform: translateY(var(--end)); }
+}
+
 /* Die Wolke. Eigenes Koordinatensystem (345x112 Figma-Punkte), damit
    die Fragmente per transform statt per Layout wandern. */
-.magic-cloud { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
-.magic-cloud text {
-  font-family: var(--font); font-weight: 600; font-size: 10px;
-  letter-spacing: 1.2px; fill: #fff;
+/* Die Wolke ist HTML, nicht SVG (siehe magic-code.tsx): Drift und
+   Uebergaenge laufen so im Compositor. Bis zum 2026-09-24 drehte die
+   Drift ein SVG-Element — das kostete 22 Sekunden lang in Schleife ein
+   Layout je Bild, auch wenn Home gar nicht zu sehen war.
+
+   Jedes Fragment steht bei (--x, --y), beide als Anteil der Flaeche;
+   `container-type: size` macht cqw/cqh zu Breite und Hoehe der Karte.
+   Der zweite translate zentriert das Fragment auf seinem Punkt, wie
+   vorher text-anchor="middle". */
+.magic-cloud {
+  position: absolute; inset: 0; z-index: 0; container-type: size;
+  animation: magic-drift 22s var(--ease-out) infinite;
+}
+.mote {
+  position: absolute; left: 0; top: 0; white-space: nowrap;
+  font-weight: 600; font-size: 10px; line-height: 1; letter-spacing: 1.2px; color: #fff;
+  transform: translate(calc(var(--x) * 100cqw), calc(var(--y) * 100cqh)) translate(-50%, -50%) scale(var(--s));
   transition: transform 1.5s var(--ease-out), opacity 1.5s var(--ease-out);
 }
 /* Einatmen ist kuerzer und haerter als das Ausatmen. */
-.magic-cloud.gathering text {
+.magic-cloud.gathering .mote {
   transition-duration: var(--dur-screen); transition-timing-function: var(--ease-in);
-}
-.magic-drift {
-  transform-box: view-box; transform-origin: 172.5px 56px;
-  animation: magic-drift 22s var(--ease-out) infinite;
 }
 @keyframes magic-drift {
   0%, 100% { transform: rotate(-1.2deg) scale(1); }
@@ -873,14 +1029,25 @@ button.sim-card { cursor: pointer; }
   align-items: center; gap: 6px; padding: 20px 20px 18px;
 }
 .magic-code { display: flex; gap: 6px; }
-/* Feste Stellenbreite: sonst zappelt die Zeile, waehrend die Ziffern
-   durchs Alphabet laufen. */
+/* Jede Stelle ist ein Walzenfenster (siehe Code-Walze oben). Feste
+   Stellenbreite, sonst zappelt die Zeile, waehrend die Walzen laufen.
+
+   Das Fenster ist grosszuegiger als die Zeichenzelle — Innenabstand
+   rundum, per negativem Aussenabstand wieder herausgerechnet —, damit
+   der korallene Schein nicht an der Maskenkante abreisst. Die Maske
+   blendet oben und unten weich aus: die Zeichen tauchen auf, statt an
+   einer Kante zu erscheinen. */
 .magic-code i {
+  --cell: 1.2em;
+  --land: calc(0.66s + var(--i) * 0.14s);
+  display: block; box-sizing: content-box; height: var(--cell);
+  padding: 0.6em 0.8em; margin: -0.6em -0.8em;
   font-style: normal; font-weight: 700; font-size: 1.6rem; line-height: 1.2;
   min-width: 0.74em; text-align: center;
   text-shadow: 0 2px 16px rgba(225, 80, 85, 0.6);
+  -webkit-mask-image: linear-gradient(transparent, #000 25%, #000 75%, transparent);
+  mask-image: linear-gradient(transparent, #000 25%, #000 75%, transparent);
 }
-.magic.rolling .magic-code i { text-shadow: 0 2px 26px rgba(225, 80, 85, 0.9); }
 .magic-label {
   display: inline-flex; align-items: center; gap: 6px;
   font-weight: 600; font-size: var(--fs-label); line-height: 1.35;
@@ -898,7 +1065,12 @@ button.sim-card { cursor: pointer; }
    und Innenabstand kommen aus .card (app.css) — hier steht nur noch,
    was die Kacheln von jeder anderen Karte unterscheidet. */
 .usage .card { justify-content: space-between; }
-.usage .card svg { color: var(--noura-accent); }
+.usage .card .use-ic {
+  width: 40px; height: 40px; border-radius: var(--noura-radius-pill);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--noura-well); color: var(--noura-accent-mark);
+}
+.usage .card .use-ic svg { display: block; }
 .usage .col-l { flex: 1; min-height: 312px; }
 .usage .col-r { flex: 1; display: flex; flex-direction: column; gap: 12px; }
 .usage .col-r .card { min-height: 150px; }
@@ -916,7 +1088,7 @@ button.sim-card { cursor: pointer; }
 .usage .val { font-weight: 600; font-size: var(--fs-screen); line-height: 1.35; margin-top: 4px; }
 /* Figma: leerer heller Kreisumriss, kein Fortschrittsbogen. ∞ in Akzentrot. */
 .ring-wrap { position: relative; width: 126px; height: 126px; align-self: center; }
-.ring-wrap .inf { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: var(--fs-screen); line-height: 1.333; color: var(--noura-accent); }
+.ring-wrap .inf { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: var(--fs-screen); line-height: 1.333; color: var(--noura-accent-mark); }
 
 /* ---------- Navbar / FABs ---------- */
 .navbar { position: absolute; bottom: 0; left: 0; right: 0; padding: 48px 24px var(--bar-bottom); display: flex; justify-content: flex-end; z-index: 20; }
@@ -925,7 +1097,6 @@ button.sim-card { cursor: pointer; }
 .fab-stack { position: absolute; right: 24px; bottom: calc(var(--bar-bottom) + 73px); display: flex; flex-direction: column; align-items: flex-end; gap: 12px; z-index: 19; }
 .fab-stack .btn { width: auto; opacity: 0; transform: translateY(14px); pointer-events: none; transition: opacity var(--dur-move) var(--ease-out), transform var(--dur-move) var(--ease-out); }
 .fab-stack.open .btn { opacity: 1; transform: translateY(0); pointer-events: auto; }
-.fab-stack .btn:nth-child(1) { transition-delay: 0.06s; }
 .mehr-btn { width: auto; }
 .mehr-btn svg { transition: transform var(--dur-quick) var(--ease-out); }
 .mehr-btn.open svg { transform: rotate(45deg); }
@@ -939,7 +1110,7 @@ button.sim-card { cursor: pointer; }
 .sheet {
   position: absolute; left: 0; right: 0; bottom: 0; height: 782px; max-height: 94%; z-index: 50;
   background: var(--noura-glass);
-  backdrop-filter: blur(var(--noura-blur-bar)); -webkit-backdrop-filter: blur(var(--noura-blur-bar));
+  -webkit-backdrop-filter: blur(var(--noura-blur-bar)); backdrop-filter: blur(var(--noura-blur-bar));
   border-radius: var(--noura-radius-card) var(--noura-radius-card) 0 0; border: none;
   /* Was geht, beschleunigt weg; was kommt, bremst ab. Vorher lief
      beides auf derselben Kurve — das Sheet verliess den Screen so
@@ -948,15 +1119,24 @@ button.sim-card { cursor: pointer; }
   display: flex; flex-direction: column; overflow: hidden;
 }
 .sheet.on { transform: translateY(0); transition-timing-function: var(--ease-out); }
+/* Unten angekommen: nicht nur aus dem Bild, sondern aus dem Rendern.
+   Beides ist noetig — content-visibility ueberspringt den Inhalt, die
+   Glasflaeche des Sheets selbst bleibt dabei stehen; die nimmt erst
+   visibility weg. Gesetzt von Sheet() in sheets.tsx. */
+.sheet.parked { visibility: hidden; content-visibility: hidden; }
 /* Der Griff ist eine Marke auf Glas, keine Flaeche: bei 10 % auf einer
    10-%-Flaeche war er praktisch unsichtbar. `line` ist der Token fuer
    genau diese Rolle. */
-.sheet .handle { width: 36px; height: 4px; border-radius: var(--noura-radius-pill); background: var(--noura-line); margin: 8px auto 0; flex-shrink: 0; }
+.sheet .handle { width: 36px; height: 4px; border-radius: var(--noura-radius-pill); background: var(--noura-line); margin: 0 auto; flex-shrink: 0; }
 .sheet-body { flex: 1; overflow-y: auto; padding: 24px; scrollbar-width: none; }
 .sheet-body::-webkit-scrollbar { display: none; }
 
 /* Profile sheet */
-.acct-head { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+/* Figma zeichnet dieses Sheet ohne Schliessen-Knopf; der Code hat ihn
+   ergaenzt (oben rechts, 16 + 44px), und das Profilbild lag darunter.
+   padding-right 48px = Knopfkante (60) minus Sheet-Innenabstand (24)
+   plus 12 Luft. */
+.acct-head { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; padding-right: 48px; }
 .acct-head .tx { flex: 1; }
 .acct-head h2 { font-weight: 700; font-size: var(--fs-title); }
 .acct-head p { font-weight: 500; font-size: var(--fs-label); color: var(--noura-text-muted); margin-top: 2px; }
@@ -965,7 +1145,7 @@ button.sim-card { cursor: pointer; }
 .quick-cards { display: flex; gap: 12px; }
 .quick-cards .qc {
   flex: 1; min-height: 100px; border-radius: var(--noura-radius-tile); background: var(--noura-glass);
-  backdrop-filter: blur(var(--noura-blur-card)); -webkit-backdrop-filter: blur(var(--noura-blur-card));
+  -webkit-backdrop-filter: blur(var(--noura-blur-card)); backdrop-filter: blur(var(--noura-blur-card));
   border: none;
   display: flex; flex-direction: column; justify-content: space-between; padding: 20px;
   cursor: pointer; color: var(--noura-text); text-align: left;
@@ -978,33 +1158,211 @@ button.sim-card { cursor: pointer; }
 .list-row { display: flex; align-items: center; gap: 24px; padding: 0; background: none; border: none; color: var(--noura-text); font-weight: 600; font-size: var(--fs-label); line-height: 1.357; cursor: pointer; width: 100%; min-height: var(--tap); margin-bottom: 4px; text-align: left; }
 /* Kreis kommt aus dem SVG selbst, kein CSS-Rand mehr */
 .list-row .ic { width: 20px; height: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--noura-text); line-height: 0; }
-.list-row.danger { color: var(--noura-accent); }
-.list-row.danger .ic { color: var(--noura-accent); }
+.list-row.danger { color: var(--noura-accent-text); }
+.list-row.danger .ic { color: var(--noura-accent-text); }
 
 /* Support chat */
-.chat-area { display: flex; flex-direction: column; gap: 12px; padding-bottom: 12px; min-height: 100%; }
+/* Kopf: wer antwortet. Neben dem Schliessen-Knopf (top 12, 44px) —
+   -4px heben die Zeile auf dessen Mitte, 72px rechts halten 12px Luft
+   zu ihm. Der Kopf scrollt nicht mit: wer mit wem spricht, muss immer
+   zu sehen sein (generative-ai.md › Transparency).
+   Groessen seit 2026-09-24: Name wie jeder Sheet-Titel (20/700), die
+   Zeile darunter 14 statt 12. */
+.chat-head {
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  min-height: var(--tap); margin-top: -4px; padding: 0 72px 12px 24px;
+  animation: whoIn var(--dur-move) var(--ease-out);
+}
+.chat-ava {
+  flex-shrink: 0; width: var(--tap); height: var(--tap); border-radius: var(--noura-radius-pill);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--noura-well); color: var(--noura-text);
+  font-weight: 700; font-size: var(--fs-title); line-height: 1;
+  animation: avaIn var(--dur-screen) var(--spring);
+}
+/* Ein Mensch traegt Glas statt Mulde — derselbe Unterschied, den der
+   Kopf in Worten macht, einmal auch ohne Worte. */
+.chat-ava.person { background: var(--noura-glass-strong); }
+.chat-head .tx { min-width: 0; }
+.chat-head h2 { font-weight: 700; font-size: var(--fs-title); line-height: 1.35; }
+.chat-head p { font-weight: 500; font-size: var(--fs-label); line-height: 1.357; color: var(--noura-text-muted); }
+.chat-head .nowrap { white-space: nowrap; }
+/* Das Gegenueber wechselt: die Zeile kommt von oben herein, das Bild
+   setzt mit der einen Feder ein. Laeuft nur beim Wechsel (der Kopf
+   traegt den Sprecher als Schluessel), nie bei einer Nachricht. */
+@keyframes whoIn { from { opacity: 0; transform: translateY(-6px); } }
+@keyframes avaIn { from { opacity: 0; transform: scale(0.8); } }
+
+.chat-area { display: flex; flex-direction: column; gap: 12px; padding-bottom: 12px; min-height: 100%; outline: none; }
+.chat-msg { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.chat-msg.me { align-items: flex-end; }
 /* Figma: Blasen Glas @20%, Radius 24px, Innenabstand 20px, kein Rand.
-   Eigene Nachrichten unterscheiden sich nur durch die Ausrichtung. */
+   Eigene Nachrichten unterscheiden sich nur durch die Ausrichtung.
+   Die Beugung dunkelt ab (--glass-refract, brightness .68): Glas 20 %
+   im Glas-Sheet ueber der Aurora-Koralle gab Weiss nur 4,06:1 (Chrome,
+   2026-09-24, dunkelster Pixel unter dem Text) — dieselbe Lage wie bei
+   der Tarifleiste, dieselbe Antwort. Blur der Inhaltsstufe, denn eine
+   Blase ist Inhalt, kein Bedienelement.
+   Text 17px (--fs-read) statt 16, Zeile 22 nach HIG; Breite 80 statt
+   75 %, damit die groessere Schrift nicht jede Antwort um zwei Zeilen
+   verlaengert. Vertikal 16 statt 20: bei 17/22 wirkte die Blase sonst
+   aufgeblasen. */
 .bubble {
-  max-width: 75%; padding: 20px; border-radius: var(--noura-radius-card);
-  font-weight: 600; font-size: var(--fs-body); line-height: 1.312; white-space: pre-line;
+  max-width: 80%; padding: 16px 20px; border-radius: var(--noura-radius-card);
+  font-weight: 600; font-size: var(--fs-read); line-height: 1.294; white-space: pre-line;
+  /* Kein einzelnes Wort allein in der letzten Zeile. Wo der Browser es
+     nicht kann, bricht er wie bisher. */
+  text-wrap: pretty;
   background: var(--noura-glass-strong);
-  backdrop-filter: blur(var(--noura-blur-control)); -webkit-backdrop-filter: blur(var(--noura-blur-control));
+  -webkit-backdrop-filter: var(--glass-refract); backdrop-filter: var(--glass-refract);
   border: none; align-self: flex-start;
   animation: bubbleIn var(--dur-quick) var(--ease-out);
 }
 .bubble.me { align-self: flex-end; }
 @keyframes bubbleIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.quick-replies { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; margin-top: auto; padding-top: 24px; }
+/* Getippt: die Blase steigt aus der Eingabeleiste auf, verankert an
+   ihrer rechten unteren Ecke — dort, wo der Sendeknopf sitzt. Eine
+   gewaehlte Antwort fliegt stattdessen vom Knopf her (support-chat.tsx),
+   dort wird diese Animation abgeschaltet. */
+.chat-msg.me .bubble { transform-origin: 100% 100%; animation: sendIn var(--dur-move) var(--ease-out); }
+@keyframes sendIn { from { opacity: 0; transform: translateY(24px) scale(0.94); } }
+/* Der Absender ueber der ersten Blase eines Sprechers. */
+.bubble-from {
+  font-weight: 500; font-size: var(--fs-label); line-height: 1.357; color: var(--noura-text-muted);
+  margin: 0 4px -4px; animation: bubbleIn var(--dur-quick) var(--ease-out);
+}
+
+/* Warten: was gerade passiert, als Satz, und die Haarlinie, die im
+   System jedes Warten traegt (hairlineSweep, siehe .btn). Kein
+   Spinner, keine Punkte. */
+.bubble.pending, .chat-sys.pending { position: relative; overflow: hidden; }
+/* Weiss, nicht gedaempft: `text-muted` auf Glas 20 % kommt auf 4,35:1
+   und traegt die Zeile nicht. Den Unterschied zur Antwort machen
+   Groesse, Schnitt und die Haarlinie. */
+.bubble.pending { font-weight: 500; font-size: var(--fs-body); line-height: 1.312; }
+.bubble.pending::after, .chat-sys.pending::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px;
+  background: var(--noura-text); transform-origin: left;
+  animation: hairlineSweep var(--dur-beat) var(--ease-out) infinite;
+}
+/* Systemzeilen: Zustand, kein Gespraechsbeitrag — also mittig und
+   ohne Flaeche. Warteschlange, Uebergabe, Ende. */
+.chat-sys {
+  align-self: center; max-width: 85%; padding: 4px 16px 8px; text-align: center; text-wrap: balance;
+  font-weight: 500; font-size: var(--fs-label); line-height: 1.357; color: var(--noura-text-muted);
+  animation: sysIn var(--dur-move) var(--ease-out);
+}
+@keyframes sysIn { from { opacity: 0; transform: scale(0.96); } }
+
+/* Die Karte unter einer Antwort: Inhalt im Sheet, also Mulde und
+   Radius 16 — nicht Glas. Zwei weisse Schichten uebereinander hellen
+   den Grund auf (gemessen an den Kontoseiten, 2026-09-24).
+   Sie folgt der Blase um 120ms: erst der Satz, dann der Beleg. */
+.chat-card {
+  width: 90%; border-radius: var(--noura-radius-tile); background: var(--noura-well);
+  overflow: hidden; animation: cardIn var(--dur-move) var(--ease-out) 120ms backwards;
+}
+@keyframes cardIn { from { opacity: 0; transform: translateY(12px); } }
+/* Die Buchung ist der eine folgenreiche Moment im Chat: ihre Karte
+   setzt mit der Feder ein, zusammen mit der Erfolgs-Haptik. Die
+   einzige Feder im Verlauf. */
+.chat-card.booking { animation: cardIn var(--dur-screen) var(--spring) 120ms backwards; }
+.cc-body { display: flex; flex-direction: column; gap: 4px; padding: 16px; }
+.cc-k {
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 500; font-size: var(--fs-label); line-height: 1.357; color: var(--noura-text-muted);
+}
+/* Datenwert auf 24px — Entscheidung vom 2026-09-04. */
+.cc-v { font-weight: 600; font-size: var(--fs-screen); line-height: 1.35; }
+/* Der Termin. Abgesagt wird er durchgestrichen — die Linie zieht sich
+   von links durch, statt einfach dazustehen: so sieht man, dass
+   gerade DIESER Termin wegfiel. transform statt text-decoration,
+   damit es sich bewegen darf. */
+.cc-t {
+  position: relative; align-self: flex-start;
+  font-weight: 700; font-size: var(--fs-read); line-height: 1.294;
+  transition: opacity var(--dur-quick) var(--ease-out);
+}
+.cc-t::after {
+  content: ''; position: absolute; left: -2px; right: -2px; top: 52%; height: 1.5px;
+  background: currentColor; transform: scaleX(0); transform-origin: left;
+  transition: transform var(--dur-move) var(--ease-out);
+}
+/* .65 Deckkraft auf Weiss ist `text-muted`, nur animierbar. */
+.cc-t.off { opacity: 0.65; }
+.cc-t.off::after { transform: scaleX(1); }
+.cc-note { font-weight: 500; font-size: var(--fs-label); line-height: 1.45; color: var(--noura-text-muted); text-wrap: pretty; }
+.cc-body .cycle-bar { margin: 8px 0 4px; }
+/* Der Balken fuellt sich einmal, nachdem die Karte steht: der Anteil
+   ist die Aussage, und so liest man ihn als Anteil. Ziel ist der
+   eigene Wert des Elements (kein `to`-Bild). */
+.chat-card .cycle-bar i { animation: barIn var(--dur-screen) var(--ease-out) 320ms backwards; }
+@keyframes barIn { from { transform: scaleX(0); } }
+.cc-body .magic-steps { gap: 16px; }
+.cc-body .magic-steps b { font-size: var(--fs-body); line-height: 1.312; }
+.cc-body .magic-steps p { font-size: var(--fs-body); line-height: 1.45; }
+/* Schritte kommen nacheinander — es sind Schritte. */
+.cc-body .magic-steps li { animation: bubbleIn var(--dur-quick) var(--ease-out) backwards; animation-delay: calc(200ms + var(--i, 0) * 90ms); }
+/* Das Haekchen zeichnet sich einmal. `pathLength=1` macht die Laenge
+   unabhaengig vom Pfad. */
+.cc-check { flex-shrink: 0; color: var(--noura-text); }
+.cc-check path { stroke-dasharray: 1; stroke-dashoffset: 0; animation: checkDraw var(--dur-move) var(--ease-out) 360ms backwards; }
+@keyframes checkDraw { from { stroke-dashoffset: 1; } }
+/* Die Zeile, die weiterfuehrt: wie eine Kontozeile, die ganze Breite
+   ist das Tippziel, Trennlinie ab dem Text. */
+.cc-row {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; min-height: var(--tap); padding: 12px 16px;
+  background: none; border: none; cursor: pointer; text-align: left;
+  color: var(--noura-text); font-weight: 600; font-size: var(--fs-body); line-height: 1.312;
+  transition: background var(--dur-tap) var(--ease-out);
+}
+.cc-row svg { flex-shrink: 0; color: var(--noura-text-muted); }
+.cc-row:active { background: var(--press-wash); }
+.cc-row.danger { color: var(--noura-accent-text); }
+.cc-body + .cc-row::before {
+  content: ''; position: absolute; top: 0; left: 16px; right: 0; height: 1px;
+  background: var(--noura-line);
+}
+
+/* Figma stapelt zwei Knoepfe untereinander. Bei vier umbrechen sie —
+   zwei kurze teilen sich eine Zeile, rechtsbuendig wie eigene
+   Nachrichten. */
+.quick-replies { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: auto; padding-top: 24px; }
 .quick-replies .btn { width: auto; font-size: var(--fs-body); }
+/* Sie kommen von rechts, nacheinander — von der Seite, auf der sie zu
+   Deinen Worten werden. `backwards` statt `both`: nach dem Einflug darf
+   :active wieder an transform, sonst stuende der Druck still. */
+.quick-replies .btn { animation: replyIn var(--dur-move) var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * 60ms); }
+@keyframes replyIn { from { opacity: 0; transform: translateX(16px); } }
+/* Gewaehlt: die anderen treten zurueck, der gewaehlte bleibt stehen und
+   fliegt gleich darauf in den Verlauf (support-chat.tsx). */
+.quick-replies .btn.out {
+  opacity: 0; transform: scale(0.96); pointer-events: none;
+  transition: opacity var(--dur-tap) var(--ease-in), transform var(--dur-tap) var(--ease-in);
+}
+.quick-replies .btn.picked { pointer-events: none; }
 /* Figma 1330:2685: Eingabefeld 257x64 Glas @20% r24, Sendeknopf 64x64
-   Glas @20% voll rund — nicht rot. */
-.chat-input { display: flex; gap: 24px; padding: 12px 24px calc(28px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; }
+   Glas @20% voll rund — nicht rot. Unten --bar-bottom statt 28px plus
+   voller Safe-Area: die zaehlte die Zone der Home-Leiste doppelt
+   (Figma: 46px unter dem Feld, --bar-bottom ergibt 48).
+   Das Feld ist eine Mulde, nicht Glas — Abweichung von Figma, als
+   Vorschlag: Glas 20 % im Glas-Sheet gab dem Platzhalter 2,77:1
+   (Chrome, 2026-09-24, dunkelster Pixel unter dem Text). Eine
+   dunklere Beugung half nicht: das Sheet ist mit seinem eigenen
+   backdrop-filter Backdrop Root, der Filter des Felds erreicht die
+   Aurora gar nicht. Dieselbe Antwort wie bei der Tarifleiste und den
+   Kontoseiten: die Flaeche, in die man etwas legt, ist dunkler als
+   ihr Grund. Der Sendeknopf bleibt Glas — er ist das Bedienelement. */
+.chat-input { display: flex; gap: 24px; padding: 12px 24px var(--bar-bottom); flex-shrink: 0; }
 .chat-input input {
-  flex: 1; background: var(--noura-glass-strong);
-  backdrop-filter: blur(var(--noura-blur-control)); -webkit-backdrop-filter: blur(var(--noura-blur-control));
+  flex: 1; min-width: 0; background: var(--noura-well);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22);
   border: none; border-radius: var(--noura-radius-card);
-  padding: 0 20px; color: var(--noura-text); font-weight: 600; font-size: var(--fs-label); line-height: 1.357; min-height: 64px; outline: none;
+  /* 17px wie die Blasen — was man tippt, soll so gross sein wie das,
+     was daraus wird. Unter 16px zoomt Safari beim Fokus ausserdem ins
+     Feld. */
+  padding: 0 20px; color: var(--noura-text); font-weight: 600; font-size: var(--fs-read); line-height: 1.294; min-height: 64px; outline: none;
 }
 /* Ein Flaechentoken als Textfarbe: 20 % Weiss auf der Glasleiste sind
    rund 2:1 und damit weit unter den 4,5:1, die `accessibility.md` fuer
@@ -1012,15 +1370,19 @@ button.sim-card { cursor: pointer; }
    man handeln kann — er nimmt `text-muted` wie jede andere
    Nebenzeile, so wie die beiden anderen Felder der App auch. */
 .chat-input input::placeholder { color: var(--noura-text-muted); }
+.chat-input input:focus-visible { box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22), inset 0 0 0 1.5px var(--noura-text); }
 .chat-input .send {
   width: 64px; height: 64px; border-radius: var(--noura-radius-pill); cursor: pointer;
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   background: var(--noura-glass-strong);
-  backdrop-filter: blur(var(--noura-blur-control)); -webkit-backdrop-filter: blur(var(--noura-blur-control));
+  -webkit-backdrop-filter: blur(var(--noura-blur-control)); backdrop-filter: blur(var(--noura-blur-control));
   border: none;
-  transition: transform var(--dur-screen) var(--spring);
+  transition: transform var(--dur-screen) var(--spring), opacity var(--dur-quick) var(--ease-out);
 }
 .chat-input .send:active { transition: transform var(--dur-tap) var(--ease-out); transform: scale(0.94); }
+/* Leeres Feld: nichts zu senden. Dieselbe Abblendung wie .btn:disabled. */
+.chat-input .send:disabled { opacity: 0.4; cursor: default; }
+.chat-input .send:disabled:active { transform: none; }
 
 /* Plan sheet */
 .plan-sheet-head h2 { font-weight: 700; font-size: var(--fs-title); }
@@ -1034,7 +1396,7 @@ button.sim-card { cursor: pointer; }
 /* Toast */
 .toast {
   position: absolute; left: 50%; bottom: 140px; transform: translate(-50%, 20px); z-index: 80;
-  background: var(--noura-glass-strong); backdrop-filter: blur(var(--noura-blur-control)); -webkit-backdrop-filter: blur(var(--noura-blur-control));
+  background: var(--noura-glass-strong); -webkit-backdrop-filter: blur(var(--noura-blur-control)); backdrop-filter: blur(var(--noura-blur-control));
   border: 1px solid var(--noura-line); border-radius: var(--noura-radius-pill); padding: 14px 22px;
   /* `all` animierte auch Farbe, Rand und Schatten mit — im Haus gilt,
      dass nur transform und opacity laufen. Radius 18px stand auf keiner
