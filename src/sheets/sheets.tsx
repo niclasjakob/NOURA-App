@@ -1,29 +1,25 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import { PLANS, planTitle, type Plan } from '../data/plans'
-import {
-  HOLDER,
-  ROAMING_ADDONS,
-  fmtGb,
-  type RoamZone,
-  type RoamingState,
-} from '../data/account'
+import { CYCLE, HOLDER, fmtDate, payLabel, type Payment, type Receipt } from '../data/account'
 import {
   CODE_LEN,
   DROPS,
-  FAIL_TEXT,
   FEATURED,
+  FRIEND_CODES,
+  MY_INVITE,
   dropState,
+  failText,
   minutesLeft,
   normalizeCode,
+  perksFor,
   spotsLeft,
   type Drop,
   type MagicPass,
-  type RedeemFail,
+  type RedeemMiss,
   type RedeemResult,
 } from '../data/magic'
-import { Button, Close, FeatureList, Monogram, SimCard } from '../components/ui'
+import { Button, Close, FeatureList, SimCard } from '../components/ui'
 import { MagicTicket } from '../components/magic-pass'
-import { AllowanceRing } from '../components/roaming'
 import { useDialog, useDragToDismiss, useInert } from '../hooks/a11y'
 import { hapticError, hapticSelection, hapticSuccess, setHapticsOn } from '../lib/haptics'
 import { ACCT_PAGE_TITLE, DEFAULT_SETTINGS, type AcctPage } from '../data/settings'
@@ -32,6 +28,7 @@ import {
   DocsPage,
   HelpPage,
   NotificationsPage,
+  PaymentPage,
   SecurityPage,
   type DocKey,
   type Settings,
@@ -39,15 +36,17 @@ import {
 import { SupportChat } from './support-chat'
 import type { ChatJump } from '../data/support'
 
-export type SheetId = 'support' | 'profile' | 'plan' | 'roaming' | 'magic' | null
+export type SheetId = 'support' | 'profile' | 'plan' | 'magic' | 'confirm' | 'usage' | null
 
 /* ---------- Sheet-Huelle ----------
    Vorher liess sich ein Sheet nur ueber den Hintergrund schliessen,
    der Fokus blieb dahinter stehen, und die Knoepfe geschlossener
    Sheets waren weiter mit der Tabulatortaste erreichbar. Hier jetzt:
    Fokusfalle, Escape, sichtbarer Schliessen-Knopf, Ziehgeste am
-   Griff — und `inert`, solange das Sheet unten liegt. */
-function Sheet({
+   Griff — und `inert`, solange das Sheet unten liegt.
+
+   Exportiert fuer das Bestaetigungs-Sheet (confirm-sheet.tsx). */
+export function Sheet({
   id,
   open,
   label,
@@ -108,18 +107,16 @@ export function SupportSheet({
   open,
   onClose,
   plan,
-  roaming,
   onJump,
 }: {
   open: boolean
   onClose: () => void
   plan: Plan
-  roaming: RoamingState
   onJump: (to: ChatJump) => void
 }) {
   return (
     <Sheet id="supportSheet" open={open} label="Support" onClose={onClose}>
-      <SupportChat open={open} plan={plan} roaming={roaming} onJump={onJump} />
+      <SupportChat open={open} plan={plan} onJump={onJump} />
     </Sheet>
   )
 }
@@ -238,8 +235,8 @@ export function ProfileSheet({
   onOpenSupport,
   onOpenPlan,
   planIdx,
-  roamZone,
-  onRoamZone,
+  payment,
+  receipts,
 }: {
   open: boolean
   onClose: () => void
@@ -248,8 +245,10 @@ export function ProfileSheet({
   onOpenSupport: () => void
   onOpenPlan: () => void
   planIdx: number
-  roamZone: RoamZone
-  onRoamZone: (z: RoamZone) => void
+  /** Die Zahlart aus dem Checkout — nicht mehr eine erfundene Karte. */
+  payment: Payment
+  /** Bestaetigungen fuer Wechsel und Kuendigung. */
+  receipts: Receipt[]
 }) {
   const [page, setPage] = useState<AcctPage | null>(null)
   const [shown, setShown] = useState<AcctPage | null>(null)
@@ -365,7 +364,15 @@ export function ProfileSheet({
     ) : shown === 'help' ? (
       <HelpPage onOpenSupport={onOpenSupport} />
     ) : shown === 'docs' ? (
-      <DocsPage plan={plan} open={doc} onOpen={setDoc} onOpenSecurity={() => go('security')} />
+      <DocsPage
+        plan={plan}
+        receipts={receipts}
+        open={doc}
+        onOpen={setDoc}
+        onOpenSecurity={() => go('security')}
+      />
+    ) : shown === 'payment' ? (
+      <PaymentPage plan={plan} payment={payment} onOpenSupport={onOpenSupport} />
     ) : null
 
   return (
@@ -376,9 +383,8 @@ export function ProfileSheet({
         <div className="acct-head">
           <div className="tx">
             <h2>Dein Account</h2>
-            <p>Nächste Zahlung am 08.08.2026</p>
+            <p>Nächste Zahlung am {fmtDate(CYCLE.invoiceDate)}</p>
           </div>
-          <Monogram name={HOLDER.first} />
         </div>
         {/* Figma: zwei Karten mit Karten-Symbol, Label oben klein, Wert darunter */}
         <div className="quick-cards">
@@ -390,10 +396,14 @@ export function ProfileSheet({
                 <rect x="3" y="13" width="8" height="2" rx="1" fill="rgba(255,255,255,.5)" />
               </svg>
             </span>
-            <span className="qc-label">Dein Plan</span>
+            <span className="qc-label">Dein Tarif</span>
             <span className="qc-value">{planTitle(PLANS[planIdx])}</span>
           </button>
-          <button className="qc">
+          {/* Zeigt die Zahlart, die im Checkout gewaehlt wurde, und fuehrt
+              zu ihr. Bis zum 2026-09-25 stand hier "Deine Karte *9876" —
+              auch nach einer Bestellung per Lastschrift — und der Tipp
+              ging ins Leere. */}
+          <button className="qc" data-page="payment" onClick={() => go('payment')}>
             <span className="qc-icon">
               <svg width="28" height="20" viewBox="0 0 28 20" fill="none" aria-hidden="true">
                 <rect x="0.5" y="0.5" width="27" height="19" rx="3" fill="rgba(255,255,255,.35)" />
@@ -401,54 +411,21 @@ export function ProfileSheet({
                 <rect x="3" y="13" width="8" height="2" rx="1" fill="rgba(255,255,255,.5)" />
               </svg>
             </span>
-            <span className="qc-label">Deine Karte</span>
-            <span className="qc-value">*9876</span>
+            <span className="qc-label">Zahlung</span>
+            <span className="qc-value">{payLabel(payment)}</span>
           </button>
         </div>
         <div className="list-section">
-          <h3>Sonstiges</h3>
+          <h3>Einstellungen</h3>
           <ListRow icon={ic('security')} label={ACCT_PAGE_TITLE.security} nav page="security" onClick={() => go('security')} />
           <ListRow icon={ic('bell')} label={ACCT_PAGE_TITLE.notifications} nav page="notifications" onClick={() => go('notifications')} />
           <ListRow icon={ic('appearance')} label={ACCT_PAGE_TITLE.appearance} nav page="appearance" onClick={() => go('appearance')} />
         </div>
         <div className="list-section">
-          <h3>Service</h3>
+          <h3>Hilfe und Vertrag</h3>
           <ListRow icon={ic('help')} label={ACCT_PAGE_TITLE.help} nav page="help" onClick={() => go('help')} />
           <ListRow icon={ic('docs')} label={ACCT_PAGE_TITLE.docs} nav page="docs" onClick={() => go('docs')} />
           <ListRow icon={ic('logout')} label="Abmelden" danger onClick={onLogout} />
-        </div>
-
-        {/* ---- Vorfuehr-Schalter ----
-            Im Echtbetrieb kommt die Zone vom Netz. Damit sich die
-            Reiseansicht ohne Flugticket zeigen laesst, steht hier ein
-            klar als Prototyp gekennzeichneter Umschalter. */}
-        <div className="list-section demo-sec">
-          <h3>Prototyp</h3>
-          <p className="demo-note">Standort simulieren — im Echtbetrieb erkennt die App das Netz selbst.</p>
-          <div className="demo-switch" role="radiogroup" aria-label="Standort simulieren">
-            {(
-              [
-                ['home', 'Zuhause'],
-                ['eu', 'EU'],
-                ['world', 'Welt'],
-              ] as [RoamZone, string][]
-            ).map(([z, label]) => (
-              <button
-                key={z}
-                role="radio"
-                aria-checked={roamZone === z}
-                className={roamZone === z ? 'on' : ''}
-                onClick={() => {
-                  /* Segmentwechsel — dieselbe Gestenklasse wie das
-                     Tarifkarussell, also dieselbe Rueckmeldung. */
-                  if (roamZone !== z) hapticSelection()
-                  onRoamZone(z)
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
         </div>
         <div style={{ height: 40 }} />
       </div>
@@ -481,186 +458,32 @@ export function ProfileSheet({
   )
 }
 
-/* ================= Roaming ================= */
-export function RoamingSheet({
-  open,
-  onClose,
-  roaming,
-  onBuyAddon,
-}: {
-  open: boolean
-  onClose: () => void
-  roaming: RoamingState
-  onBuyAddon: (gb: number) => void
-}) {
-  const world = roaming.zone === 'world'
-  const total = roaming.allowanceGb ?? 0
-  /* Ohne Kontingent im Tarif und ohne zugebuchtes Paket gibt es
-     nichts anzuzeigen — dann ist die Frage nicht "wie viel ist noch
-     da", sondern "wie komme ich hier ins Netz". */
-  const worldEmpty = world && total === 0
+/* ================= Magic Codes — einloesen, halten, entdecken =================
+   Die Kachel auf Home zeigt eine Wolke aus Codes. Was sie behauptet,
+   loest diese Seite ein: Woher kommen die Codes, was bringt einer, und
+   wo liegt, was man schon hat.
 
-  return (
-    <Sheet id="roamingSheet" open={open} label="Reisen" onClose={onClose}>
-      <div className="sheet-body">
-        <div className="plan-sheet-head">
-          <h2>Reisen</h2>
-          <p>
-            {roaming.flag} {roaming.country} · {roaming.network}
-          </p>
-        </div>
+   Seit dem 2026-09-04 bringt ein Code tatsaechlich etwas (vorher
+   quittierte jede Zeichenfolge mit demselben Toast). Seit dem
+   2026-09-25 kommen Codes aus drei Quellen — Creators, Partner,
+   Freunde —, und die Seite ist danach geordnet, was man hier tut:
+   einloesen, ansehen, was man hat, entdecken, weitergeben. Die
+   Erklaerkacheln ("Was ein Code bringt", "Warum sie sich aendern")
+   sind in einen Satz unter "So funktioniert's" gewandert; neun
+   Abschnitte in einem Scroll waren zu viele.
 
-        {roaming.zone === 'home' && (
-          <div className="card roam-info">
-            <p className="roam-lead">Du bist im Heimatnetz — es gelten Deine normalen Tarifleistungen.</p>
-            {/* Die Zahlen kommen aus dem Tarif, nicht aus einem festen
-                Text: fuer CONNECT stand hier vorher ein Weltkontingent,
-                das es in dem Tarif nicht gibt. */}
-            <ul className="roam-rules">
-              <li>
-                <b>In der EU</b> surfst Du zum Inlandspreis. Bei unbegrenzten Tarifen gilt eine
-                Fair-Use-Grenze von {fmtGb(roaming.euFupGb, 0)} pro Monat — danach 0,25 € je GB.
-              </li>
-              <li>
-                <b>Weltweit</b>{' '}
-                {roaming.includedGb > 0
-                  ? `sind ${fmtGb(roaming.includedGb, 0)} pro Monat enthalten, danach 4,99 € je GB.`
-                  : 'ist in Deinem Tarif nichts enthalten. Du buchst vor der Reise ein Paket ab 4,99 € dazu.'}
-              </li>
-            </ul>
-          </div>
-        )}
+   Zwei Ansichten, kein zweites Sheet: die Eingabe mit allem darum,
+   und der Zugang. Ein Zugang ist das Ergebnis dieses Ablaufs, nicht
+   sein eigenes Thema.
 
-        {roaming.zone === 'eu' && (
-          <div className="card roam-info">
-            {/* "Unbegrenzt in der EU" waere die bequeme Formulierung
-                und schlicht falsch: die Verordnung (EU) 2022/612 laesst
-                bei unbegrenzten Inlandstarifen eine Fair-Use-Grenze zu.
-                Sie hier zu nennen kostet einen Satz — sie zu verschweigen
-                kostet den Kunden. */}
-            <p className="roam-lead">
-              EU-Roaming ist aktiv. Du surfst zum Inlandspreis, ohne Aufschlag.
-            </p>
-            <AllowanceRing used={roaming.euUsedGb} total={roaming.euFupGb} run={open} />
-            <div className="roam-stat">
-              <span className="label">Diesen Monat genutzt</span>
-              <span className="val">
-                {fmtGb(roaming.euUsedGb)} / {fmtGb(roaming.euFupGb, 0)}
-              </span>
-            </div>
-            <p className="roam-fine">
-              Die Grenze ergibt sich aus Deinem Tarifpreis und ist gesetzlich vorgegeben.
-              Darüber hinaus kostet ein GB 0,25 € — abgeschaltet wird nichts. Anrufe und SMS
-              in EU-Netze deckt Deine Allnet-Flat ab.
-            </p>
-          </div>
-        )}
-
-        {worldEmpty && (
-          <div className="card roam-info">
-            <p className="roam-lead">
-              In Deinem Tarif ist außerhalb der EU kein Datenvolumen enthalten.
-            </p>
-            <p className="roam-fine">
-              Wir schalten nichts automatisch zu und stellen Dir nichts in Rechnung. Buch ein
-              Paket, wenn Du es brauchst — es ist sofort aktiv.
-            </p>
-          </div>
-        )}
-
-        {world && !worldEmpty && (
-          <div className="card roam-info center">
-            <AllowanceRing used={roaming.usedGb} total={total} run={open} />
-            <p className="roam-lead">
-              {fmtGb(roaming.usedGb)} von {fmtGb(total, 0)} Weltdaten genutzt
-            </p>
-            <p className="roam-fine">
-              Danach {roaming.extraPerGb} je GB. Wir schalten nichts automatisch zu — Du entscheidest.
-            </p>
-          </div>
-        )}
-
-        {/* Steht auch dann da, wenn der Tarif kein Weltvolumen hat —
-            genau dann braucht der Reisende es naemlich. */}
-        {world && (
-          <div className="list-section">
-            <h3>Datenpaket zubuchen</h3>
-            <div className="addons">
-              {ROAMING_ADDONS.map((a) => (
-                <button key={a.key} className="addon" onClick={() => onBuyAddon(a.gb)}>
-                  <span className="addon-gb">{a.gb} GB</span>
-                  <span className="addon-price">{a.price}</span>
-                  <span className="addon-note">{a.note}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div style={{ height: 40 }} />
-      </div>
-    </Sheet>
-  )
-}
-
-/* ================= Magic Code — Konzeptseite und Einloesung =================
-   Die Kachel auf Home zeigt eine Wolke aus Codes, die sich staendig
-   neu formiert. Was sie behauptet, muss diese Seite einloesen: Woher
-   kommen die Codes, warum halten sie nur kurz, und was bringt einer.
-
-   Seit dem 2026-09-04 bringt einer tatsaechlich etwas. Vorher quittierte
-   die Eingabe jede Zeichenfolge mit demselben Toast — vier Zeichen rein,
-   eine freundliche Luege raus. Jetzt laeuft der Code gegen die Drops in
-   `data/magic.ts` und endet in einem Zugang, den man vorzeigen kann.
-
-   Das Sheet hat deshalb zwei Ansichten: die Eingabe mit der Erklaerung,
-   und den Zugang. Kein zweites Sheet dafuer — ein Zugang ist das
-   Ergebnis dieses Ablaufs und nicht sein eigenes Thema.
-
-   Achtung: Die Seite bleibt ein Konzeptvorschlag, kein abgestimmtes
-   Produkt. Laufzeit (60 Minuten), Stueckzahl und die drei Vorteile sind
-   gesetzt, damit der Prototyp etwas Konkretes zeigt — sie sind das
-   erste, was im Review zur Diskussion steht. */
-
-/* Symbole in Akzentrot, wie ueberall in der App. */
-const IcFestival = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true">
-    <path d="M12 3v3" />
-    <path d="M12 6 3 20h18z" />
-    <path d="M12 6v14" />
-  </svg>
-)
-const IcConcert = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true">
-    <path d="M9 18V5l11-2v13" />
-    <circle cx="6.5" cy="18" r="2.5" />
-    <circle cx="17.5" cy="16" r="2.5" />
-  </svg>
-)
-const IcMeetup = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="9" cy="8" r="3.2" />
-    <path d="M2.8 19a6.2 6.2 0 0 1 12.4 0" />
-    <path d="M16 5.4a3.2 3.2 0 0 1 0 5.2M17.5 13.4A6.2 6.2 0 0 1 21.2 19" />
-  </svg>
-)
-
-/* Kurz halten: drei Kacheln nebeneinander sind je rund 100px breit,
-   jedes zweite Wort bricht dort um.
-
-   Kein Datenvolumen und kein Roaming mehr (entfernt am 2026-09-04, von
-   Niclas beauftragt): Gigabyte kann jeder Anbieter draufpacken, ein Platz
-   im Raum nicht. Ein Code oeffnet ab hier ausschliesslich Tueren. */
-const PERKS = [
-  { icon: <IcFestival />, title: 'Festivals', note: 'Slots und Backstage' },
-  { icon: <IcConcert />, title: 'Konzerte', note: 'Gästeliste statt VVK' },
-  { icon: <IcMeetup />, title: 'Meet-ups', note: 'Plätze bei Creators' },
-]
+   Achtung: Konzeptvorschlag, kein abgestimmtes Produkt. Laufzeiten,
+   Stueckzahlen, Partner und Vorteile sind gesetzt, damit der Prototyp
+   etwas Konkretes zeigt. */
 
 const STEPS = [
   {
-    title: 'Code entdecken',
-    text: 'Creator geben sie im Stream aus, Freunde schicken sie weiter, auf Events hängen sie an der Wand. Auf Deiner Startseite siehst Du, was gerade kursiert.',
+    title: 'Code bekommen',
+    text: 'Creators geben sie im Stream aus, Partner in ihren Kanälen, Freunde schicken Dir ihren eigenen.',
   },
   {
     title: 'Vier Zeichen eintippen',
@@ -668,7 +491,7 @@ const STEPS = [
   },
   {
     title: 'Zugang liegt sofort bereit',
-    text: 'Du bekommst Deinen Einlass-Code auf der Stelle — ohne Vorverkauf, ohne Bestätigungsmail. Er liegt danach auf Deiner Startseite.',
+    text: 'Ohne Vorverkauf, ohne Bestätigungsmail. Er liegt danach auf Deiner Startseite.',
   },
 ]
 
@@ -677,6 +500,8 @@ const STEPS = [
    nicht. */
 function dropNote(d: Drop, passes: MagicPass[]): string {
   if (passes.some((p) => p.id === d.id)) return 'schon eingelöst'
+  if (d.source === 'friend') return 'Einladung · läuft nicht ab'
+  if (d.source === 'partner') return 'dauerhaft'
   const state = dropState(d, passes)
   if (state === 'expired') return 'abgelaufen'
   if (state === 'full') return 'vergriffen'
@@ -689,6 +514,8 @@ function dropNote(d: Drop, passes: MagicPass[]): string {
    gedrueckt hat, liest sich nicht als Pruefung. */
 const CHECK_MS = 520
 
+const INVITE_TEXT = `Mein NOURA-Einladungscode: ${MY_INVITE}. Damit stehen wir beide auf der Gästeliste des nächsten Community-Abends.`
+
 export function MagicSheet({
   open,
   onClose,
@@ -696,22 +523,30 @@ export function MagicSheet({
   onNotice,
   passes,
   focusPassId,
+  plan,
+  prefill = null,
 }: {
   open: boolean
   onClose: () => void
+  /** Ein Code, der schon im Feld stehen soll — aus einem Link. */
+  prefill?: string | null
   /** Prueft und legt bei Erfolg den Zugang an — die Zugaenge liegen in App. */
   onRedeem: (code: string) => RedeemResult
   onNotice: (text: string) => void
   passes: MagicPass[]
   /** Von Home aus: dieser Zugang wird direkt gezeigt. */
   focusPassId: string | null
+  /** Der Tarif entscheidet, welche Partner-Vorteile hier stehen. */
+  plan: Plan
 }) {
   const [code, setCode] = useState('')
   const [checking, setChecking] = useState(false)
-  const [fail, setFail] = useState<RedeemFail | null>(null)
+  const [fail, setFail] = useState<RedeemMiss | null>(null)
   const [shown, setShown] = useState<string | null>(null)
   const [reminded, setReminded] = useState(false)
   const checkRef = useRef<number>(0)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   /* Die Restlaufzeit steht an jedem Code. Ohne Takt bliebe sie stehen,
      und die Behauptung "60 Minuten" waere im laufenden Sheet
@@ -729,11 +564,11 @@ export function MagicSheet({
   useEffect(() => {
     if (!open) return
     setShown(focusPassId)
-    setCode('')
+    setCode(prefill ?? '')
     setFail(null)
     setChecking(false)
     return () => window.clearTimeout(checkRef.current)
-  }, [open, focusPassId])
+  }, [open, focusPassId, prefill])
 
   const ready = code.length === CODE_LEN
 
@@ -754,20 +589,45 @@ export function MagicSheet({
         setCode('')
       } else {
         hapticError()
-        setFail(res.reason)
+        setFail(res)
       }
     }, CHECK_MS)
   }
 
+  /* Einen oeffentlichen Code aus der Liste uebernehmen: nach oben, ins
+     Feld — eingeloest wird mit demselben Knopf wie jeder andere Code. */
+  const take = (c: string) => {
+    setCode(c)
+    setFail(null)
+    const smooth = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    bodyRef.current?.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' })
+    window.setTimeout(() => inputRef.current?.focus({ preventScroll: true }), smooth ? 320 : 0)
+  }
+
+  /* Teilen ueber das System-Sheet, wo es eines gibt; sonst in die
+     Zwischenablage. Ein abgebrochenes Teilen ist kein Fehler. */
+  const share = () => {
+    if (typeof navigator.share === 'function') {
+      navigator.share({ text: INVITE_TEXT }).catch(() => {})
+      return
+    }
+    const copied = () => onNotice('Einladungscode kopiert.')
+    const fallback = () => onNotice(`Dein Einladungscode: ${MY_INVITE}`)
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(INVITE_TEXT).then(copied, fallback)
+    else fallback()
+  }
+
   const pass = shown ? passes.find((p) => p.id === shown) ?? null : null
+  const other = PLANS.find((p) => p.key !== plan.key)
 
   /* ---- Ansicht 2: der Zugang ---- */
   if (pass) {
+    const perk = pass.drop.source === 'partner'
     return (
       <Sheet id="magicSheet" open={open} label="Dein Zugang" onClose={onClose}>
         <div className="sheet-body">
           <div className="plan-sheet-head">
-            <h2>Du stehst auf der Liste</h2>
+            <h2>{perk ? 'Dein Vorteil liegt bereit' : 'Du stehst auf der Liste'}</h2>
             {/* Der Wechsel der Ansicht ist visuell offensichtlich und fuer
                 VoiceOver sonst gar nichts — deshalb hier als Meldung. */}
             <p role="status">
@@ -778,11 +638,15 @@ export function MagicSheet({
           <MagicTicket pass={pass} />
 
           <div className="pass-actions">
-            <Button
-              onClick={() => onNotice('Im Kalender vorgemerkt — wir erinnern Dich am Vortag.')}
-            >
-              Im Kalender merken
-            </Button>
+            {/* Ein Kalendereintrag hat nur bei einem Termin Sinn — ein
+                Vorteil, der dauerhaft gilt, braucht keinen. */}
+            {!perk && (
+              <Button
+                onClick={() => onNotice('Im Kalender vorgemerkt — wir erinnern Dich am Vortag.')}
+              >
+                Im Kalender merken
+              </Button>
+            )}
             <Button
               onClick={() => {
                 setShown(null)
@@ -804,20 +668,21 @@ export function MagicSheet({
     )
   }
 
-  /* ---- Ansicht 1: Eingabe und Erklaerung ---- */
+  /* ---- Ansicht 1: Eingabe und alles darum ---- */
   return (
-    <Sheet id="magicSheet" open={open} label="Magic Code" onClose={onClose}>
-      <div className="sheet-body">
+    <Sheet id="magicSheet" open={open} label="Magic Codes" onClose={onClose}>
+      <div className="sheet-body" ref={bodyRef}>
         <div className="plan-sheet-head">
-          <h2>Magic Code</h2>
-          <p>Zutritt statt Gigabyte: Festivals, Konzerte und Meet-ups — kurz gültig, streng
-            begrenzt, ständig neu im Umlauf.</p>
+          <h2>Magic Codes</h2>
+          {/* Derselbe Satz wie im Onboarding und in der Hilfe. */}
+          <p>Vier Zeichen von Creators, Partnern oder Freunden. Eingelöst liegt der Zugang auf Home.</p>
         </div>
 
         <div className="card magic-redeem">
           <span className="label">Code einlösen</span>
           <div className="magic-entry">
             <input
+              ref={inputRef}
               className={`magic-input${fail ? ' bad' : ''}`}
               type="text"
               inputMode="text"
@@ -849,7 +714,7 @@ export function MagicSheet({
                Feld, das sie ausgeloest hat, und muss stehenbleiben, bis
                der naechste Versuch laeuft. */
             <p className="magic-error" id="magic-error" role="alert">
-              {FAIL_TEXT[fail]}
+              {failText(fail)}
             </p>
           ) : (
             <p className="magic-fine">
@@ -880,72 +745,7 @@ export function MagicSheet({
         )}
 
         <div className="list-section">
-          <h3>So funktioniert's</h3>
-          <ol className="magic-steps">
-            {STEPS.map((s, i) => (
-              <li key={s.title}>
-                <span className="n" aria-hidden="true">
-                  {i + 1}
-                </span>
-                <div>
-                  <b>{s.title}</b>
-                  <p>{s.text}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-
-        {/* ---- Vorfuehr-Hilfe ----
-            Ein Code, den man raten muesste, macht den Ablauf unvorfuehrbar:
-            32^4 sind ueber eine Million Moeglichkeiten. Die Liste steht
-            deshalb sichtbar als Prototyp-Block da — wie der Standort-
-            Umschalter im Profil — und zeigt bewusst auch die Codes, die
-            scheitern. Ein Ablauf, den man nur im Gutfall sieht, ist im
-            Review nur die halbe Wahrheit. */}
-        <div className="list-section demo-sec">
-          <h3>Prototyp</h3>
-          <p className="demo-note">
-            Im Echtbetrieb kursieren Codes im Stream, unter Freunden oder auf dem Gelände. Hier
-            stehen sie zum Antippen — samt der Fälle, in denen es nicht klappt.
-          </p>
-          <ul className="code-list">
-            {DROPS.map((d) => (
-              <li key={d.id}>
-                <button
-                  className="code-chip"
-                  onClick={() => {
-                    setCode(d.code)
-                    setFail(null)
-                  }}
-                  aria-label={`Code ${d.code.split('').join(' ')} übernehmen`}
-                >
-                  {d.code}
-                </button>
-                <span className="code-what">
-                  <b>{d.title}</b>
-                  <span>{dropNote(d, passes)}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="list-section">
-          <h3>Was ein Code bringt</h3>
-          <div className="magic-perks">
-            {PERKS.map((p) => (
-              <div key={p.title} className="card magic-perk">
-                <span className="ic">{p.icon}</span>
-                <b>{p.title}</b>
-                <span className="note">{p.note}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="list-section">
-          <h3>Ein Drop in freier Wildbahn</h3>
+          <h3>Gerade live</h3>
           <div className="card magic-event">
             <div className="event-head">
               <span className="event-avatar" aria-hidden="true">{FEATURED.initials}</span>
@@ -995,11 +795,8 @@ export function MagicSheet({
               {reminded ? 'Erinnerung steht' : 'Erinnere mich zum Drop'}
             </Button>
           </div>
-        </div>
 
-        <div className="list-section">
-          <h3>Auch gerade im Umlauf</h3>
-          <ul className="drop-list">
+          <ul className="drop-list magic-drops">
             {/* Abgelaufene Drops stehen nicht mehr im Umlauf — ihr Code
                 funktioniert oben trotzdem noch als Vorfuehrung des
                 Fehlerfalls. */}
@@ -1019,29 +816,110 @@ export function MagicSheet({
           </ul>
         </div>
 
+        {/* ---- Partner-Vorteile ----
+            Oeffentliche Codes, dauerhaft, an den Tarif gebunden — dieselbe
+            Auswahl, die die Tarifwahl als "Magic Codes öffnen" nennt. Ein
+            Tipp uebernimmt den Code ins Feld oben. */}
         <div className="list-section">
-          <h3>Warum sie sich ständig ändern</h3>
-          <div className="card magic-why">
-            <p className="roam-lead">
-              Jeder Magic Code lebt 60 Minuten und existiert in fester Stückzahl. Ist sie
-              aufgebraucht, ist er weg — und der nächste sieht schon wieder anders aus.
-            </p>
-            <ul className="roam-rules">
-              <li>
-                <b>Fälschungssicher:</b> Ein abfotografierter Code ist eine Stunde später wertlos.
+          <h3>Vorteile mit {planTitle(plan)}</h3>
+          <p className="magic-fine magic-lead">
+            Partner geben diese Codes öffentlich aus. Mit {planTitle(plan)} öffnen sie {plan.magicScope}.
+          </p>
+          <ul className="code-list">
+            {perksFor(plan.key).map((d) => (
+              <li key={d.id}>
+                <button
+                  className="code-chip"
+                  onClick={() => take(d.code)}
+                  aria-label={`Code ${d.code.split('').join(' ')} für ${d.title} übernehmen`}
+                >
+                  {d.code}
+                </button>
+                <span className="code-what">
+                  <b>{d.title}</b>
+                  <span>
+                    {d.detail} · {dropNote(d, passes)}
+                  </span>
+                </span>
               </li>
-              <li>
-                <b>Kein Gutschein-Portal:</b> Was sich nicht sammeln lässt, lässt sich auch nicht
-                weiterverkaufen.
-              </li>
-              <li>
-                <b>Wieder persönlich:</b> Wer teilt, teilt mit Menschen, die gerade zuhören.
-              </li>
-            </ul>
+            ))}
+          </ul>
+          {other && (
             <p className="magic-fine">
-              Der Zugang, den Du damit holst, bleibt — er hängt nicht an der Laufzeit des Codes.
+              Mit {planTitle(other)}: {other.magicScope}.
             </p>
+          )}
+        </div>
+
+        {/* ---- Freunde einladen ----
+            Die dritte Quelle (Pitch-Deck, "Referral Codes"): privat
+            weitergegeben, dasselbe Feld, dasselbe Alphabet. */}
+        <div className="list-section">
+          <h3>Freunde einladen</h3>
+          <div className="card invite-card">
+            <span className="label">Dein Einladungscode</span>
+            <span className="invite-code" aria-label={`Einladungscode ${MY_INVITE.split('').join(' ')}`}>
+              {MY_INVITE}
+            </span>
+            <p className="magic-fine">
+              Wer mit Deinem Code zu NOURA kommt, steht mit Dir auf der Gästeliste des nächsten
+              Community-Abends.
+            </p>
+            <Button onClick={share}>Code teilen</Button>
           </div>
+        </div>
+
+        <div className="list-section">
+          <h3>So funktioniert's</h3>
+          <ol className="magic-steps">
+            {STEPS.map((s, i) => (
+              <li key={s.title}>
+                <span className="n" aria-hidden="true">
+                  {i + 1}
+                </span>
+                <div>
+                  <b>{s.title}</b>
+                  <p>{s.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p className="magic-fine magic-after">
+            Creator-Codes leben 60 Minuten und haben feste Stückzahlen — ein abfotografierter Code
+            ist eine Stunde später wertlos. Partner-Codes gelten dauerhaft in ihrem Tarif. Dein
+            Zugang bleibt, auch wenn der Code abläuft.
+          </p>
+        </div>
+
+        {/* ---- Vorfuehr-Hilfe ----
+            Ein Code, den man raten muesste, macht den Ablauf unvorfuehrbar:
+            32^4 sind ueber eine Million Moeglichkeiten. Die Liste steht
+            deshalb sichtbar als Prototyp-Block da und zeigt bewusst auch
+            die Codes, die scheitern. Ein Ablauf, den man nur im Gutfall sieht, ist im
+            Review nur die halbe Wahrheit. */}
+        <div className="list-section demo-sec">
+          <h3>Prototyp</h3>
+          <p className="demo-note">
+            Im Echtbetrieb kursieren Codes im Stream, unter Freunden oder auf dem Gelände. Hier
+            stehen sie zum Antippen — samt der Fälle, in denen es nicht klappt.
+          </p>
+          <ul className="code-list">
+            {[...DROPS, ...FRIEND_CODES].map((d) => (
+              <li key={d.id}>
+                <button
+                  className="code-chip"
+                  onClick={() => take(d.code)}
+                  aria-label={`Code ${d.code.split('').join(' ')} übernehmen`}
+                >
+                  {d.code}
+                </button>
+                <span className="code-what">
+                  <b>{d.title}</b>
+                  <span>{dropNote(d, passes)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div className="card magic-creator">
@@ -1059,29 +937,74 @@ export function MagicSheet({
   )
 }
 
-/* ================= Current plan ================= */
+/* ================= Dein Tarif =================
+   Hiess bis zum 2026-09-25 "Dein aktueller Plan" — ein Ding, vier
+   Woerter (Plan, Tarif, Plan anpassen, Dein Plan). Jetzt: Tarif.
+
+   Wechseln fuehrt nicht mehr in den Neukunden-Ablauf, sondern ins
+   Bestaetigungs-Sheet; Kuendigen ebenso, mit dem Wortlaut nach
+   § 312k BGB. Was vorgemerkt oder gekuendigt ist, steht hier oben —
+   mit dem Weg zurueck. */
 export function PlanSheet({
   open,
   onClose,
   planIdx,
+  pendingIdx,
+  cancelled,
   onSwitchPlan,
   onCancelPlan,
+  onUndoSwitch,
+  onUndoCancel,
 }: {
   open: boolean
   onClose: () => void
   planIdx: number
+  /** Zum naechsten Abrechnungstag vorgemerkter Tarif, sonst null. */
+  pendingIdx: number | null
+  cancelled: boolean
   onSwitchPlan: () => void
   onCancelPlan: () => void
+  onUndoSwitch: () => void
+  onUndoCancel: () => void
 }) {
   const plan = PLANS[planIdx]
+  /* Jedes Oeffnen beginnt oben — dort steht, was vorgemerkt oder
+     gekuendigt ist. Wer vom Bestaetigungs-Sheet mit "Fertig" hierher
+     zurueckkommt, hatte vorher zum Kuendigen-Link gescrollt und saehe
+     den neuen Zustand sonst nicht. */
+  const bodyRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (open && bodyRef.current) bodyRef.current.scrollTop = 0
+  }, [open])
   return (
-    <Sheet id="planSheet" open={open} label="Dein aktueller Plan" onClose={onClose}>
-      <div className="sheet-body">
+    <Sheet id="planSheet" open={open} label="Dein Tarif" onClose={onClose}>
+      <div className="sheet-body" ref={bodyRef}>
         <div className="plan-sheet-head">
-          <h2>Dein aktueller Plan</h2>
-          <p>Wechsel oder kündige Deinen Plan</p>
+          <h2>Dein Tarif</h2>
+          <p>Wechseln oder kündigen, jeden Monat</p>
         </div>
-        <SimCard plan={plan} chipText="Aktiv" holder={HOLDER.full} />
+
+        {cancelled ? (
+          <div className="card plan-note" role="status">
+            <b>Gekündigt zum {fmtDate(CYCLE.end)}</b>
+            <p>Bis dahin läuft alles weiter. Die Bestätigung liegt unter Account → Dokumente.</p>
+            <button type="button" className="link-plain" onClick={onUndoCancel}>
+              Kündigung zurücknehmen
+            </button>
+          </div>
+        ) : pendingIdx !== null ? (
+          <div className="card plan-note" role="status">
+            <b>
+              Ab {fmtDate(CYCLE.invoiceDate)}: {PLANS[pendingIdx].name}
+            </b>
+            <p>Bis dahin bleibt {plan.name}.</p>
+            <button type="button" className="link-plain" onClick={onUndoSwitch}>
+              Wechsel zurücknehmen
+            </button>
+          </div>
+        ) : null}
+
+        <SimCard plan={plan} chipText={cancelled ? 'Gekündigt' : 'Aktiv'} holder={HOLDER.full} />
         <div className="features-block" style={{ marginTop: 32, paddingBottom: 0 }}>
           <h3>Deine Features</h3>
           <p className="desc">{plan.desc}</p>
@@ -1089,12 +1012,15 @@ export function PlanSheet({
         </div>
         <div className="plan-sheet-actions">
           {/* Figma: Glas-Button, nicht rot gefuellt */}
-          <Button onClick={onSwitchPlan}>
-            Plan wechseln
-          </Button>
-          <button className="link-danger" onClick={onCancelPlan}>
-            Plan kündigen
-          </button>
+          {!cancelled && pendingIdx === null && <Button onClick={onSwitchPlan}>Tarif wechseln</Button>}
+          {/* § 312k BGB: gut lesbar, mit nichts anderem beschriftet als
+              "Verträge hier kündigen", fuehrt unmittelbar zur
+              Bestaetigungsseite — und ist staendig verfuegbar. */}
+          {!cancelled && (
+            <button className="link-danger" onClick={onCancelPlan}>
+              Verträge hier kündigen
+            </button>
+          )}
         </div>
         <div style={{ height: 24 }} />
       </div>

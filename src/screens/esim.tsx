@@ -25,16 +25,18 @@
    ============================================================ */
 import { useEffect, useRef, useState } from 'react'
 import { Button, FlowSteps, Screen } from '../components/ui'
+import { PassCard } from '../components/magic-pass'
+import type { MagicPass } from '../data/magic'
 import type { Plan } from '../data/plans'
 import { AuroraFlow } from '../components/onboarding-visuals'
 import { BEAT_TONE, EsimStage } from '../components/esim-forge'
-import { BeatCaption, BeatMeter } from '../components/beats'
+import { BeatCaption } from '../components/beats'
 import { hapticLand, hapticPress, hapticSuccess } from '../lib/haptics'
 import {
   ESIM_INSTALL_ACTS,
   ESIM_MANUAL,
   ESIM_REQUIREMENTS,
-  FIRST_STEPS,
+  firstSteps,
   HOLDER,
   FORGE_ACTS,
   FORGE_FINALE,
@@ -44,8 +46,7 @@ import {
    haengt daran, wie viel in ihm zu sehen ist. Hier wird daraus die
    Kette der Zeitpunkte gerechnet, statt eine feste Schrittweite zu
    multiplizieren. */
-const MS_LIST = [...FORGE_ACTS, ...ESIM_INSTALL_ACTS].map((a) => a.ms)
-const TOTAL_BEATS = MS_LIST.length
+const TOTAL_BEATS = FORGE_ACTS.length + ESIM_INSTALL_ACTS.length
 
 /** Startet eine Gruppe von Takten und meldet sich am Ende. Gibt die
     Zeitgeber zurueck, damit der Aufrufer sie wieder abraeumen kann. */
@@ -65,6 +66,9 @@ export function EsimJourney({
   active,
   plan,
   numberLabel,
+  porting,
+  unlocked,
+  onLive,
   onDone,
 }: {
   active: boolean
@@ -73,6 +77,13 @@ export function EsimJourney({
   /** Die Rufnummer, um die es geht — bei Mitnahme steht hier der
       Hinweis auf den laufenden Wechsel statt einer Nummer. */
   numberLabel: string
+  /** Zieht eine Nummer um? Davon haengt ab, welche Schritte danach anstehen. */
+  porting: boolean
+  /** Ein vor dem Kauf reservierter Magic Code — eingeloest im Moment
+      "im Netz", oder die Auskunft, warum es nicht ging. */
+  unlocked: { pass: MagicPass } | { miss: string } | null
+  /** Die eSIM ist im Netz. Jetzt wird der reservierte Code eingeloest. */
+  onLive: () => void
   onDone: () => void
 }) {
   const [phase, setPhase] = useState<Phase>('forge')
@@ -158,13 +169,16 @@ export function EsimJourney({
         : phase === 'done'
           ? ESIM_INSTALL_ACTS[ESIM_INSTALL_ACTS.length - 1]
           : FORGE_FINALE
-  const step =
+  /* Wie viele Takte gefuellt sind, sobald der laufende fertig ist. Der
+     Nachlauf "bereit" (idx 3 der Fertigung) ist kein eigener Takt und
+     fuellt nichts nach. */
+  const fill =
     phase === 'forge'
-      ? Math.min(idx, FORGE_ACTS.length)
+      ? Math.min(idx + 1, FORGE_ACTS.length)
       : phase === 'handover'
         ? FORGE_ACTS.length
         : phase === 'install'
-          ? FORGE_ACTS.length + idx
+          ? FORGE_ACTS.length + Math.min(idx + 1, ESIM_INSTALL_ACTS.length)
           : TOTAL_BEATS
 
   /* ---------- Die Signatur ----------
@@ -179,10 +193,10 @@ export function EsimJourney({
 
      Der Schlag haengt am Taktwechsel, nicht am Rendern: derselbe Takt
      zweimal gerendert loest nichts aus (Regel 2). Gezaehlt wird dabei
-     nach Phase UND Index, nicht nach `step` — `step` steht am Ende der
-     Fertigung, waehrend der Uebergabe und zu Beginn der Einrichtung
-     auf demselben Wert, und der erste Schlag des iPhones fiele
-     stillschweigend aus.
+     nach Phase UND Index, nicht nach dem Fuellstand der Schrittanzeige
+     (`fill`) — der steht am Ende der Fertigung und waehrend der
+     Uebergabe auf demselben Wert, und ein Schlag fiele stillschweigend
+     aus.
 
      Der letzte Index der Einrichtung wird doppelt gestellt: der
      Nachlauf haelt das Bild eine Sekunde, damit das Netz zeigen kann,
@@ -213,19 +227,17 @@ export function EsimJourney({
      nach dem letzten Takt (der Nachlauf von runActs) und damit ein
      eigener Moment, keine Doppelung. */
   useEffect(() => {
-    if (phase === 'done') hapticSuccess()
+    if (phase !== 'done') return
+    hapticSuccess()
+    onLive()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
-  const meter = (paused = false) => (
-    <BeatMeter
-      step={step}
-      msList={MS_LIST}
-      run={warm}
-      paused={paused}
-      groupAfter={FORGE_ACTS.length}
-      label={`Schritt ${Math.min(step + 1, TOTAL_BEATS)} von ${TOTAL_BEATS} der eSIM-Einrichtung`}
-    />
-  )
+  /* Die Takte fuellen das Segment "eSIM" der Schrittanzeige, jeder
+     ueber seine eigene Dauer. Waehrend der Uebergabe steht die Fuellung
+     bei drei von sieben: dort arbeitet niemand, der Kunde ist dran. Das
+     war vorher die Luecke im eigenen Taktmesser. */
+  const steps = firstSteps(porting)
 
   return (
     <Screen active={active}>
@@ -244,6 +256,14 @@ export function EsimJourney({
           steht als data-Attribut am Rahmen, die Groesse und der Platz
           kommen aus dem CSS — der Inhalt darum wechselt, der
           Gegenstand nicht. */}
+      <div className="flow-top">
+        <FlowSteps
+          current={phase === 'done' ? 4 : 3}
+          progress={fill / TOTAL_BEATS}
+          stepMs={phase === 'handover' ? 0 : act.ms}
+        />
+      </div>
+
       <div className="jr" data-phase={phase}>
         <div className="jr-stage">
           <EsimStage beat={act.beat} run={warm} plan={plan} holder={HOLDER.full} />
@@ -252,7 +272,6 @@ export function EsimJourney({
         {shown === 'forge' || shown === 'install' ? (
         <div className={`jr-run${leave}`}>
           <BeatCaption title={act.title} text={act.text} />
-          {meter()}
         </div>
       ) : shown === 'handover' ? (
         /* Die Uebergabe. Die Karte bleibt stehen und dreht sich zum
@@ -262,7 +281,7 @@ export function EsimJourney({
            gerade kein Netz, um danach zu suchen. */
         <div className={`flow esim-hand${leave}`}>
           <div className="flow-head">
-            <FlowSteps current={3} />
+            <div className="flow-steps-space" aria-hidden="true" />
             {/* Haelt den Platz frei, ueber dem die Buehne schwebt. */}
             <div className="jr-gap" aria-hidden="true" />
             <h1>{FORGE_FINALE.title}</h1>
@@ -273,7 +292,7 @@ export function EsimJourney({
 
           <div className="flow-scroll">
             <div className="card esim-card">
-              <ul className="roam-rules esim-req">
+              <ul className="dot-list esim-req">
                 {ESIM_REQUIREMENTS.map((r) => (
                   <li key={r}>{r}</li>
                 ))}
@@ -290,7 +309,7 @@ export function EsimJourney({
               </button>
               {manual && (
                 <div className="card esim-manual">
-                  <p className="roam-lead">
+                  <p className="card-lead">
                     Einstellungen → Mobilfunk → eSIM hinzufügen → Details manuell eingeben.
                   </p>
                   <div className="esim-kv">
@@ -312,7 +331,6 @@ export function EsimJourney({
           </div>
 
           <div className="flow-cta">
-            {meter(true)}
             <Button onClick={() => setPhase('install')}>
               eSIM installieren
             </Button>
@@ -325,16 +343,31 @@ export function EsimJourney({
            Dashboard liegt. */
         <div className={`flow esim-done${leave}`}>
           <div className="flow-head">
+            <div className="flow-steps-space" aria-hidden="true" />
             <div className="jr-gap" aria-hidden="true" />
             <h1>Du bist im Netz.</h1>
             <p className="flow-lead">{numberLabel}</p>
           </div>
 
           <div className="flow-scroll">
+            {/* Der Code, mit dem jemand hergekommen ist, zahlt sich genau
+                hier aus: im selben Moment, in dem die eSIM live ist. */}
+            {unlocked && 'pass' in unlocked && (
+              <section className="flow-sec esim-unlock">
+                <h2>Dein Magic Code ist eingelöst</h2>
+                <PassCard pass={unlocked.pass} />
+              </section>
+            )}
+            {unlocked && 'miss' in unlocked && (
+              <section className="flow-sec esim-unlock">
+                <h2>Dein Magic Code</h2>
+                <p className="hint">{unlocked.miss}</p>
+              </section>
+            )}
             <section className="flow-sec">
-              <h2>Drei Dinge noch</h2>
+              <h2>{steps.length === 2 ? 'Zwei Dinge noch' : 'Drei Dinge noch'}</h2>
               <ol className="magic-steps">
-                {FIRST_STEPS.map((s, i) => (
+                {steps.map((s, i) => (
                   <li key={s.title}>
                     <span className="n" aria-hidden="true">{i + 1}</span>
                     <div>
@@ -349,7 +382,10 @@ export function EsimJourney({
           </div>
 
           <div className="flow-cta">
-            <Button onClick={onDone}>Los geht's</Button>
+            {/* "Fertig", nicht "Los geht's": writing.md › Best practices —
+                "Make it clear when a flow is complete by using language
+                like 'Done.'" */}
+            <Button onClick={onDone}>Fertig</Button>
           </div>
         </div>
       )}

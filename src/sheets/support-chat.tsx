@@ -6,7 +6,7 @@
    und steht in keiner Vorlage — also fuehrt apple-design, und
    data/support.ts erklaert, warum der Assistent sagt, was er sagt.
 
-   Die Bauart in drei Saetzen:
+   Die Bauart in vier Saetzen:
 
    · Rechts steht, was Du sagst oder sagen kannst. Deine Blasen UND
      die Antwortknoepfe — ein Knopf ist eine Antwort, die schon
@@ -15,6 +15,11 @@
      ist Inhalt im Sheet, also Mulde (--noura-well), nicht Glas:
      "Inhalt IM Sheet ist dunkler als das Sheet" (Konto-Seiten,
      2026-09-24).
+   · Unten steht fest, was immer geht: der Rueckruf und das
+     Eingabefeld. Der Rueckruf ist kein Vorschlag des Assistenten,
+     sondern der Weg an ihm vorbei zum Team (generative-ai.md:
+     "consider offering a non-AI fallback") — er wechselt nicht mit
+     jeder Antwort, scrollt nicht weg und fliegt nicht in den Verlauf.
    · Warten zeigt, was gerade passiert: ein Satz und die Haarlinie,
      die das System fuer jedes Warten hat. Keine huepfenden Punkte —
      die sagen nur, dass etwas passiert, nicht was.
@@ -26,6 +31,10 @@
    der Blase, weil sie zu ihr gehoert. Die Vorschlaege kommen zuletzt,
    weil sie erst nach der Antwort Sinn ergeben. Nichts davon haelt die
    Eingabe auf — getippt werden kann jederzeit.
+
+   Bis zum 2026-09-25 gab es daneben den Chat mit einem Menschen
+   (Warteschlange, Lea, Systemzeilen). Entfallen, von Niclas: der
+   Rueckruf ist der eine Weg zum Team.
    ============================================================ */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Button } from '../components/ui'
@@ -39,22 +48,17 @@ import {
   fmtEuro,
   fmtGb,
   usageSummary,
-  type RoamingState,
 } from '../data/account'
 import { planTitle, type Plan } from '../data/plans'
 import {
-  AGENT,
-  AGENT_REPLIES,
   CALLBACK_SLOTS,
   ESIM_STEPS,
-  FALLBACK,
-  QUEUE_MS,
   TEAM_HOURS,
-  agentHello,
+  UNSURE,
   answer,
   detect,
   greeting,
-  startTopics,
+  START_TOPICS,
   topicLabel,
   type ChatCard,
   type ChatJump,
@@ -62,7 +66,7 @@ import {
   type Topic,
 } from '../data/support'
 
-type From = 'me' | 'bot' | 'agent' | 'sys'
+type From = 'me' | 'bot'
 
 interface Msg {
   id: number
@@ -72,12 +76,8 @@ interface Msg {
   jump?: { to: ChatJump; label: string }
 }
 
-/** Was rechts unten zur Wahl steht. 'start' wird beim Zeichnen
-    aufgeloest, nicht beim Setzen — wechselt der Standort, waehrend der
-    Chat offen liegt, stimmen die Vorschlaege trotzdem. */
-type Offer = { k: 'topics'; topics: Topic[] | 'start' } | { k: 'slots' } | { k: 'agent' } | null
-
-type Mode = 'bot' | 'queue' | 'agent'
+/** Was rechts unten zur Wahl steht. 'start' steht fuer START_TOPICS. */
+type Offer = { k: 'topics'; topics: Topic[] | 'start' } | { k: 'slots' } | null
 
 interface Booking {
   slot: string
@@ -95,8 +95,8 @@ interface Booking {
 
    1. ANKOMMEN (SEND_BEAT) — die eigene Nachricht landet, erst dann
       beginnt die Gegenseite. Ohne die Pause antworten beide zugleich.
-   2. NACHSEHEN (think / typing) — waechst mit dem, was geantwortet
-      wird. Eine Karte heisst: es wurde etwas nachgeschlagen.
+   2. NACHSEHEN (think) — waechst mit dem, was geantwortet wird. Eine
+      Karte heisst: es wurde etwas nachgeschlagen.
    3. ANBIETEN (OFFER_BEAT) — die Vorschlaege erst, wenn die Antwort
       steht. Vorher waeren sie Antworten auf eine Frage, die noch
       niemand gestellt hat. */
@@ -104,8 +104,6 @@ const SEND_BEAT = 350
 const OFFER_BEAT = 450
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 const think = (text: string, looksUp: boolean) => clamp(1100 + text.length * 6 + (looksUp ? 350 : 0), 1200, 2200)
-/** Ein Mensch tippt, er schlaegt nicht nach — also nach Laenge. */
-const typing = (text: string) => clamp(1200 + text.length * 14, 1600, 3000)
 /** Die anderen Vorschlaege gehen, bevor der gewaehlte losfliegt. */
 const LEAVE_MS = 140
 
@@ -114,29 +112,29 @@ const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)
 export function SupportChat({
   open,
   plan,
-  roaming,
   onJump,
 }: {
   open: boolean
   plan: Plan
-  roaming: RoamingState
   /** Schliesst den Chat und oeffnet das Ziel — ein Sheet zur Zeit. */
   onJump: (to: ChatJump) => void
 }) {
-  const ctx: SupportCtx = { first: HOLDER.first, phone: HOLDER.phone, plan, roaming, usage: usageSummary() }
+  const ctx: SupportCtx = { first: HOLDER.first, phone: HOLDER.phone, plan, usage: usageSummary() }
 
   const nextId = useRef(1)
   const [msgs, setMsgs] = useState<Msg[]>(() => [{ id: 0, from: 'bot', text: greeting(ctx) }])
   const [offer, setOffer] = useState<Offer>({ k: 'topics', topics: 'start' })
-  const [pending, setPending] = useState<{ text: string; sys?: boolean } | null>(null)
-  const [mode, setMode] = useState<Mode>('bot')
+  /* Was nach der laufenden Antwort zur Wahl stehen wird. Der feste
+     Rueckruf-Knopf fragt danach: solange die Zeiten unterwegs oder
+     schon da sind, ist er gedrueckt und nimmt keinen zweiten Tipp. */
+  const [coming, setComing] = useState<Offer>(null)
+  const [pending, setPending] = useState<string | null>(null)
   const [booking, setBooking] = useState<Booking | null>(null)
   const [input, setInput] = useState('')
 
   const bodyRef = useRef<HTMLDivElement>(null)
   const logRef = useRef<HTMLDivElement>(null)
   const lastRef = useRef<HTMLDivElement>(null)
-  const agentTurn = useRef(0)
   /* Jede Antwort bekommt eine Marke. Nur die juengste raeumt das Warten
      weg und setzt die Vorschlaege — tippt jemand zweimal schnell, gilt
      das, was zur zweiten Nachricht gehoert. */
@@ -158,107 +156,87 @@ export function SupportChat({
 
   const respond = (
     a: { status: string; text: string; card?: ChatCard; jump?: Msg['jump'] },
-    from: 'bot' | 'agent',
     then: Offer,
     after?: () => void,
   ) => {
     const mine = ++turn.current
-    const wait = from === 'agent' ? typing(a.text) : think(a.text, Boolean(a.card || a.jump))
+    const wait = think(a.text, Boolean(a.card || a.jump))
     setOffer(null)
-    later(() => mine === turn.current && setPending({ text: a.status }), SEND_BEAT)
+    setComing(then)
+    later(() => mine === turn.current && setPending(a.status), SEND_BEAT)
     later(() => {
-      push({ from, text: a.text, card: a.card, jump: a.jump })
+      push({ from: 'bot', text: a.text, card: a.card, jump: a.jump })
       after?.()
       if (mine !== turn.current) return
       setPending(null)
-      later(() => mine === turn.current && setOffer(then), OFFER_BEAT)
+      later(() => {
+        if (mine !== turn.current) return
+        setOffer(then)
+        setComing(null)
+      }, OFFER_BEAT)
     }, SEND_BEAT + wait)
   }
 
   /* ---- Themen ---- */
   const ask = (topic: Topic) => {
-    if (topic === 'human') return handOff()
-    if (topic === 'callback') {
-      if (booking && !booking.cancelled)
-        return respond(
-          { status: 'Sieht nach Deinem Termin …', text: 'Du hast schon einen Rückruf:', card: 'booking' },
-          'bot',
-          { k: 'topics', topics: ['human'] },
-        )
-      return respond(
-        { status: 'Sucht freie Zeiten …', text: `Gern. Wir rufen Dich unter ${ctx.phone} an — wann passt es Dir?` },
-        'bot',
-        { k: 'slots' },
-      )
-    }
+    if (topic === 'callback') return callBack()
     const a = answer(topic, ctx)
-    respond(a, 'bot', { k: 'topics', topics: a.next })
+    respond(a, { k: 'topics', topics: a.next })
   }
 
   /* ---- Rueckruf ----
-     Die Buchung ist der eine folgenreiche Moment in diesem Chat, also
+     Der eine Weg zum Team — ueber den festen Knopf, auf Nachfrage
+     ("Kann ich mit jemandem sprechen?") und dort, wo der Assistent
+     keine Antwort hat (`unsure`). Steht schon ein Termin, zeigt er ihn,
+     statt einen zweiten anzubieten. */
+  const callBack = (unsure = false) => {
+    if (booking && !booking.cancelled)
+      return respond(
+        {
+          status: 'Sieht nach Deinem Termin …',
+          text: unsure ? `${UNSURE} Frag das am besten bei Deinem Rückruf:` : 'Du hast schon einen Rückruf:',
+          card: 'booking',
+        },
+        { k: 'topics', topics: 'start' },
+      )
+    respond(
+      {
+        status: unsure ? 'Schreibt …' : 'Sucht freie Zeiten …',
+        text: unsure
+          ? `${UNSURE} Jemand aus dem Team ruft Dich unter ${ctx.phone} an — wann passt es Dir?`
+          : `Gern. Wir rufen Dich unter ${ctx.phone} an — wann passt es Dir?`,
+      },
+      { k: 'slots' },
+    )
+  }
+
+  /* Die Buchung ist der eine folgenreiche Moment in diesem Chat, also
      traegt sie die Erfolgs-Haptik — im selben Augenblick, in dem die
      Karte erscheint (Regel 1: nie das einzige Signal). */
   const book = (slot: string) => {
     setBooking({ slot, cancelled: false })
     respond(
       { status: 'Trägt den Termin ein …', text: 'Steht. Zehn Minuten vorher bekommst Du eine Mitteilung.', card: 'booking' },
-      'bot',
       { k: 'topics', topics: ['usage', 'bill'] },
       hapticSuccess,
     )
   }
 
-  /* Absagen geht aus der Karte heraus, auch mitten im Gespraech mit
-     Lea. Dann meldet es das System in einer Zeile — der Assistent
-     spricht nicht mehr, und Lea hat es nicht getan. */
+  /* Absagen geht aus der Karte heraus. */
   const cancelBooking = () => {
     setBooking((b) => b && { ...b, cancelled: true })
-    if (mode !== 'bot') return push({ from: 'sys', text: 'Rückruf abgesagt' })
     respond(
       { status: 'Sagt den Termin ab …', text: 'Abgesagt. Wenn Du doch reden willst, sag einfach Bescheid.' },
-      'bot',
-      { k: 'topics', topics: ['callback', 'human'] },
+      { k: 'topics', topics: 'start' },
     )
-  }
-
-  /* ---- Uebergabe ----
-     Die Warteschlange steht als Zeile in der Mitte, nicht als Blase:
-     sie ist Zustand, kein Gespraechsbeitrag. Wer waehrenddessen
-     schreibt, schreibt schon an den Menschen — der Assistent schweigt
-     ab hier. */
-  const handOff = () => {
-    const mine = ++turn.current
-    setOffer(null)
-    setMode('queue')
-    later(() => setPending({ text: 'Du bist in der Warteschlange — Platz 2', sys: true }), SEND_BEAT)
-    later(
-      () => mine === turn.current && setPending({ text: 'Platz 1 — gleich geht’s los', sys: true }),
-      SEND_BEAT + QUEUE_MS[0],
-    )
-    later(() => {
-      setPending(null)
-      push({ from: 'sys', text: `${AGENT.name} aus dem ${AGENT.team} ist jetzt im Chat` })
-      setMode('agent')
-      respond({ status: `${AGENT.name} schreibt …`, text: agentHello(ctx) }, 'agent', { k: 'agent' })
-    }, SEND_BEAT + QUEUE_MS[0] + QUEUE_MS[1])
-  }
-
-  const endAgent = () => {
-    push({ from: 'sys', text: `Chat mit ${AGENT.name} beendet` })
-    agentTurn.current = 0
-    setMode('bot')
-    respond({ status: 'Schreibt …', text: 'Ich bin wieder da. Sonst noch etwas?' }, 'bot', { k: 'topics', topics: 'start' })
   }
 
   /* ---- Eingaben ---- */
-  /** `act`: eine Handlung, keine Nachricht — sie erscheint nicht als
-      eigene Blase. */
-  type Reply = { label: string; ghost?: boolean; act?: boolean; run: () => void }
+  type Reply = { label: string; ghost?: boolean; run: () => void }
   const replies: Reply[] =
     offer?.k === 'topics'
-      ? (offer.topics === 'start' ? startTopics(ctx) : offer.topics).map((t) => ({
-          label: topicLabel(t, ctx),
+      ? (offer.topics === 'start' ? START_TOPICS : offer.topics).map((t) => ({
+          label: topicLabel(t),
           run: () => ask(t),
         }))
       : offer?.k === 'slots'
@@ -267,16 +245,10 @@ export function SupportChat({
             {
               label: 'Doch nicht',
               ghost: true,
-              run: () =>
-                respond({ status: 'Schreibt …', text: 'Kein Problem. Sonst noch etwas?' }, 'bot', {
-                  k: 'topics',
-                  topics: 'start',
-                }),
+              run: () => respond({ status: 'Schreibt …', text: 'Kein Problem. Sonst noch etwas?' }, { k: 'topics', topics: 'start' }),
             },
           ]
-        : offer?.k === 'agent'
-          ? [{ label: 'Chat beenden', ghost: true, act: true, run: endAgent }]
-          : []
+        : []
 
   /* Der gedrueckte Knopf verschwindet mit seiner Gruppe. Ohne neues Ziel
      faellt der Fokus auf das Dokument, und VoiceOver faengt oben an. */
@@ -299,10 +271,7 @@ export function SupportChat({
     later(
       () => {
         setLeaving(null)
-        /* "Chat beenden" ist keine Nachricht an Lea, sondern eine
-           Handlung — sie steht als Systemzeile im Verlauf, nicht als
-           eigene Blase. */
-        if (!r.act) flights.current.set(push({ from: 'me', text: r.label }), from)
+        flights.current.set(push({ from: 'me', text: r.label }), from)
         r.run()
       },
       reduceMotion() ? 0 : LEAVE_MS,
@@ -330,20 +299,28 @@ export function SupportChat({
     flights.current.clear()
   }, [msgs])
 
+  /* ---- Der feste Rueckruf ----
+     Er bleibt stehen, also fliegt er nicht: die Blase steigt aus der
+     Leiste auf wie eine getippte. Steht ein Termin, traegt der Knopf
+     ihn — der Weg zum Team zeigt dann seinen Stand, und ein Tipp holt
+     die Karte mit "Rückruf absagen". */
+  const booked = booking && !booking.cancelled ? booking : null
+  const choosing = offer?.k === 'slots' || coming?.k === 'slots'
+  const requestCall = () => {
+    if (choosing || leaving) return
+    push({ from: 'me', text: booked ? 'Mein Rückruf' : topicLabel('callback') })
+    callBack()
+  }
+
   const send = () => {
     const v = input.trim()
     if (!v || leaving) return
     setInput('')
     push({ from: 'me', text: v })
-    if (mode === 'queue') return
-    if (mode === 'agent') {
-      const text = AGENT_REPLIES[Math.min(agentTurn.current++, AGENT_REPLIES.length - 1)]
-      return respond({ status: `${AGENT.name} schreibt …`, text }, 'agent', { k: 'agent' })
-    }
     const intent = detect(v)
     if (intent === 'thanks')
-      return respond({ status: 'Schreibt …', text: 'Gern! Sonst noch etwas?' }, 'bot', { k: 'topics', topics: 'start' })
-    if (intent === null) return respond(FALLBACK, 'bot', { k: 'topics', topics: FALLBACK.next })
+      return respond({ status: 'Schreibt …', text: 'Gern! Sonst noch etwas?' }, { k: 'topics', topics: 'start' })
+    if (intent === null) return callBack(true)
     ask(intent)
   }
 
@@ -374,25 +351,16 @@ export function SupportChat({
 
   return (
     <>
-      {/* Der Schluessel wechselt mit dem Gegenueber: die Zeile wird neu
-          gesetzt und kommt herein — wer antwortet, hat gewechselt. Die
-          Warteschlange ist noch der Assistent, nur mit anderer Zeile. */}
-      <div className="chat-head" key={mode === 'agent' ? 'agent' : 'bot'}>
-        <span className={`chat-ava${mode === 'agent' ? ' person' : ''}`} aria-hidden="true">
-          {mode === 'agent' ? AGENT.initial : <AssistantGlyph />}
+      <div className="chat-head">
+        <span className="chat-ava" aria-hidden="true">
+          <AssistantGlyph />
         </span>
         <div className="tx">
-          <h2>{mode === 'agent' ? `${AGENT.name} · ${AGENT.team}` : 'Assistent'}</h2>
+          <h2>Assistent</h2>
+          {/* Kurz genug fuer eine Zeile neben dem Schliessen-Knopf
+              (241px bei 14px). Die Zeiten brechen nie in sich um. */}
           <p>
-            {mode === 'agent'
-              ? 'Ein Mensch aus unserem Team'
-              : mode === 'queue'
-                ? 'Verbindet Dich mit dem Team …'
-                : /* Kurz genug fuer eine Zeile neben dem Schliessen-Knopf
-                     (241px bei 14px). Die Zeiten brechen nie in sich um. */
-                  <>
-                    Automatisch · <span className="nowrap">Team {TEAM_HOURS}</span>
-                  </>}
+            Automatisch · <span className="nowrap">Team {TEAM_HOURS}</span>
           </p>
         </div>
       </div>
@@ -402,17 +370,11 @@ export function SupportChat({
           {msgs.map((m, i) => {
             const isLast = i === msgs.length - 1 && !pending
             const ref = isLast ? lastRef : undefined
-            if (m.from === 'sys')
-              return (
-                <div key={m.id} className="chat-sys" ref={ref}>
-                  {m.text}
-                </div>
-              )
             const showFrom = m.from !== 'me' && m.from !== speaker
             if (m.from !== 'me') speaker = m.from
             return (
               <div key={m.id} data-mid={m.id} className={`chat-msg${m.from === 'me' ? ' me' : ''}`} ref={ref}>
-                {showFrom && <span className="bubble-from">{m.from === 'agent' ? AGENT.name : 'Assistent'}</span>}
+                {showFrom && <span className="bubble-from">Assistent</span>}
                 <div className={`bubble${m.from === 'me' ? ' me' : ''}`}>{m.text}</div>
                 {(m.card || m.jump) && (
                   <div className={`chat-card${m.card === 'booking' ? ' booking' : ''}`}>
@@ -432,14 +394,8 @@ export function SupportChat({
           })}
 
           {pending && (
-            <div
-              /* Neuer Text, neues Element: "Platz 2" → "Platz 1" kommt
-                 herein, statt still ausgetauscht zu werden. */
-              key={pending.text}
-              ref={lastRef}
-              className={pending.sys ? 'chat-sys pending' : 'bubble pending'}
-            >
-              {pending.text}
+            <div key={pending} ref={lastRef} className="bubble pending">
+              {pending}
             </div>
           )}
 
@@ -464,26 +420,38 @@ export function SupportChat({
         </div>
       </div>
 
-      <div className="chat-input">
-        <input
-          type="text"
-          aria-label={mode === 'agent' ? `Nachricht an ${AGENT.name}` : 'Nachricht schreiben'}
-          placeholder={mode === 'agent' ? `Nachricht an ${AGENT.name} …` : 'Frag etwas …'}
-          /* virtual-keyboards.md › Best practices: die Eingabetaste sagt,
-             was sie tut. */
-          enterKeyHint="send"
-          autoComplete="off"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && send()}
-        />
-        <button className="send" aria-label="Senden" onClick={send} disabled={!input.trim()}>
-          {/* Figma: Papierflieger-Symbol, 18x18 */}
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M22 2L11 13" />
-            <path d="M22 2l-7 20-4-9-9-4 20-7z" />
-          </svg>
-        </button>
+      <div className="chat-foot">
+        <Button className={`chat-call${booked ? ' booked' : ''}`} onClick={requestCall} disabled={choosing}>
+          <PhoneGlyph />
+          {booked ? (
+            <span>
+              Rückruf · <span className="nowrap">{booked.slot}</span>
+            </span>
+          ) : (
+            topicLabel('callback')
+          )}
+        </Button>
+        <div className="chat-input">
+          <input
+            type="text"
+            aria-label="Nachricht schreiben"
+            placeholder="Frag etwas …"
+            /* virtual-keyboards.md › Best practices: die Eingabetaste sagt,
+               was sie tut. */
+            enterKeyHint="send"
+            autoComplete="off"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && send()}
+          />
+          <button className="send" aria-label="Senden" onClick={send} disabled={!input.trim()}>
+            {/* Figma: Papierflieger-Symbol, 18x18 */}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M22 2L11 13" />
+              <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+            </svg>
+          </button>
+        </div>
       </div>
     </>
   )
@@ -504,7 +472,7 @@ function CardBody({
   booking: Booking | null
   onCancel: () => void
 }) {
-  const { usage: u, plan, roaming: r } = ctx
+  const { usage: u, plan } = ctx
 
   if (card === 'usage') {
     const up = u.trendPct >= 0
@@ -528,28 +496,6 @@ function CardBody({
         <b className="cc-v">{fmtEuro(plan.monthly)}</b>
         <span className="cc-note">
           Zeitraum {fmtDayMonth(CYCLE.start)}–{fmtDate(CYCLE.end)}, inkl.{'\u00a0'}{Math.round(VAT * 100)}{'\u00a0'}%{'\u00a0'}MwSt.
-          {/* Der Betrag ist der Grundpreis, nicht die Summe: was unter
-              "Reisen" zugebucht wurde, kommt dazu. Das zu verschweigen
-              hiesse, eine zu niedrige Zahl als Rechnung auszugeben. */}
-          {r.extraGb > 0 && ' Dazu kommen Deine zugebuchten Reisepakete.'}
-        </span>
-      </div>
-    )
-  }
-
-  if (card === 'roaming') {
-    const eu = r.zone === 'eu'
-    const used = eu ? r.euUsedGb : r.usedGb
-    const total = eu ? r.euFupGb : r.allowanceGb ?? 0
-    return (
-      <div className="cc-body">
-        <span className="cc-k">
-          {r.flag} {r.country} · {r.network}
-        </span>
-        <b className="cc-v">{fmtGb(used)}</b>
-        <Bar value={used} max={total} label={`${fmtGb(used)} von ${fmtGb(total, 0)} genutzt`} />
-        <span className="cc-note">
-          von {fmtGb(total, 0)} {eu ? 'Fair Use in diesem Monat' : 'Reisevolumen'}
         </span>
       </div>
     )
@@ -630,5 +576,14 @@ const AssistantGlyph = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M5 4.5h14a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-7.5L7 20v-3.5H5A1.5 1.5 0 0 1 3.5 15V6A1.5 1.5 0 0 1 5 4.5z" />
     <path d="M8 9.5h8M8 12.5h5" />
+  </svg>
+)
+
+/* Ein Hoerer, gezeichnet wie die Sprechblase darueber: 24er Raster,
+   Kontur 1.8, runde Enden. Er sagt, was der Knopf von den Vorschlaegen
+   unterscheidet — hier antwortet ein Mensch, am Telefon. */
+const PhoneGlyph = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21 16.4v2.9a1.9 1.9 0 0 1-2.1 1.9 18.8 18.8 0 0 1-8.2-2.9 18.5 18.5 0 0 1-5.7-5.7A18.8 18.8 0 0 1 2.1 4.4 1.9 1.9 0 0 1 4 2.3h2.9a1.9 1.9 0 0 1 1.9 1.6c.1.9.4 1.8.7 2.7a1.9 1.9 0 0 1-.4 2L7.8 9.8a15.2 15.2 0 0 0 5.7 5.7l1.2-1.2a1.9 1.9 0 0 1 2-.4c.9.3 1.8.6 2.7.7a1.9 1.9 0 0 1 1.6 1.8z" />
   </svg>
 )

@@ -134,9 +134,24 @@ export function MagicTicket({ pass }: { pass: MagicPass }) {
 /* ---------- Kachel auf Home ----------
    Direkt unter der Code-Wolke: was die Wolke verspricht, liegt darunter
    als das, was man davon besitzt. Kompakt, weil Home schon dicht ist —
-   die Einzelheiten stehen im Sheet. */
-export function PassCard({ pass, onOpen }: { pass: MagicPass; onOpen: () => void }) {
+   die Einzelheiten stehen im Sheet.
+
+   Ohne `onOpen` steht sie still (keine Taste, kein Pfeil) — so zeigt
+   der Abschluss der eSIM-Einrichtung denselben Zugang, der gleich auf
+   Home liegt, ohne ins Sheet zu fuehren. */
+export function PassCard({ pass, onOpen }: { pass: MagicPass; onOpen?: () => void }) {
   const d = pass.drop
+  const body = (
+    <>
+      <ScanCode value={pass.entry} size={48} />
+      <span className="pass-tx">
+        <span className="pass-kind">{d.kind} · Zugang</span>
+        <b>{d.title}</b>
+        <span className="pass-when">{d.when}</span>
+      </span>
+    </>
+  )
+  if (!onOpen) return <div className="card pass-card">{body}</div>
   return (
     <button
       type="button"
@@ -144,12 +159,7 @@ export function PassCard({ pass, onOpen }: { pass: MagicPass; onOpen: () => void
       onClick={onOpen}
       aria-label={`Zugang ${d.title} anzeigen`}
     >
-      <ScanCode value={pass.entry} size={48} />
-      <span className="pass-tx">
-        <span className="pass-kind">{d.kind} · Zugang</span>
-        <b>{d.title}</b>
-        <span className="pass-when">{d.when}</span>
-      </span>
+      {body}
       <svg
         className="pass-go"
         viewBox="0 0 24 24"

@@ -268,10 +268,13 @@
   --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
   /* Nur Abgaenge. Was geht, beschleunigt weg; nichts kommt mit ease-in an. */
   --ease-in: cubic-bezier(0.4, 0, 0.9, 0.2);
-  /* Nur Schleifen, die hin und zurueck laufen (Schweben, Treiben): Sinus,
-     symmetrisch. ease-out startet jede Haelfte mit dem 2,25-fachen der
-     mittleren Geschwindigkeit — an jedem Umkehrpunkt kam die Karte zur
-     Ruhe und schnellte dann los, ein Zucken alle fuenf Sekunden. */
+  /* Nur Schleifen, die hin und zurueck laufen: Sinus, symmetrisch.
+     ease-out startet jede Haelfte mit dem 2,25-fachen der mittleren
+     Geschwindigkeit — ein Zucken an jedem Umkehrpunkt.
+     Seit dem 2026-09-25 laufen solche Schleifen nur noch ueber
+     Deckkraft (Suchbalken, Passkey). Gegenstaende pendeln nicht:
+     Karten stehen still, Scheine pumpen nicht, der Hintergrund kreist
+     gleichmaessig statt hin und her (onboarding.css › Farbwolken). */
   --ease-sway: cubic-bezier(0.37, 0, 0.63, 1);
   /* Der eine Ueberschwinger. Ein echter gedaempfter Schwinger
      (Antwort 0,42s, Daempfung 0,72, 25 Stuetzstellen ueber 460ms),
@@ -871,14 +874,16 @@ button.sim-card { cursor: pointer; }
    haengt die Kopfhoehe und damit der Versatz von .home-scroll (171px).
 
    Auf Home ist es ein schwebender Knopf, also Stufe 3: dasselbe Liquid
-   Glass wie .btn und .sheet-close, mit Kantenreflex. Im Kopf des
-   Konto-Sheets ist es nur ein Zeichen und traegt die flache Glasflaeche
-   wie .event-avatar — derselbe Buchstabe, ohne zu behaupten, man
-   koenne darauf tippen. */
+   Glass wie .btn und .sheet-close, mit Kantenreflex. Die Flaeche traegt
+   der Knopf, das Monogramm ist nur der Buchstabe darin.
+
+   Im Kopf des Konto-Sheets stand bis zum 2026-09-25 dasselbe Zeichen
+   noch einmal, flach. Entfernt (Niclas): der Knopf, der das Sheet
+   oeffnet, liegt direkt dahinter — das Sheet wiederholte ihn nur. */
 .monogram {
   width: 54px; height: 54px; flex-shrink: 0; border-radius: var(--noura-radius-pill);
   display: flex; align-items: center; justify-content: center;
-  background: var(--noura-glass-strong); color: var(--noura-text);
+  color: var(--noura-text);
   font-weight: 700; font-size: var(--fs-title); line-height: 1;
 }
 .avatar-btn {
@@ -888,7 +893,6 @@ button.sim-card { cursor: pointer; }
   -webkit-backdrop-filter: var(--lg-refract); backdrop-filter: var(--lg-refract);
   box-shadow: var(--lg-inner), var(--lg-lift);
 }
-.avatar-btn .monogram { background: none; }
 /* Kantenreflex wie .btn::before. */
 .avatar-btn::before {
   content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
@@ -902,9 +906,9 @@ button.sim-card { cursor: pointer; }
   -webkit-mask-composite: xor; mask-composite: exclude;
   pointer-events: none; z-index: -1;
 }
-/* Ein Abstand traegt die Spalte: 24px zwischen den Bloecken, 12px
-   innerhalb (siehe .usage-panel-in). Vorher standen hier sechs Werte,
-   davon zwei als Einzel-Margin an .magic und .section-toggle.
+/* Ein Abstand traegt die Spalte: 24px zwischen den Bloecken. Vorher
+   standen hier sechs Werte, davon zwei als Einzel-Margin an .magic und
+   dem inzwischen entfallenen Abschnittstitel.
 
    Der Abstand nach unten kommt aus denselben Tokens, an denen der
    "Mehr"-Knopf haengt: Leistenabstand + 61px Knopfhoehe + 24px Luft.
@@ -936,7 +940,8 @@ button.sim-card { cursor: pointer; }
 
    Rot bleibt auch hier keine Flaeche: Der Akzent erscheint nur als
    weicher Schein hinter dem Code — er markiert die Stelle, an der
-   sich etwas bewegt, und atmet im Takt der Neuformierung (5,2 s).
+   sich etwas bewegt. Er steht still; bis zum 2026-09-25 pumpte er im
+   Takt der Neuformierung, zusammen mit der Wolke doppelte Unruhe.
    Bau der Wolke siehe src/components/magic-code.tsx. */
 .magic {
   position: relative; width: 100%;
@@ -955,11 +960,7 @@ button.sim-card { cursor: pointer; }
   width: 180px; height: 104px; pointer-events: none;
   background: radial-gradient(50% 50% at 50% 50%,
     rgba(225, 80, 85, 0.3), rgba(225, 80, 85, 0) 72%);
-  animation: magic-glow 5.2s var(--ease-out) infinite;
-}
-@keyframes magic-glow {
-  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.9); }
-  50%      { opacity: 1;   transform: translate(-50%, -50%) scale(1.08); }
+  opacity: 0.8; transform: translate(-50%, -50%);
 }
 
 /* ---------- Code-Walze (components/code-reel.tsx) ----------
@@ -996,10 +997,14 @@ button.sim-card { cursor: pointer; }
 
 /* Die Wolke. Eigenes Koordinatensystem (345x112 Figma-Punkte), damit
    die Fragmente per transform statt per Layout wandern. */
-/* Die Wolke ist HTML, nicht SVG (siehe magic-code.tsx): Drift und
-   Uebergaenge laufen so im Compositor. Bis zum 2026-09-24 drehte die
+/* Die Wolke ist HTML, nicht SVG (siehe magic-code.tsx): ihre
+   Uebergaenge laufen so im Compositor. Bis zum 2026-09-24 drehte eine
    Drift ein SVG-Element — das kostete 22 Sekunden lang in Schleife ein
-   Layout je Bild, auch wenn Home gar nicht zu sehen war.
+   Layout je Bild, auch wenn Home gar nicht zu sehen war. Seit dem
+   2026-09-25 gibt es die Drift gar nicht mehr: die Wolke drehte sich
+   um 2,4 Grad hin und zurueck, und zwischen zwei Neuformierungen
+   schwankte damit die ganze Karte. Bewegung hat sie jetzt nur, wenn
+   der Code wechselt.
 
    Jedes Fragment steht bei (--x, --y), beide als Anteil der Flaeche;
    `container-type: size` macht cqw/cqh zu Breite und Hoehe der Karte.
@@ -1007,7 +1012,6 @@ button.sim-card { cursor: pointer; }
    vorher text-anchor="middle". */
 .magic-cloud {
   position: absolute; inset: 0; z-index: 0; container-type: size;
-  animation: magic-drift 22s var(--ease-out) infinite;
 }
 .mote {
   position: absolute; left: 0; top: 0; white-space: nowrap;
@@ -1018,10 +1022,6 @@ button.sim-card { cursor: pointer; }
 /* Einatmen ist kuerzer und haerter als das Ausatmen. */
 .magic-cloud.gathering .mote {
   transition-duration: var(--dur-screen); transition-timing-function: var(--ease-in);
-}
-@keyframes magic-drift {
-  0%, 100% { transform: rotate(-1.2deg) scale(1); }
-  50%      { transform: rotate(1.2deg) scale(1.05); }
 }
 
 .magic-body {
@@ -1055,40 +1055,32 @@ button.sim-card { cursor: pointer; }
 .magic-label svg { width: 16px; height: 16px; transition: transform var(--dur-quick) var(--ease-out); }
 .magic:active .magic-label svg { transform: translateX(3px); }
 
-/* Ohne eigene Margin: den Abstand traegt der gap der Scrollspalte. */
-.section-toggle { display: flex; align-items: center; gap: 8px; background: none; border: none; cursor: pointer; color: #fff; font-weight: 600; font-size: var(--fs-title); padding: 0; margin: 0; }
-.section-toggle svg { transition: transform var(--dur-quick) var(--ease-out); }
-.section-toggle.closed svg { transform: rotate(-90deg); }
-/* .usage / .usage-panel stehen in app.css — die alte 320px-Deckelung
-   ist entfallen, sie haette die Kacheln bei groesserer Schrift gekappt. */
-/* Figma 1330:1831: Kacheln 166x312 bzw. 166x150, Luecke 12px. Material
-   und Innenabstand kommen aus .card (app.css) — hier steht nur noch,
-   was die Kacheln von jeder anderen Karte unterscheidet. */
-.usage .card { justify-content: space-between; }
-.usage .card .use-ic {
-  width: 40px; height: 40px; border-radius: var(--noura-radius-pill);
+/* Verbrauch: .status-card (Home) und das Verbrauchs-Sheet stehen in
+   app.css. Am 2026-09-25 entfallen: die Klappe "Dein Verbrauch"
+   (.section-toggle, .usage-panel) und mit ihr die drei Figma-Kacheln
+   (1330:1831, .usage, .col-l/.col-r) samt ∞-Ring (.ring-wrap) — Home
+   zeigt die Statuskarte, die Zahlen stehen im Sheet. */
+/* Die Platte der Verbrauchs-Icons, jetzt fuer das ∞ der Statuskarte:
+   Akzent auf --noura-well, sonst traegt Koralle ueber der Aurora nicht
+   (Entscheidung 2026-09-24). */
+.status-card .use-ic {
+  width: 40px; height: 40px; flex-shrink: 0; border-radius: var(--noura-radius-pill);
   display: flex; align-items: center; justify-content: center;
   background: var(--noura-well); color: var(--noura-accent-mark);
 }
-.usage .card .use-ic svg { display: block; }
-.usage .col-l { flex: 1; min-height: 312px; }
-.usage .col-r { flex: 1; display: flex; flex-direction: column; gap: 12px; }
-.usage .col-r .card { min-height: 150px; }
+.status-card .use-ic .inf { font-weight: 700; font-size: var(--fs-title); line-height: 1; }
 /* Bildunterschrift auf Karten. Muss global stehen: unter .usage
-   gescoped erreichte die Regel weder CycleCard und ForecastCard noch
-   die drei Stellen in den Sheets — dort rendert dieselbe Klasse sonst
-   in 16px Weiss, in einem Schnitt (400), den General Sans lokal gar
-   nicht mitbringt. */
+   gescoped erreichte die Regel die Stellen in den Sheets nicht — dort
+   rendert dieselbe Klasse sonst in 16px Weiss, in einem Schnitt (400),
+   den General Sans lokal gar nicht mitbringt. */
 .label { font-weight: 500; font-size: var(--fs-label); line-height: 1.357; color: var(--noura-text-muted); }
 /* 24px statt 20px — von Niclas am 2026-09-04 entschieden. Bewusst
    ueber der Figma-Vorlage (dort Card-Titel 700/20), wie seinerzeit die
-   Liquid-Glass-Entscheidung: auf einem Screen, dessen Aufgabe das
-   Anzeigen von Verbrauch ist, gehoert die Zahl zum Lautesten. 20px
-   traegt seitdem nur noch Ueberschriften. */
-.usage .val { font-weight: 600; font-size: var(--fs-screen); line-height: 1.35; margin-top: 4px; }
-/* Figma: leerer heller Kreisumriss, kein Fortschrittsbogen. ∞ in Akzentrot. */
-.ring-wrap { position: relative; width: 126px; height: 126px; align-self: center; }
-.ring-wrap .inf { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: var(--fs-screen); line-height: 1.333; color: var(--noura-accent-mark); }
+   Liquid-Glass-Entscheidung: wo Verbrauch angezeigt wird, gehoert die
+   Zahl zum Lautesten. 20px traegt seitdem nur noch Ueberschriften.
+   Stand bis zum 2026-09-25 als .usage .val auf den Home-Kacheln, jetzt
+   im Verbrauchs-Sheet. */
+.use-val { font-weight: 600; font-size: var(--fs-screen); line-height: 1.35; margin-top: 4px; }
 
 /* ---------- Navbar / FABs ---------- */
 .navbar { position: absolute; bottom: 0; left: 0; right: 0; padding: 48px 24px var(--bar-bottom); display: flex; justify-content: flex-end; z-index: 20; }
@@ -1171,27 +1163,16 @@ button.sim-card { cursor: pointer; }
 .chat-head {
   display: flex; align-items: center; gap: 12px; flex-shrink: 0;
   min-height: var(--tap); margin-top: -4px; padding: 0 72px 12px 24px;
-  animation: whoIn var(--dur-move) var(--ease-out);
 }
 .chat-ava {
   flex-shrink: 0; width: var(--tap); height: var(--tap); border-radius: var(--noura-radius-pill);
   display: flex; align-items: center; justify-content: center;
   background: var(--noura-well); color: var(--noura-text);
-  font-weight: 700; font-size: var(--fs-title); line-height: 1;
-  animation: avaIn var(--dur-screen) var(--spring);
 }
-/* Ein Mensch traegt Glas statt Mulde — derselbe Unterschied, den der
-   Kopf in Worten macht, einmal auch ohne Worte. */
-.chat-ava.person { background: var(--noura-glass-strong); }
 .chat-head .tx { min-width: 0; }
 .chat-head h2 { font-weight: 700; font-size: var(--fs-title); line-height: 1.35; }
 .chat-head p { font-weight: 500; font-size: var(--fs-label); line-height: 1.357; color: var(--noura-text-muted); }
 .chat-head .nowrap { white-space: nowrap; }
-/* Das Gegenueber wechselt: die Zeile kommt von oben herein, das Bild
-   setzt mit der einen Feder ein. Laeuft nur beim Wechsel (der Kopf
-   traegt den Sprecher als Schluessel), nie bei einer Nachricht. */
-@keyframes whoIn { from { opacity: 0; transform: translateY(-6px); } }
-@keyframes avaIn { from { opacity: 0; transform: scale(0.8); } }
 
 .chat-area { display: flex; flex-direction: column; gap: 12px; padding-bottom: 12px; min-height: 100%; outline: none; }
 .chat-msg { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
@@ -1235,25 +1216,16 @@ button.sim-card { cursor: pointer; }
 /* Warten: was gerade passiert, als Satz, und die Haarlinie, die im
    System jedes Warten traegt (hairlineSweep, siehe .btn). Kein
    Spinner, keine Punkte. */
-.bubble.pending, .chat-sys.pending { position: relative; overflow: hidden; }
+.bubble.pending { position: relative; overflow: hidden; }
 /* Weiss, nicht gedaempft: `text-muted` auf Glas 20 % kommt auf 4,35:1
    und traegt die Zeile nicht. Den Unterschied zur Antwort machen
    Groesse, Schnitt und die Haarlinie. */
 .bubble.pending { font-weight: 500; font-size: var(--fs-body); line-height: 1.312; }
-.bubble.pending::after, .chat-sys.pending::after {
+.bubble.pending::after {
   content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px;
   background: var(--noura-text); transform-origin: left;
   animation: hairlineSweep var(--dur-beat) var(--ease-out) infinite;
 }
-/* Systemzeilen: Zustand, kein Gespraechsbeitrag — also mittig und
-   ohne Flaeche. Warteschlange, Uebergabe, Ende. */
-.chat-sys {
-  align-self: center; max-width: 85%; padding: 4px 16px 8px; text-align: center; text-wrap: balance;
-  font-weight: 500; font-size: var(--fs-label); line-height: 1.357; color: var(--noura-text-muted);
-  animation: sysIn var(--dur-move) var(--ease-out);
-}
-@keyframes sysIn { from { opacity: 0; transform: scale(0.96); } }
-
 /* Die Karte unter einer Antwort: Inhalt im Sheet, also Mulde und
    Radius 16 — nicht Glas. Zwei weisse Schichten uebereinander hellen
    den Grund auf (gemessen an den Kontoseiten, 2026-09-24).
@@ -1354,7 +1326,40 @@ button.sim-card { cursor: pointer; }
    Aurora gar nicht. Dieselbe Antwort wie bei der Tarifleiste und den
    Kontoseiten: die Flaeche, in die man etwas legt, ist dunkler als
    ihr Grund. Der Sendeknopf bleibt Glas — er ist das Bedienelement. */
-.chat-input { display: flex; gap: 24px; padding: 12px 24px var(--bar-bottom); flex-shrink: 0; }
+.chat-foot {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
+  padding: 12px 24px var(--bar-bottom); flex-shrink: 0;
+}
+/* Der Rueckruf (2026-09-25, Niclas: immer sichtbar, "Mit dem Team
+   chatten" entfaellt). Er ist kein Vorschlag des Assistenten, und das
+   zeigt er an drei Stellen, nicht an einer:
+   · Ort: fest ueber dem Feld, nicht im Verlauf — er scrollt nicht weg
+     und kommt nicht mit jeder Antwort neu herein.
+   · Seite: links, buendig mit dem Feld. Rechts stehen die Saetze, die
+     zu Deinen Worten werden; dieser Knopf wird keine.
+   · Form und Material: Pille in Tippziel-Hoehe mit Hoerer, getoentes
+     Glas (--noura-well) mit derselben Kante und demselben Glanz wie
+     jeder Knopf. Die Vorschlaege sind helles Glas; der Rueckruf gehoert
+     zur Leiste, und deren Feld ist dunkel.
+   Das dunkle Glas ist zugleich die Kontrast-Antwort. Gemessen am
+   2026-09-25 (Chrome, hellster Pixel unter dem ausgeblendeten Text):
+   helles Glas wie die Vorschlaege 3,84–4,44:1 — zu wenig fuer 16px —,
+   mit --lg-refract-dim 4,17–4,90:1, getoent 8,59–10,28:1.
+   Kein Akzentrot: Rot ist nie eine Buttonflaeche, und als Symbolfarbe
+   traegt #e15055 auf Glas nicht (2,80:1, siehe Skill). */
+.chat-foot .chat-call {
+  width: auto; min-height: var(--tap); padding: 10px 18px 10px 14px;
+  border-radius: var(--noura-radius-pill);
+  background: var(--noura-well);
+}
+/* Gedrueckt bleibt die Mulde, der Knopf legt sich an (.btn:active) —
+   das helle Druck-Glas (15 %) waere hier heller als der Ruhezustand. */
+.chat-foot .chat-call:active { background: var(--noura-well); }
+.chat-foot .chat-call svg { flex-shrink: 0; }
+/* Waehrend die Zeiten zur Wahl stehen, ist er abgeblendet
+   (.btn:disabled) — die Wahl liegt schon darueber. */
+.chat-foot .nowrap { white-space: nowrap; }
+.chat-input { display: flex; gap: 24px; align-self: stretch; }
 .chat-input input {
   flex: 1; min-width: 0; background: var(--noura-well);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22);

@@ -456,12 +456,9 @@ export function EsimStage({
       </div>
 
       {/* ---------- Empfang ----------
-          Ueber der Karte, wo auf dem iPhone die Statusleiste sitzt. Sie
-          schwebt mit der Karte — gleiche Schleife, gleicher Start —, damit
-          der Abstand zwischen beiden steht: eine Anzeige, die gegen ihren
-          Gegenstand pendelt, liest sich als zwei Dinge. Aussen das
-          Schweben, innen die Sichtbarkeit je Takt; auf einem Element
-          wuerden sich die beiden Animationen gegenseitig ersetzen.
+          Ueber der Karte, wo auf dem iPhone die Statusleiste sitzt. Wie
+          die Karte steht sie still (bis zum 2026-09-25 schwebten beide).
+          Aussen die Lage, innen die Sichtbarkeit je Takt.
 
           "5G" rueckt erst im letzten Takt dazu, die Balken machen ihm
           Platz — vorher stehen sie allein auf der Mitte. */}

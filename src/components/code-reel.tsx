@@ -38,19 +38,23 @@ export function useCodeReels(reduced: boolean) {
     reels: randomCode().split('').map((c) => [c]),
   }))
 
-  const advance = useCallback(() => {
-    setState((prev) => {
-      const target = randomCode().split('')
-      return {
+  /* Auf einen bestimmten Code auslaufen — das Onboarding laesst damit
+     einen Beispiel-Code einrasten, statt einen zufaelligen zu wuerfeln. */
+  const advanceTo = useCallback(
+    (code: string) => {
+      setState((prev) => ({
         cycle: prev.cycle + 1,
-        reels: target.map((c, i) =>
-          reduced ? [c] : buildReel(prev.reels[i][prev.reels[i].length - 1], c, i),
-        ),
-      }
-    })
-  }, [reduced])
+        reels: code
+          .split('')
+          .map((c, i) => (reduced ? [c] : buildReel(prev.reels[i][prev.reels[i].length - 1], c, i))),
+      }))
+    },
+    [reduced],
+  )
 
-  return { ...state, advance }
+  const advance = useCallback(() => advanceTo(randomCode()), [advanceTo])
+
+  return { ...state, advance, advanceTo }
 }
 
 /* Eine Walze. Der Aufrufer setzt `key={cycle}`, damit sie je Code neu

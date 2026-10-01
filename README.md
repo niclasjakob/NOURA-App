@@ -6,7 +6,7 @@ Interactive prototype of **NOURA**, the eSIM app connected by Vodafone, built wi
 
 Intro → Onboarding (Digital / Flexibel / Highspeed) → Plan selection (CREATE / CONSUME / MESSAGE, swipeable) → eSIM activation animation → Home (usage dashboard, "Mehr" FAB menu) → bottom sheets for Support chat, Account and current plan.
 
-The plan chosen during onboarding carries through to Home and the plan sheet. "Einloggen" on the intro screen skips straight to Home.
+The plan chosen during onboarding carries through to Home and the plan sheet. "Mit Passkey anmelden" on the intro screen shows a simulated passkey sheet, then goes straight to Home. Opening the app with `?code=XXXX` (e.g. `?code=T4JQ`) carries a Magic Code into the plan selection.
 
 ## Getting started
 

@@ -1,5 +1,5 @@
 /* ============================================================
-   NOURA — Verbrauch, Reisen, Bestellung, Bedienbarkeit
+   NOURA — Verbrauch, Bestellung, Bedienbarkeit
 
    Ergaenzt global.css um die Bereiche, die es im Figma-Stand nicht
    gibt. Alles nutzt dieselben Tokens und dieselben Bausteine —
@@ -73,8 +73,8 @@
 /* Wartend ist nicht deaktiviert. Ein laufender Knopf behaelt seine
    Flaeche und zeigt eine Haarlinie, die seine Unterkante abfaehrt —
    kein Spinner, und nicht dieselbe Abblendung wie ein Knopf, den man
-   gar nicht druecken kann. Dieselbe Geste traegt der laufende Schritt
-   in der Aktivierung (onboarding.css). */
+   gar nicht druecken kann. Dieselbe Geste tragen das Warten im Chat
+   und der bestaetigende Knopf im Bestaetigungs-Sheet. */
 .btn[aria-busy='true'] { opacity: 1; cursor: progress; overflow: hidden; }
 /* Uebernimmt das ::after des Knopfes (den flachen Glanz) fuer die Dauer
    des Wartens. `top: auto` ist noetig, weil die Grundregel `inset: 0`
@@ -109,8 +109,6 @@ button.sim-card:active {
   transition: transform var(--dur-tap) var(--ease-out), background var(--dur-tap) var(--ease-out);
   transform: scale(0.94); background: var(--lg-tint-pressed);
 }
-.section-toggle { transition: opacity var(--dur-tap) var(--ease-out); }
-.section-toggle:active { opacity: 0.6; }
 
 /* Sechs Bedienelemente, die tippbar waren und nichts getan haben.
    Zeilen mit eigener Box bekommen den Anflug, blosse Symbole und
@@ -138,27 +136,75 @@ button.sim-card:active {
    2 — Verbrauch mit Zeitbezug
    ============================================================ */
 
-/* Ersetzt die alte .usage-Klappe. Statt max-height laeuft das
-   Zuklappen ueber grid-template-rows 1fr -> 0fr: das animiert die
-   tatsaechliche Hoehe. Mit max-height muesste man einen Wert raten,
-   der groesser ist als der Inhalt — und die halbe Laufzeit passiert
-   dann nichts Sichtbares, weil der Wert erst von 1400 auf die echten
-   ~700 fallen muss. */
-.usage-panel {
-  display: grid; grid-template-rows: 1fr;
-  transition: grid-template-rows var(--dur-move) var(--ease-out), opacity var(--dur-quick) var(--ease-out);
+/* ---- Status (Home, seit 2026-09-25) ----
+   Eine Karte statt der Klappe "Dein Verbrauch" mit fuenf Karten. Kopf
+   wie eine Kachel (Platte + Titel), darunter zwei Zeilen auf der
+   Haarlinie. Die letzte ist ein Knopf und oeffnet das Verbrauchs-Sheet;
+   ihre 48px tragen das Tippziel, deshalb endet die Karte unten mit 4px
+   statt 20px. `.card.` davor, weil .card weiter unten steht und sonst
+   den Innenabstand zuruecksetzt. */
+.card.status-card { padding-bottom: 4px; }
+.status-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.status-head h2 { font-weight: 700; font-size: var(--fs-title); line-height: 1.35; }
+.status-row {
+  display: flex; align-items: center; gap: 12px; min-height: 48px;
+  border-top: 1px solid var(--noura-line);
 }
-.usage-panel.hidden { grid-template-rows: 0fr; opacity: 0; }
-.usage-panel-in {
-  display: flex; flex-direction: column; gap: 12px;
-  overflow: hidden; min-height: 0;
+.status-row .label { flex: 1; }
+/* Weiss statt gedaempft: die Karte liegt auf Home ueber der hellen
+   Aurora-Mitte. Gemessen (Chrome, hellster Pixel neben dem Text,
+   2026-09-25): --noura-text-muted kam dort auf 3,20–3,34:1, Weiss auf
+   5,15–5,43:1. Die Rangfolge tragen Schnitt und Groesse — Zeile 500/14,
+   Wert 700/16. */
+.status-card .label { color: var(--noura-text); }
+.status-row b { font-weight: 700; font-size: var(--fs-body); line-height: 1.375; }
+button.status-row {
+  width: 100%; padding: 0; background: none; border: none; border-top: 1px solid var(--noura-line);
+  color: var(--noura-text); font: inherit; text-align: left; cursor: pointer;
+  transition: opacity var(--dur-tap) var(--ease-out);
 }
-.usage { display: flex; gap: 12px; }
+button.status-row:active { opacity: var(--press-dim); }
+.status-row .chev { margin-left: -4px; color: var(--noura-text-muted); line-height: 0; }
 
-/* ---- Abrechnungszeitraum ---- */
-.cycle-card { gap: 12px; }
-.cycle-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.cycle-day { font-weight: 600; font-size: var(--fs-label); line-height: 1.357; }
+/* ---- Verbrauchs-Sheet (seit 2026-09-25) ----
+   Das Detail-Sheet aus dem Konzept "Home Usage Concept". Gruppen sind
+   Mulden, nicht Glas — wie in den Kontoseiten und im Chat: Inhalt IM
+   Sheet ist dunkler als das Sheet. Die Zeilen der letzten Gruppe sind
+   dieselben .status-row wie auf der Statuskarte, dort ohne Kante oben. */
+.use-list { display: flex; flex-direction: column; gap: 12px; padding-bottom: 24px; }
+.use-well {
+  background: var(--noura-well); border-radius: var(--noura-radius-tile);
+  padding: 20px; display: flex; flex-direction: column;
+}
+.use-well.rows { padding: 0 20px; }
+.use-well.rows .status-row:first-child { border-top: none; }
+.use-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.use-note {
+  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
+  color: var(--noura-text-muted);
+}
+.use-pair { display: flex; gap: 12px; }
+.use-pair .use-well { flex: 1; min-width: 0; }
+.use-pair .use-note { margin-top: 4px; }
+
+/* ---- Tagesbalken ----
+   Die Balken wachsen einmal beim Oeffnen, versetzt von links — der
+   Monat liest sich als Zeitachse. Nur transform, im Leerlauf steht
+   alles. Punkte fuer die Tage, die noch kommen, in --noura-text-faint:
+   ein nicht-textliches Zeichen, genau dafuer ist die Stufe da. */
+.day-bars { display: flex; align-items: flex-end; gap: 3px; height: 64px; margin: 16px 0 12px; }
+.day-bars i {
+  flex: 1; min-width: 0; height: var(--h); border-radius: 2px; background: var(--noura-accent);
+  transform: scaleY(0); transform-origin: bottom;
+  transition: transform var(--dur-screen) var(--ease-out) calc(var(--i) * 20ms);
+}
+.day-bars.run i { transform: scaleY(1); }
+.day-bars b { flex: 1; min-width: 0; display: flex; justify-content: center; }
+.day-bars b::before { content: ''; width: 3px; height: 3px; border-radius: 50%; background: var(--noura-text-faint); }
+
+/* ---- Fortschrittsbalken ----
+   Stand bis zum 2026-09-25 im Abrechnungszeitraum auf Home; den gibt
+   es nicht mehr, der Balken lebt im Support-Chat und im Magic-Sheet. */
 .cycle-bar, .event-bar {
   height: 6px; border-radius: 3px; background: var(--noura-line);
   overflow: hidden; margin: 12px 0;
@@ -168,144 +214,40 @@ button.sim-card:active {
   background: var(--noura-accent); transform-origin: left;
   transition: transform var(--dur-screen) var(--ease-out);
 }
-.cycle-foot {
-  display: flex; flex-direction: column; gap: 2px;
-  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
-  color: var(--noura-text-muted);
-}
 
-/* ---- Prognose ---- */
-.forecast-card { gap: 8px; }
-.fc-head { display: flex; align-items: flex-start; justify-content: space-between; }
-.fc-val {
-  display: flex; align-items: center; gap: 8px; margin-top: 4px;
-  font-weight: 600; font-size: var(--fs-screen); line-height: 1.35;
-}
-/* Der Trend ist ein Chip, keine Buttonflaeche — Akzentrot nur, wenn
-   der Verbrauch steigt. */
-.trend {
-  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
-  padding: 1px 8px; border-radius: var(--noura-radius-pill);
-}
-.trend.up { background: var(--noura-accent-fill); }
-.trend.down { background: var(--noura-glass-strong); }
-/* ---- Tagesverlauf ----
-   Die Linie zeichnet sich beim Betreten des Screens von links nach
-   rechts, die Flaeche blendet danach auf. Damit liest sich der Verlauf
-   als Zeitachse statt als fertiges Bild. */
-.spark { width: 100%; height: 44px; margin: 4px 0; display: block; }
-.spark-line {
-  stroke-dasharray: 1; stroke-dashoffset: 1;
-  transition: stroke-dashoffset var(--dur-beat) var(--ease-out);
-}
-.spark.run .spark-line { stroke-dashoffset: 0; }
-.spark-area { opacity: 0; transition: opacity var(--dur-screen) var(--ease-out) var(--dur-screen); }
-.spark.run .spark-area { opacity: 1; }
-.fc-note {
-  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
-  color: var(--noura-text-muted);
-}
-.fc-assure {
-  display: flex; align-items: center; gap: 8px; margin-top: 12px;
-  font-weight: 600; font-size: var(--fs-label); line-height: 1.357;
-}
-.fc-assure .dot {
-  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-  background: var(--noura-accent);
-}
-
-/* Das "Mehr"-Menue traegt jetzt drei Eintraege. Sie fahren von unten
-   nach oben versetzt ein, damit die Liste als Bewegung aus dem Knopf
-   heraus liest statt als Block, der erscheint. */
-.fab-stack .btn:nth-child(1) { transition-delay: var(--dur-tap); }
-.fab-stack .btn:nth-child(2) { transition-delay: 60ms; }
-.fab-stack .btn:nth-child(3) { transition-delay: 0s; }
+/* Das "Mehr"-Menue traegt zwei Eintraege (bis zum 2026-09-25 drei,
+   mit "Reisen"). Sie fahren von unten nach oben versetzt ein, damit
+   die Liste als Bewegung aus dem Knopf heraus liest statt als Block,
+   der erscheint. */
+.fab-stack .btn:nth-child(1) { transition-delay: 60ms; }
+.fab-stack .btn:nth-child(2) { transition-delay: 0s; }
 .fab-stack:not(.open) .btn { transition-delay: 0s; }
 
 /* ============================================================
-   3 — Reisen / Roaming
+   3 — Geteilte Bausteine
+   Hier stand bis zum 2026-09-25 "Reisen / Roaming". Die Reiseansicht
+   ist entfallen; was von ihr andere Screens mittragen, steht jetzt
+   unter neutralem Namen (vorher .roam-lead / .roam-rules).
    ============================================================ */
-/* ---- Kontingent-Ring ----
-   Anders als der ∞-Ring auf der Home-Kachel zeigt dieser einen
-   echten Fuellstand — in der Weltzone gibt es eine echte Grenze. */
-.allow-ring { position: relative; width: 126px; height: 126px; margin: 0 auto 12px; }
-.allow-ring svg { width: 100%; height: 100%; display: block; }
-/* Faehrt beim Oeffnen des Sheets auf den Wert. Derselbe Uebergang
-   traegt danach das Zubuchen: der Bogen wandert sichtbar zurueck,
-   statt auf den neuen Stand zu springen. */
-.allow-arc { transition: stroke-dashoffset var(--dur-beat) var(--ease-out), stroke var(--dur-move) var(--ease-out); }
-.allow-mid {
-  position: absolute; inset: 0; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 2px;
-}
-.allow-mid b { font-weight: 700; font-size: var(--fs-screen); line-height: 1.35; }
-.allow-mid em {
-  font-style: normal; font-weight: 500; font-size: var(--fs-caption);
-  line-height: 1.333; color: var(--noura-text-muted);
-}
-
-.roam-info { gap: 12px; }
-.roam-info.center { text-align: center; }
-.roam-lead { font-weight: 600; font-size: var(--fs-label); line-height: 1.45; }
-.roam-fine {
-  margin-top: 8px; font-weight: 500; font-size: var(--fs-caption);
-  line-height: 1.45; color: var(--noura-text-muted);
-}
-.roam-rules { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
-.roam-rules li {
+/* Einleitender Satz in einer Karte — eSIM-Einrichtung, manuell. */
+.card-lead { font-weight: 600; font-size: var(--fs-label); line-height: 1.45; }
+/* Liste mit Akzentpunkt — eSIM-Voraussetzungen, Kuendigung. */
+.dot-list { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.dot-list li {
   font-weight: 500; font-size: var(--fs-label); line-height: 1.45;
   color: var(--noura-text-muted); padding-left: 16px; position: relative;
 }
-.roam-rules li::before {
+.dot-list li::before {
   content: ''; position: absolute; left: 0; top: 8px;
   width: 6px; height: 6px; border-radius: 50%; background: var(--noura-accent);
 }
-.roam-rules b { color: var(--noura-text); font-weight: 600; }
-.roam-stat { display: flex; align-items: baseline; justify-content: space-between; margin-top: 12px; }
-/* 24px wie auf Home — Entscheidung vom 2026-09-04, siehe Skill.
-   Bis dahin stand hier 20px und wich damit von Home ab. */
-.roam-stat .val { font-weight: 600; font-size: var(--fs-screen); line-height: 1.35; }
 
-/* ---- Zusatzpakete ---- */
-.addons { display: flex; gap: 8px; }
-.addons .addon {
-  flex: 1; display: flex; flex-direction: column; gap: 2px;
-  padding: 16px 12px; cursor: pointer; text-align: left;
-  min-height: var(--tap);
-  background: var(--noura-glass-strong); border: none;
-  border-radius: var(--noura-radius-tile); color: var(--noura-text);
-  -webkit-backdrop-filter: blur(var(--noura-blur-control)); backdrop-filter: blur(var(--noura-blur-control));
-  transition: transform var(--dur-screen) var(--spring);
-}
-.addons .addon:active { transition: transform var(--dur-tap) var(--ease-out); transform: scale(0.96); }
-.addon-gb { font-weight: 700; font-size: var(--fs-body); line-height: 1.312; }
-.addon-price { font-weight: 600; font-size: var(--fs-label); line-height: 1.357; }
-.addon-note {
-  font-weight: 500; font-size: var(--fs-caption); line-height: 1.333;
-  color: var(--noura-text-muted);
-}
-
-/* ---- Vorfuehr-Schalter ---- */
+/* ---- Prototyp-Block (Magic-Sheet) ---- */
 .demo-sec { opacity: 0.75; }
 .demo-note {
   font-weight: 500; font-size: var(--fs-caption); line-height: 1.4;
   color: var(--noura-text-muted); margin: -12px 0 12px;
 }
-/* Dasselbe Segment wie die Tarif-Reiter, also dieselbe Flaeche: Spur
-   auf `glass`, Wahl auf `glass-active`. Akzentrot fuellte hier bis zum
-   2026-09-18 den gewaehlten Knopf — eine zweite Stelle, an der eine
-   Wahl wie ein Etikett aussah. */
-.demo-switch {
-  display: flex; gap: 4px; padding: 3px;
-  background: var(--noura-glass); border-radius: var(--noura-radius-pill);
-}
-.demo-switch button {
-  flex: 1; min-height: var(--tap); cursor: pointer; border: none;
-  border-radius: var(--noura-radius-pill); color: var(--noura-text-muted);
-  background: none; font-weight: 600; font-size: var(--fs-label);
-  transition: color var(--dur-quick) var(--ease-out), background var(--dur-quick) var(--ease-out);
-}
-.demo-switch button.on { background: var(--noura-glass-active); color: var(--noura-text); }
 
 /* ---- Vorfuehr-Abkuerzung (Intro / Onboarding) ----
    Kein Button aus der Figma-Vorlage, sondern eine Vorfuehr-Hilfe. Deshalb
@@ -355,13 +297,34 @@ button.sim-card:active {
   color: var(--noura-text-muted);
 }
 .flow-steps li i {
-  display: block; height: 3px; border-radius: 2px;
+  position: relative; display: block; height: 3px; border-radius: 2px; overflow: hidden;
   background: var(--noura-glass-strong);
-  transition: background var(--dur-quick) var(--ease-out);
 }
-.flow-steps li.done i { background: rgba(255, 255, 255, 0.55); }
-.flow-steps li.now i { background: var(--noura-accent); }
+/* Die Fuellung ist ein eigenes Element, damit ein laufender Schritt sie
+   anteilig zeigen kann: FlowSteps setzt `transform` und die Dauer des
+   Takts inline, die Fuellung laeuft linear mit dem Bild (wie vorher der
+   Taktmesser). Ohne Angabe ist das laufende Segment ganz gefuellt. */
+.flow-steps li i b {
+  position: absolute; inset: 0; transform-origin: left; transform: scaleX(0);
+  background: var(--noura-accent);
+  transition-property: transform; transition-timing-function: linear;
+}
+.flow-steps li.now i b { transform: scaleX(1); }
+.flow-steps li.done i b { transform: scaleX(1); background: rgba(255, 255, 255, 0.55); }
 .flow-steps li.now { color: var(--noura-text); font-weight: 600; }
+
+/* Die Anzeige an fester Stelle — fuer Screens, deren Inhalt waehrend des
+   Schritts wechselt (Ident: Auswahl → Pruefung; eSIM: vier Phasen). So
+   bleibt sie EIN Element und springt beim Wechsel nicht. Dieselbe Hoehe
+   wie der Kopf von .flow (Statusleiste + Abstand + Zurueck-Knopf). */
+.flow-top {
+  position: absolute; left: 0; right: 0; top: calc(54px + 12px + 64px);
+  padding: 0 24px; z-index: 10; pointer-events: none;
+}
+/* Platzhalter im Kopf dieser Screens, damit Titel und Text dort stehen,
+   wo sie mit einer Anzeige im Kopf stuenden: 3px Spur, 6px Abstand,
+   eine Zeile Beschriftung. */
+.flow-steps-space { height: calc(9px + 0.63rem * 1.3); }
 
 .flow-scroll {
   flex: 1; min-height: 0;
@@ -544,7 +507,7 @@ button.sim-card:active {
    5 — Magic Code: Konzeptseite
 
    Sitzt hinter der Kachel auf Home. Dieselben Bausteine wie die
-   Reiseansicht — Glaskarte @10 %, Radius 16, Innenabstand 20 —
+   Verbrauchsseite — Glaskarte @10 %, Radius 16, Innenabstand 20 —
    damit die Seite nicht wie ein Fremdkoerper wirkt. Rot bleibt
    auch hier Symbol- und Chipfarbe, nie Flaeche.
    ============================================================ */
@@ -640,7 +603,8 @@ button.sim-card:active {
   color: var(--noura-text-muted);
 }
 /* Der Punkt pulst — er ist der einzige Hinweis darauf, dass der Code
-   noch nicht gefallen ist, sondern gleich faellt. */
+   noch nicht gefallen ist, sondern gleich faellt. Nur ueber die
+   Deckkraft: seit dem 2026-09-25 schrumpft er dabei nicht mehr. */
 .event-live {
   flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 10px; border-radius: var(--noura-radius-pill);
@@ -649,11 +613,11 @@ button.sim-card:active {
 }
 .event-live i {
   width: 6px; height: 6px; border-radius: 50%; background: var(--noura-accent);
-  animation: eventPulse 1.8s var(--ease-out) infinite;
+  animation: eventPulse 1.8s var(--ease-sway) infinite;
 }
 @keyframes eventPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.35; transform: scale(0.75); }
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
 }
 .event-title {
   margin-top: 16px; font-weight: 700; font-size: var(--fs-title); line-height: 1.35;
@@ -1008,8 +972,8 @@ button.sim-card:active {
 .magic-input.bad { box-shadow: inset 0 0 0 1.5px var(--noura-accent); }
 
 /* ---- Vorfuehr-Codes ----
-   Wie der Standort-Umschalter im Profil: sichtbar gedaempft, damit
-   niemand sie fuer Produktinhalt haelt. */
+   Im Prototyp-Block (.demo-sec): sichtbar gedaempft, damit niemand
+   sie fuer Produktinhalt haelt. */
 .code-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .code-list li { display: flex; align-items: center; gap: 12px; }
 .code-chip {
@@ -1275,3 +1239,166 @@ button.sim-card:active {
   text-decoration: underline; text-underline-offset: 3px;
 }
 .set-sec .btn { width: 100%; }
+
+
+/* ============================================================
+   Konzept 2026-09-25 — eine Journey
+   Bestaetigen, Codes vor dem Kauf, Passkey, Onboarding zum Ausprobieren.
+   ============================================================ */
+
+/* ---- Leiser Textknopf ----
+   Fuer den Weg zurueck aus einem Zustand (Wechsel zuruecknehmen, Code
+   entfernen). Weiss unterstrichen statt Akzent: Koralle traegt auf Glas
+   keinen Text (Kontrastliste im Skill). */
+.link-plain {
+  align-self: flex-start; background: none; border: none; cursor: pointer;
+  min-height: var(--tap); padding: 0; margin-top: 4px;
+  color: var(--noura-text); font-family: var(--font); font-weight: 600; font-size: var(--fs-label);
+  text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--noura-line);
+}
+.link-plain:active { color: var(--noura-text-muted); }
+
+/* ---- Onboarding: Beispiel-Code ausprobieren ----
+   Ein Bedienelement, also Stufe 3: Glas 20 %, Radius 24. */
+.ob-try {
+  align-self: flex-start; min-height: var(--tap); margin-top: 4px; padding: 0 18px;
+  border: none; border-radius: var(--noura-radius-card); cursor: pointer;
+  background: var(--noura-glass-strong); color: var(--noura-text);
+  -webkit-backdrop-filter: blur(var(--noura-blur-control)); backdrop-filter: blur(var(--noura-blur-control));
+  font-family: var(--font); font-weight: 600; font-size: var(--fs-label);
+  transition: background var(--dur-tap) var(--ease-out);
+}
+.ob-try:active { background: var(--press-wash); }
+/* Das Ergebnis erscheint, wenn die Tueren aufgegangen sind (1,66s plus
+   Versatz, onboarding.css) — nicht vor dem Vorgang, der es erzeugt. */
+.mcode-result {
+  margin-top: 14px; padding: 6px 12px; border-radius: var(--noura-radius-pill);
+  background: var(--noura-well); font-weight: 600; font-size: var(--fs-caption); line-height: 1.333;
+  animation: mcodeResult var(--dur-move) var(--ease-out) 2.05s both;
+}
+@keyframes mcodeResult { from { opacity: 0; transform: translateY(6px); } }
+
+/* ---- Tarifwahl: Magic Code vor dem Kauf ---- */
+/* Dieselbe Folge wie im Kopf von .flow: Anzeige, 16px, Titel. */
+.plan-header .flow-steps + h1 { margin-top: 16px; }
+.plan-code-sec { padding: 0 24px; margin-top: 32px; }
+.plan-code-sec h2 { font-weight: 700; font-size: var(--fs-title); line-height: 1.35; margin-bottom: 12px; }
+.plan-code-sec .magic-redeem { display: flex; flex-direction: column; }
+.plan-code-flag {
+  margin-top: 8px; font-weight: 600; font-size: var(--fs-caption); line-height: 1.4;
+  color: var(--noura-text);
+}
+.plan-code-flag::before {
+  content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--noura-accent); margin-right: 8px; vertical-align: 1px;
+}
+.code-held { display: flex; flex-direction: column; }
+.sum-code {
+  margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--noura-line);
+  font-weight: 600; font-size: var(--fs-caption); line-height: 1.4;
+}
+.esim-unlock h2 { margin-bottom: 12px; }
+
+/* ---- Tarif-Sheet: vorgemerkt oder gekuendigt ---- */
+.plan-note {
+  display: flex; flex-direction: column; gap: 4px; margin-bottom: 20px;
+  background: var(--noura-well); -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.plan-note b { font-weight: 700; font-size: var(--fs-label); line-height: 1.357; }
+.plan-note p { font-weight: 500; font-size: var(--fs-caption); line-height: 1.4; color: var(--noura-text-muted); }
+
+/* ---- Bestaetigungs-Sheet ----
+   Inhalt IM Sheet ist dunkler als das Sheet (Merksatz der Kontoseiten):
+   Gruppen und Auswahlzeilen stehen in der Mulde, nicht auf Glas. */
+.cf .opt { background: var(--noura-well); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.cf-swap { display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; gap: 8px; }
+.cf-plan {
+  display: flex; flex-direction: column; gap: 2px; padding: 14px 16px;
+  border-radius: var(--noura-radius-tile); background: var(--noura-well);
+}
+.cf-plan.to { box-shadow: inset 0 0 0 1.5px var(--noura-accent); }
+.cf-plan span { font-weight: 500; font-size: var(--fs-caption); color: var(--noura-text-muted); }
+.cf-plan b { font-weight: 700; font-size: var(--fs-body); line-height: 1.3; letter-spacing: 0.02em; }
+.cf-plan small { font-weight: 500; font-size: var(--fs-caption); color: var(--noura-text-muted); }
+.cf-arrow { align-self: center; color: var(--noura-text-muted); font-size: var(--fs-body); }
+.cf-list .set-row { flex-direction: column; align-items: flex-start; gap: 2px; }
+.cf-list dd { margin: 0; font-weight: 600; font-size: var(--fs-label); line-height: 1.4; }
+.cf-list dd b { font-weight: 700; }
+.cf-old { color: var(--noura-text-muted); font-weight: 500; }
+.cf-cost { margin-top: 24px; padding: 8px 16px; }
+.cf-rules { margin-top: 0; padding: 0 4px; }
+.cf-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 28px; }
+/* Das Ergebnis steht im Sheet, bis es jemand wegtippt — kein Toast. */
+.cf-done {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 24px;
+  animation: cfDone var(--dur-move) var(--ease-out) both;
+}
+@keyframes cfDone { from { opacity: 0; transform: translateY(10px); } }
+.cf-done h2 { font-weight: 700; font-size: var(--fs-title); line-height: 1.35; text-wrap: balance; }
+.cf-done > p:not(.set-foot) { font-weight: 500; font-size: var(--fs-label); line-height: 1.5; color: var(--noura-text-muted); }
+.cf-done .set-foot { margin: 0; }
+.cf-done .cf-actions { width: 100%; }
+.cf-mark {
+  width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--noura-accent-fill); color: #fff;
+  animation: cfMark var(--dur-move) var(--spring) both;
+}
+.cf-mark svg { width: 26px; height: 26px; }
+@keyframes cfMark { from { transform: scale(0.5); opacity: 0; } }
+
+/* ---- Magic Codes ---- */
+.magic-lead { margin: -12px 0 16px; }
+.magic-drops { margin-top: 12px; }
+.magic-after { margin-top: 20px; }
+.invite-card { display: flex; flex-direction: column; gap: 10px; }
+.invite-code {
+  font-weight: 700; font-size: var(--fs-screen); line-height: 1.2;
+  letter-spacing: 0.3em; font-variant-numeric: tabular-nums;
+}
+
+/* ---- Passkey ----
+   Die Nachbildung des System-Sheets. Bewusst NICHT im NOURA-Glas: das
+   Sheet gehoert iOS, nicht der App — Farben, Schrift und der blaue
+   Knopf sind die des Systems im dunklen Erscheinungsbild. */
+.pk-scrim {
+  position: absolute; inset: 0; z-index: 70; background: rgba(0, 0, 0, 0.45);
+  opacity: 0; pointer-events: none; transition: opacity var(--dur-move) var(--ease-in);
+}
+.pk-scrim.on { opacity: 1; pointer-events: auto; transition-timing-function: var(--ease-out); }
+.pk-sheet {
+  position: absolute; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 71;
+  padding: 28px 24px 24px; border-radius: 36px;
+  background: #1c1c1e; color: #fff;
+  font-family: -apple-system, 'SF Pro Text', system-ui, sans-serif;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+  transform: translateY(110%); transition: transform var(--dur-move) var(--ease-in);
+}
+.pk-sheet.on { transform: translateY(0); transition-timing-function: var(--ease-out); }
+.pk-sheet:focus { outline: none; }
+.pk-close {
+  position: absolute; top: 16px; right: 16px; width: 30px; height: 30px; border-radius: 50%;
+  border: none; background: #2c2c2e; color: #98989f; display: grid; place-items: center; cursor: pointer;
+}
+.pk-glyph { width: 56px; height: 56px; color: #0a84ff; margin-bottom: 4px; }
+.pk-glyph.ok { color: #30d158; }
+.pk-glyph svg { width: 100%; height: 100%; }
+.pk-glyph.scan svg { animation: pkScan 0.9s var(--ease-sway) infinite alternate; }
+@keyframes pkScan { to { opacity: 0.45; } }
+.pk-sheet h2 { font-size: 20px; font-weight: 600; line-height: 1.25; }
+.pk-text { font-size: 15px; line-height: 1.4; color: #98989f; max-width: 300px; }
+.pk-account {
+  width: 100%; margin-top: 8px; padding: 12px 14px; border-radius: 14px; background: #2c2c2e;
+  display: flex; align-items: center; gap: 12px; text-align: left;
+}
+.pk-av {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center;
+  background: #636366; font-weight: 600; font-size: 16px;
+}
+.pk-who { display: flex; flex-direction: column; min-width: 0; }
+.pk-who b { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.pk-who small { font-size: 13px; color: #98989f; }
+.pk-go {
+  width: 100%; margin-top: 12px; min-height: 50px; border: none; border-radius: 14px; cursor: pointer;
+  background: #0a84ff; color: #fff; font: inherit; font-size: 17px; font-weight: 600;
+}
+.pk-go:disabled { cursor: default; opacity: 0.85; }

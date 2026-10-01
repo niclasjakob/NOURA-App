@@ -18,7 +18,7 @@
      genau wie alles, was Daten auswertet.
    ============================================================ */
 
-export type AcctPage = 'security' | 'notifications' | 'appearance' | 'help' | 'docs'
+export type AcctPage = 'security' | 'notifications' | 'appearance' | 'help' | 'docs' | 'payment'
 
 /** Titel der Seite = Beschriftung der Zeile, die sie oeffnet. Wer die
     Zeile umbenennt, benennt die Seite mit. */
@@ -28,6 +28,7 @@ export const ACCT_PAGE_TITLE: Record<AcctPage, string> = {
   appearance: 'Darstellung',
   help: 'Hilfe',
   docs: 'Dokumente',
+  payment: 'Zahlung',
 }
 
 export interface Setting {
@@ -72,12 +73,6 @@ export const NOTIFY_SERVICE: Setting[] = [
     note: 'Wenn ein Drop öffnet — die Plätze sind oft in Minuten weg.',
     on: true,
   },
-  {
-    key: 'roaming',
-    label: 'Roaming',
-    note: 'Wenn Du im Ausland ankommst und bei 80\u00a0% Deines Reisevolumens.',
-    on: true,
-  },
   { key: 'invoice', label: 'Rechnung', note: 'Wenn Deine Monatsrechnung bereitliegt.', on: true },
 ]
 export const NOTIFY_MARKETING: Setting[] = [
@@ -112,11 +107,12 @@ export const DEFAULT_SETTINGS: Record<string, boolean> = Object.fromEntries(
 )
 
 /* ---------- Hilfe ----------
-   Die fuenf Fragen, die der Ablauf selbst aufwirft: Geraetewechsel
+   Die vier Fragen, die der Ablauf selbst aufwirft: Geraetewechsel
    (eSIM statt Plastik), Nummer (Mitnahme in der Bestellung), Magic
-   Codes (das eigene Bauteil), Roaming (Reise-Sheet) und Kuendigung
-   (monatlich, im Plan-Sheet). Die Antworten nennen den Weg in DIESER
-   App, nicht allgemeine Mobilfunk-Hilfe. */
+   Codes (das eigene Bauteil) und Kuendigung (monatlich, im Plan-Sheet).
+   Die Antworten nennen den Weg in DIESER App, nicht allgemeine
+   Mobilfunk-Hilfe. Die Roaming-Frage zeigte ins Reise-Sheet und ist
+   mit ihm am 2026-09-25 entfallen. */
 export const FAQ: { q: string; a: string }[] = [
   {
     q: 'Neues iPhone — wie kommt meine eSIM mit?',
@@ -128,14 +124,10 @@ export const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Was sind Magic Codes?',
-    a: 'Vier Zeichen aus einem Stream, von Creators oder von Freunden. Du löst sie auf Home ein und stehst dann beim Festival, Konzert oder Meet-up auf der Liste.',
-  },
-  {
-    q: 'Was kostet Roaming?',
-    a: 'In der EU nutzt Du Deinen Tarif wie zu Hause, im Rahmen der Fair-Use-Grenze. Außerhalb der EU buchst Du Daten unter „Reisen“ zu, ab 4,99 € je GB.',
+    a: 'Vier Zeichen von Creators, Partnern oder Freunden. Du löst sie über die Magic-Code-Karte auf Home ein — oder schon bei der Tarifwahl, dann wartet Dein Platz, bis die eSIM läuft.',
   },
   {
     q: 'Wie kündige ich?',
-    a: 'Jeden Monat, direkt hier: Home → Plan anpassen → Plan kündigen. Dein Plan läuft bis zum Ende des Abrechnungsmonats.',
+    a: 'Jeden Monat, direkt in der App: Tipp auf Home Deine Karte an, dann „Verträge hier kündigen“. Dein Tarif läuft bis zum Ende des Abrechnungszeitraums, die Bestätigung liegt danach unter Dokumente.',
   },
 ]

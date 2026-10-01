@@ -65,15 +65,12 @@
   will-change: transform;
 }
 .fg-plate svg { width: 100%; height: 100%; display: block; overflow: visible; }
-/* Das Schweben liegt auf dem SVG, nicht auf der Platte: dort wuerde es
-   mit der Lageaenderung des Takts um dieselbe Eigenschaft streiten.
-   Sinus statt ease-out (seit 2026-09-24): mit ease-out kam die Karte an
-   jedem Umkehrpunkt zur Ruhe und schnellte dann los. */
-.fg-plate svg { animation: fgFloat 10.15s var(--ease-sway) infinite; }
-@keyframes fgFloat {
-  0%, 100% { transform: translateY(-5px) rotate(-0.4deg); }
-  50% { transform: translateY(5px) rotate(0.4deg); }
-}
+/* Die Karte schwebt nicht. Bis zum 2026-09-25 lief hier eine Schleife,
+   5px auf und ab mit 0,4 Grad Drehung — erst mit ease-out, dann mit
+   Sinus, aber hin und her blieb sie: zwischen den Takten wirkte die
+   Karte unruhig statt gefertigt. Sie bewegt sich jetzt nur, wenn der
+   Takt ihre Lage aendert. Nebenbei lief die Schleife auf dem <svg> —
+   ein Layout je Bild, gegen die Leistungsregel im Design-System. */
 
 /* Takt 1-3 liegt die Karte auf der Werkbank — gekippt und gedreht wie
    in der Figma-Vorlage. Ab "bereit" richtet sie sich auf und wendet
@@ -367,18 +364,11 @@
    Statusleiste steht. Grundzustand ist der Schluss: vier volle Balken
    und "5G" daneben. Die Takte davor nehmen weg.
 
-   Aussen (.fg-signal) Lage und Schweben, innen (.fg-sig) die
-   Sichtbarkeit je Takt — auf einem Element wuerde die Einblendung die
-   Schwebe-Schleife ersetzen. Das Schweben ist dasselbe wie das der
-   Karte, gleiche Dauer, gleicher Start: 4,5px sind ihre 5px mal der 0,9,
-   auf die sie hier verkleinert ist. So steht der Abstand zwischen beiden. */
+   Aussen (.fg-signal) die Lage, innen (.fg-sig) die Sichtbarkeit je
+   Takt. Wie die Karte steht auch die Anzeige still; bewegt sind nur
+   die Balken selbst. */
 .fg-signal {
   position: absolute; left: 0; right: 0; top: 56px; height: 27px;
-  animation: fgFloatY 10.15s var(--ease-sway) infinite;
-}
-@keyframes fgFloatY {
-  0%, 100% { transform: translateY(-4.5px); }
-  50% { transform: translateY(4.5px); }
 }
 .fg-sig {
   height: 100%;
@@ -562,27 +552,6 @@
 @keyframes jrOut { to { opacity: 0; transform: translateY(-4px); } }
 @keyframes jrBody { from { opacity: 0; } }
 @keyframes jrBodyUp { from { opacity: 0; transform: translateY(10px); } }
-
-/* Auf einem Screen, auf dem gelesen und entschieden wird, steht die
-   Karte still. Das Schweben ist Leben, solange etwas passiert — sobald
-   der Ablauf auf eine Entscheidung wartet, ist es nur noch Unruhe
-   unter dem Text, den der Kunde gerade liest.
-
-   ANGEHALTEN, nicht abgeschaltet: animation:none setzt die Karte auf
-   ihre Grundlage zurueck und liess sie im Moment des Phasenwechsels um
-   die Amplitude des Schwebens zurueckspringen. play-state friert sie
-   dort ein, wo sie gerade steht.
-
-   Die langsame Atmung der Netzringe bleibt — sie ist kein bewegtes
-   Objekt, sondern die Anzeige, dass die Verbindung steht. */
-[data-phase='handover'] .fg-plate svg,
-[data-phase='done'] .fg-plate svg,
-[data-phase='handover'] .fg-signal,
-[data-phase='done'] .fg-signal { animation-play-state: paused; }
-
-/* Der Messer sitzt bei der Uebergabe ueber dem Knopf und nimmt dort die
-   volle Breite — er misst ja auch den ganzen Ablauf, nicht die Buehne. */
-.flow-cta .beat-meter { width: 100%; margin-bottom: 16px; }
 
 /* ============================================================
    Bewegung reduziert

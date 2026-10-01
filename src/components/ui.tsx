@@ -118,19 +118,55 @@ export function Screen({ active, children }: { active: boolean; children: React.
 /* ---------- Fortschritt im Abschluss-Ablauf ----------
    Vier Schritte von der Tarifwahl bis zur aktiven eSIM. Ohne diese
    Anzeige weiss niemand, wie viel nach der Identifizierung noch
-   kommt — und genau dort brechen Anmeldungen ab. */
+   kommt — und genau dort brechen Anmeldungen ab.
+
+   Seit dem 2026-09-25 steht sie auf JEDEM Screen des Ablaufs, an
+   derselben Stelle, auch waehrend Ident und eSIM laufen. Vorher stand
+   sie auf drei von elf, begann mit Schritt 1 schon erledigt (die
+   Tarifwahl trug keine), und auf der eSIM-Uebergabe standen zwei
+   Fortschrittsbalken uebereinander. Die Takte eines laufenden Schritts
+   fuellen jetzt dessen Segment (`progress`), statt einen zweiten
+   Messer zu brauchen.
+
+   `current` = Anzahl der Schritte davor; 4 heisst: alles erledigt. */
 const FLOW_LABELS = ['Tarif', 'Bestellung', 'Identität', 'eSIM']
 
-export function FlowSteps({ current }: { current: number }) {
+export function FlowSteps({
+  current,
+  progress,
+  stepMs = 0,
+}: {
+  current: number
+  /** 0–1: wie weit der laufende Schritt ist. Ohne Angabe: ganz gefuellt. */
+  progress?: number
+  /** So lange laeuft die Fuellung bis `progress` — die Dauer des Takts. */
+  stepMs?: number
+}) {
+  const all = current >= FLOW_LABELS.length
   return (
-    <ol className="flow-steps" aria-label={`Schritt ${current + 1} von ${FLOW_LABELS.length}: ${FLOW_LABELS[current]}`}>
+    <ol
+      className="flow-steps"
+      aria-label={
+        all
+          ? `Alle ${FLOW_LABELS.length} Schritte erledigt`
+          : `Schritt ${current + 1} von ${FLOW_LABELS.length}: ${FLOW_LABELS[current]}`
+      }
+    >
       {FLOW_LABELS.map((label, i) => (
         <li
           key={label}
           className={i < current ? 'done' : i === current ? 'now' : ''}
           aria-current={i === current ? 'step' : undefined}
         >
-          <i aria-hidden="true" />
+          <i aria-hidden="true">
+            <b
+              style={
+                i === current && progress !== undefined
+                  ? { transform: `scaleX(${progress})`, transitionDuration: `${stepMs}ms` }
+                  : undefined
+              }
+            />
+          </i>
           <span>{label}</span>
         </li>
       ))}
@@ -328,7 +364,7 @@ export function LiveRegion({ message }: { message: string | null }) {
    Springt ueber den kompletten Abschluss (Onboarding, Tarifwahl, Bestellung,
    Ident, Aktivierung, eSIM) direkt in den Home-Screen. Bewusst kein .btn und
    bewusst gedaempft: Figma kennt dieses Element nicht, es gehoert zur
-   Vorfuehrung — wie der Standort-Schalter im Profil-Sheet. */
+   Vorfuehrung — wie die Vorfuehr-Codes im Magic-Sheet. */
 export function DemoSkip({ onSkip, className = '' }: { onSkip: () => void; className?: string }) {
   return (
     <button
@@ -413,8 +449,8 @@ export function EsimIcon() {
    Der Anfangsbuchstabe statt eines Profilfotos (seit 2026-09-24, von
    Niclas beauftragt). Ein Mobilfunkvertrag braucht kein Gesicht — und
    ein Foto, das der Kunde nie hochgeladen hat, waere ein erfundenes
-   Detail. Derselbe Buchstabe steht auf Home (als Knopf) und im Kopf
-   des Konto-Sheets (als Zeichen): es ist dieselbe Person. */
+   Detail. Steht nur noch auf Home, im Knopf zum Konto-Sheet; im Kopf
+   des Sheets ist er seit dem 2026-09-25 entfallen. */
 export function Monogram({ name }: { name: string }) {
   return (
     <span className="monogram" aria-hidden="true">

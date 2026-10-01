@@ -20,7 +20,7 @@
 import { useId, useState } from 'react'
 import { Button, Disclosure } from '../components/ui'
 import { planTitle, type Plan } from '../data/plans'
-import { CYCLE, contractSummary } from '../data/account'
+import { CYCLE, contractSummary, fmtEuro, payLabel, type Payment, type Receipt } from '../data/account'
 import {
   APPEARANCE,
   FAQ,
@@ -242,6 +242,43 @@ export function HelpPage({ onOpenSupport }: { onOpenSupport: () => void }) {
   )
 }
 
+/* ---------- Zahlung ----------
+   Die Zahlart aus dem Checkout, und was als Naechstes abgebucht wird.
+   Bis zum 2026-09-25 stand im Konto "Deine Karte *9876" — auch nach
+   einer Bestellung per Lastschrift —, und der Tipp fuehrte nirgendwohin. */
+export function PaymentPage({
+  plan,
+  payment,
+  onOpenSupport,
+}: {
+  plan: Plan
+  payment: Payment
+  onOpenSupport: () => void
+}) {
+  return (
+    <>
+      <Group
+        title="Zahlart"
+        foot={
+          payment.method === 'sepa'
+            ? 'Das SEPA-Mandat hast Du bei der Bestellung erteilt. Jede Abbuchung kündigen wir mindestens einen Tag vorher an.'
+            : undefined
+        }
+      >
+        <InfoRow label={payLabel(payment)} value="Aktiv" note="Hinterlegt bei Deiner Bestellung." />
+        <LinkRow label="Zahlart ändern" note="Schreib uns im Chat." onClick={onOpenSupport} />
+      </Group>
+      <Group title="Nächste Abbuchung">
+        <InfoRow
+          label={fmtDate(CYCLE.invoiceDate)}
+          value={fmtEuro(plan.monthly)}
+          note={`NOURA ${planTitle(plan)}, inkl. MwSt.`}
+        />
+      </Group>
+    </>
+  )
+}
+
 /* ---------- Dokumente ---------- */
 export type DocKey = 'summary' | 'service' | 'privacy' | 'withdrawal'
 
@@ -250,11 +287,13 @@ const fmtDate = (d: Date) =>
 
 export function DocsPage({
   plan,
+  receipts,
   open,
   onOpen,
   onOpenSecurity,
 }: {
   plan: Plan
+  receipts: Receipt[]
   open: DocKey | null
   onOpen: (k: DocKey | null) => void
   onOpenSecurity: () => void
@@ -262,6 +301,20 @@ export function DocsPage({
   const toggle = (k: DocKey) => onOpen(open === k ? null : k)
   return (
     <>
+      {/* Jede verbindliche Aenderung landet hier — der Toast, der sie
+          bis zum 2026-09-25 quittierte, war nach 2,6 s weg. Neueste zuerst. */}
+      {receipts.length > 0 && (
+        <Group title="Bestätigungen">
+          {[...receipts].reverse().map((r) => (
+            <InfoRow
+              key={r.id}
+              label={r.title}
+              value={fmtDate(r.at)}
+              note={`${r.detail} · ${r.at.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`}
+            />
+          ))}
+        </Group>
+      )}
       {/* Wer gerade erst bestellt hat, hat noch keine Rechnung. Das steht
           hier als Datum, nicht als leere Liste. */}
       <Group title="Rechnungen">

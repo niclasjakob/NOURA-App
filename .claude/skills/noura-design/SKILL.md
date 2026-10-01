@@ -156,7 +156,7 @@ Safe-Area-Verrechnung (`--bar-bottom`), Glas nur auf Bedienelementen.
 ### Neue Screens ohne Figma-Vorlage
 
 Der Code ist über die Vorlage hinausgewachsen: `beats`, `esim-forge`,
-`ident-stage`, `magic-code`, `magic-pass`, `roaming`, `usage`, die Screens
+`ident-stage`, `magic-code`, `magic-pass`, `usage`, die Screens
 `checkout`, `esim` und die Konto-Unterseiten (`sheets/account-pages.tsx`)
 stehen in keinem Screen-Register. Dort gibt es nichts
 abzumessen — also führt `apple-design`, und diese Datei liefert nur das
@@ -185,8 +185,9 @@ gueltig fuer jede Buehne:
 
 - **Schleifen, die hin und zurueck laufen, tragen `--ease-sway`** (Sinus),
   nie `--ease-out`. Mit ease-out startet jede Haelfte mit dem 2,25-fachen
-  der Mittelgeschwindigkeit: an jedem Umkehrpunkt ein Zucken. Betraf das
-  Schweben der Karte und das Treiben der Aurora.
+  der Mittelgeschwindigkeit: an jedem Umkehrpunkt ein Zucken. Gilt seit
+  dem 2026-09-25 nur noch fuer Deckkraft (Suchbalken, Passkey, Live-Punkt)
+  — siehe die Regel darunter.
 - **Text wird nie im Bild des Wechsels ausgetauscht.** Der alte geht
   (0,2s linear), der neue kommt, wenn er weg ist — Takt-Text
   (`BeatCaption`) und Phasenbloecke (`.jr-leave`). Ein Schnitt mit Pause
@@ -194,6 +195,26 @@ gueltig fuer jede Buehne:
 - **Was zusammen faehrt, faehrt mit einer Kurve.** Buehne und Karte darin
   laufen beide 1,05s ease-out; mit 0,9s gegen 1,05s setzte sich die Karte
   in zwei Stufen.
+
+**Entschieden 2026-09-25 (Niclas): nichts pendelt.** „Die eSIM-Karten oder
+andere Elemente bewegen sich immer hin und her, das sieht nicht
+professionell aus.“ Auch mit Sinus blieb das Schweben ein Pendeln. Die
+Regel: **Ein Gegenstand bewegt sich nur, wenn sich etwas aendert** — ein
+Takt, ein Code, ein Schritt. Im Leerlauf steht er.
+
+| Stelle | vorher | jetzt |
+|---|---|---|
+| Karte Onboarding (`.card3d`) | ±7px auf/ab, ±0,7° | steht |
+| Karte eSIM-Einrichtung (`.fg-plate svg`) + Empfang (`.fg-signal`) | ±5px, ±0,4° | stehen |
+| Schein hinter Karte und Schritt-Visuals, Magic-Code-Schein | pumpte (Groesse 0,9–1,08) | steht, Deckkraft 0,8–0,85 |
+| Code-Wolke (`.magic-cloud`) | drehte ±1,2° | steht, bewegt sich nur beim Codewechsel |
+| Video-Ident-Fenster, Live-Punkt | pumpten | Fenster steht, Punkt nur noch Deckkraft |
+| Farbwolken (`.af`) | hin/zurueck ±90px, +14–22 % Groesse | kreisen gleichmaessig, linear, 44/52/60s, ohne Groessenaenderung |
+
+Was weiter endlos laeuft, laeuft **in eine Richtung**: Lichtstreif ueber
+der Karte, kreisende Glaspunkte, Farbwolken auf der Kreisbahn — oder zeigt
+einen Vorgang an (Suchbalken, Ladelinie, Ident-Lesen). Wer eine neue
+Schleife baut, die umkehrt, braucht einen Grund, der im Produkt steht.
 
 ---
 
@@ -840,12 +861,15 @@ rechts, Eingabefeld. Der Rest steht in `sheets/support-chat.tsx`, Themen,
 Erkennung und Antworttexte in `data/support.ts`.
 
 - **Der Assistent antwortet mit den Zahlen des Kunden**, aus denselben
-  Quellen wie Home und Reisen (`usageSummary`, `roamingState`, `plans.ts`).
+  Quellen wie Home und die Verbrauchsseite (`usageSummary`, `plans.ts`).
+  Roaming-Fragen gibt er seit dem 2026-09-25 ans Team ab (Reiseansicht
+  entfallen).
   Keine Zahl als Text in `support.ts` — sie widerspraeche beim naechsten
-  Tarifwechsel der Karte daneben. Was er nicht erkennt, gibt er ans Team ab,
-  statt zu raten.
-- **Wer antwortet, steht immer da:** Kopf (Assistent / Lea) und Absender
-  ueber der ersten Blase jedes Sprechers (`generative-ai.md › Transparency`).
+  Tarifwechsel der Karte daneben. Was er nicht erkennt, beantwortet er
+  nicht geraten, sondern bietet direkt die Rueckruf-Zeiten an (oder zeigt
+  den schon gebuchten Termin).
+- **Wer antwortet, steht immer da:** Kopf „Assistent · Automatisch“ und
+  der Absender ueber der ersten Blase (`generative-ai.md › Transparency`).
 - **Rechts steht, was Du sagst oder sagen kannst** — eigene Blasen und
   Antwortknoepfe. Die Rueckruf-Zeiten sind Antwortknoepfe: ein Tipp bucht,
   absagen geht in der Karte danach.
@@ -853,8 +877,42 @@ Erkennung und Antworttexte in `data/support.ts`.
   die Gruppen der Kontoseiten.
 - **Warten** ist ein Satz, was gerade nachgesehen wird, plus `hairlineSweep`.
   Keine huepfenden Punkte.
-- **Spruenge** (Reisen, Plan, Magic Code) schliessen den Chat und oeffnen das
+- **Spruenge** (Plan, Magic Code) schliessen den Chat und oeffnen das
   Ziel-Sheet — eines zur Zeit. Der Verlauf bleibt, das Sheet ist nur geparkt.
+
+**Entschieden 2026-09-25 (Niclas): der Rueckruf ist der eine Weg zum Team,
+und er ist immer zu sehen.** „Mit dem Team chatten“ ist entfallen, mit ihm
+Warteschlange, Lea, Kopfwechsel und Systemzeilen. Der Rueckruf steht nicht
+mehr zwischen den Vorschlaegen, sondern fest ueber dem Eingabefeld
+(`.chat-call` in `.chat-foot`). Er unterscheidet sich von den Vorschlaegen in
+allem, was sie ausmacht — denn er ist keiner:
+
+| | Vorschlaege | Rueckruf |
+|---|---|---|
+| Was | Satz an den Assistenten | Weg an ihm vorbei (`generative-ai.md`: „consider offering a non-AI fallback“) |
+| Ort | im Verlauf, rechts, wechselt je Antwort | fest ueber dem Feld, links, scrollt nicht weg |
+| Form | 61px, Radius 24, nur Text | 44px-Pille, Hoerer + Text |
+| Material | helles Liquid Glass (20 %) | getoentes Glas: `--noura-well` + Kante und Glanz von `.btn` |
+| Tipp | fliegt als eigene Blase in den Verlauf | bleibt stehen, die Blase steigt aus der Leiste |
+
+- **Zustand im Knopf:** gebucht traegt er den Termin („Rueckruf · Heute,
+  16–18 Uhr“), ein Tipp holt die Karte mit „Rueckruf absagen“. Solange die
+  Zeiten zur Wahl stehen, ist er abgeblendet.
+- **„Mensch“, „Mitarbeiter“ getippt** fuehrt zum Rueckruf; Unbekanntes auch.
+- **Startvorschlaege** sind jetzt die drei Themen der Begruessung: Verbrauch,
+  Rechnung, Tarif.
+
+> **Vorschlag, von Niclas zu bestaetigen: getoentes statt helles Glas.**
+> Die Stufe 3 sagt Glas 20 %. Gemessen (Chrome, hellster Pixel unter dem
+> ausgeblendeten Text, 2026-09-25): helles Glas **3,84–4,44:1** — fuer
+> 16px zu wenig —, mit `--lg-refract-dim` 4,17–4,90:1, getoent
+> **8,59–10,28:1**. Gedrueckt bleibt die Mulde (das helle Druck-Glas waere
+> heller als der Ruhezustand), der Knopf legt sich nur an.
+>
+> **Offen, gleiche Messung:** die hellen Vorschlaege selbst liegen bei
+> **3,64–4,83:1** — Weiss auf Glas 20 % im Glas-Sheet, dieselbe Lage wie
+> beim Eingabefeld. Nicht angefasst; wer es angeht, prueft dort zuerst
+> `--lg-refract-dim` plus Tint 14 % (am Rueckruf gemessen: 4,85–5,69:1).
 
 Gemessen (Chrome, dunkelster Pixel unter dem Text): Blasen Weiss 4,06:1 →
 4,53:1 mit `--glass-refract` statt reinem Blur; Nebenzeilen im Chat
@@ -877,8 +935,8 @@ wie jeder Sheet-Titel. Blasen 80 % breit, Innenabstand 16/20 statt 20.
 Die Antwortknoepfe bleiben Figma-Button (16px).
 
 **Takt und Bewegung.** Drei Schritte je Antwort: ankommen (350ms), nachsehen
-(1,2–2,2s, waechst mit Text und Karte; Lea tippt 1,6–3s), anbieten (Vorschlaege
-450ms nach der Antwort). Jede Animation sagt, woher etwas kommt:
+(1,2–2,2s, waechst mit Text und Karte), anbieten (Vorschlaege 450ms nach der
+Antwort). Jede Animation sagt, woher etwas kommt:
 
 | Was | Bewegung | Warum |
 |---|---|---|
@@ -889,12 +947,44 @@ Die Antwortknoepfe bleiben Figma-Button (16px).
 | Vorschlaege | von rechts, 60ms versetzt | die Seite, auf der sie zu Deinen Worten werden |
 | Buchung | Karte mit der Feder, Haekchen zeichnet sich, Erfolgs-Haptik | der eine folgenreiche Moment |
 | Absage | Linie zieht sich durch den Termin | dieser Termin faellt weg |
-| Uebergabe | Kopf wechselt (Zeile von oben, Bild mit Feder) | das Gegenueber ist ein anderes |
+| Fester Rueckruf | keine — er steht; nur die Blase steigt aus der Leiste | er wird nicht zur Nachricht, er bleibt |
 
 Nur transform, opacity und einmal `stroke-dashoffset`. Im Leerlauf laeuft im
 Chat keine Animation. Unter „Bewegung reduzieren“ entfaellt der Flug (JS
 prueft das selbst, die globale Regel greift nur fuer CSS); die Reihenfolge
 bleibt, die Bewegung nicht.
+
+### Entschieden: Home zeigt Status, die Zahlen stehen im Sheet
+
+**Gilt seit 2026-09-25**, von Niclas gewaehlt: Option A plus das
+Artboard „Details sheet“ aus dem Konzept „Home Usage Concept“
+(claude.ai/artifact/7HxMYNpGb6pEGANERBXdxv). Beide Tarife sind
+unbegrenzt, mit Allnet-Flat — von den zwoelf Zahlen der Klappe „Dein
+Verbrauch“ hatte keine fuer den Kunden eine Folge, und die einzige, die
+Geld kostet (25 €), stand am kleinsten.
+
+- **Home:** eine Karte, `StatusCard` in `components/usage.tsx`. „Alles
+  unbegrenzt“, darunter zwei Zeilen: naechste Rechnung (Betrag aus
+  `plan.monthly`) und „Verbrauch diesen Monat“ als Knopf ins Sheet. Home
+  passt damit auf einen Bildschirm.
+- **Sheet „Verbrauch & Rechnung“:** `sheets/usage-sheet.tsx`. Internet mit
+  Tagesbalken (`DayBars`: ein Balken je abgeschlossenem Tag, ein Punkt je
+  Tag, der noch kommt), Anrufe und SMS „in Deiner Flat“, naechste Rechnung
+  und Tempo. Die Hochrechnung bleibt als Satz, **ohne roten Trend-Chip** —
+  bei einem unbegrenzten Tarif ist mehr Verbrauch keine Warnung. Gruppen
+  sind Mulden (`.use-well`).
+  Gemessen (Chrome, hellster Pixel neben dem Text): gedaempfter Text
+  5,74–6,95:1, Balken `#e15055` auf der Mulde 3,89:1.
+- **Zeilen auf der Statuskarte sind weiss, nicht gedaempft.** Gemessen am
+  hellsten Pixel neben dem Text: `--noura-text-muted` 3,20–3,34:1, Weiss
+  5,15–5,43:1. Die Karte liegt ueber der hellen Aurora-Mitte.
+- **Entfallen:** die Klappe (`.section-toggle`, `.usage-panel`), die drei
+  Figma-Kacheln 1330:1831 mit ∞-Ring (`.usage`, `.col-l/-r`, `.ring-wrap`),
+  Zyklus- und Prognosekarte (`CycleCard`, `ForecastCard`, `.fc-*`,
+  `.spark*`, `.trend`). `.cycle-bar` bleibt, der Support-Chat nutzt ihn.
+- Am selben Tag zweimal anders gebaut und verworfen: die alte Ansicht
+  unveraendert im Sheet, dann als eigene Seite hinter Home. Gemeint war
+  von Anfang an das Konzept-Sheet.
 
 ### Entschieden: Monogramm statt Profilfoto
 
@@ -906,8 +996,10 @@ und der Kunde hat nie eins hochgeladen. Jetzt steht dort der Anfangsbuchstabe
 - **Home:** Knopf, also Stufe 3 — Liquid Glass wie `.btn`, mit Kantenreflex,
   gedrueckt dunkler. `aria-label="Account öffnen"`, wie das Sheet heisst.
   Weiss auf dem Glas: >= 4,95:1 unter dem Buchstaben (gemessen, Chrome).
-- **Konto-Sheet-Kopf:** dasselbe Zeichen, flach auf `--noura-glass-strong`
-  wie `.event-avatar` — nicht tippbar, also kein Kantenreflex.
+- **Konto-Sheet-Kopf: kein Monogramm** (entfernt 2026-09-25, Niclas: „passt
+  da nicht rein“). Der Knopf, der das Sheet oeffnet, liegt direkt dahinter;
+  im Sheet stand derselbe Buchstabe nur ein zweites Mal. Der Kopf traegt
+  Titel und naechste Zahlung.
 - **54px bleiben.** Daran haengt die Kopfhoehe und der Versatz 171px von
   `.home-scroll`.
 - `avatar-marcel.webp` ist geloescht.
@@ -999,7 +1091,7 @@ trägt `isolation: isolate`. Tokens: `--lg-tint`, `--lg-tint-pressed`,
 Getragen von `.btn` (alle Varianten), `.btn.icon-btn`, `.sheet-close` und —
 seit dem 2026-09-22 — der **Pille der Tarifleiste** (`.tabs .pill`, siehe
 "Entschieden: die Tarifleiste trägt eine Linse"). **Nicht** von Listenzeilen
-und nicht von den übrigen Segment-Schaltern (`.demo-switch`, `.opt-btn`) —
+und nicht von den übrigen Segment-Schaltern (`.opt-btn`) —
 Apple setzt das Material für schwebende Bedienelemente ein, nicht für Inhalt
 in der Fläche.
 
@@ -1202,12 +1294,9 @@ keine Hierarchie. Auf einem Screen, dessen Aufgabe das Anzeigen von
 Verbrauch ist, gehört die Zahl zum Lautesten. **20 px trägt seitdem nur
 noch Überschriften.**
 
-Gepflegt an zwei Stellen: `.usage .val` in `global.css` und `.fc-val` in
-`app.css`. Beide auf `--fs-screen`.
-
-Zwei Nachbarn derselben Rolle stehen bewusst noch auf 20 px, weil ihr
-Screen nicht mitentschieden wurde: `.roam-stat .val` und `.allow-mid b`
-im Reisen-Sheet. Wer das Sheet anfasst, zieht sie nach.
+Gepflegt in `.use-val` (`global.css`), auf `--fs-screen`. Bis zum
+2026-09-25 standen hier `.usage .val` und `.fc-val` — die Home-Kacheln
+und die Prognose, beide entfallen (siehe „Home zeigt Status“).
 
 **Ebenfalls am 2026-09-04:** die Begrüßung auf Home ist ein Screen-Titel
 (700/24), nicht Card-Titel — das folgt Figma, es war vorher falsch. Und
@@ -1253,6 +1342,47 @@ xcrun simctl io $SIM screenshot /tmp/shot.png    # Sichtprüfung
    guter Screen bekommt eine kurze Rückmeldung, keine herbeigeschriebene
    Liste. Kritische Funde sind Barrierefreiheits-Verstöße; alles andere trägt
    High, Medium oder Low.
+
+### Journey-Konzept (Stand 2026-09-25)
+
+Umgesetzt aus dem Flow-Review "NOURA Journey Concept" (Artifact), von Niclas
+beauftragt — **ohne** die neue Startseite: Tab-Leiste und "Start"-Screen sind
+nicht umgesetzt, Home bleibt, wie es ist.
+
+- **Ein Bestaetigungs-Sheet fuer jeden verbindlichen Tipp**
+  (`sheets/confirm-sheet.tsx`): Tarif wechseln, Kuendigen (das Datenpaket
+  ist am 2026-09-25 mit der Reiseansicht entfallen).
+  Aufbau immer gleich: was sich aendert, ab wann, was es kostet, Zahlart, EIN
+  Knopf im Gesetzeswortlaut ("Zahlungspflichtig wechseln", "jetzt kündigen"
+  nach § 312k BGB), danach ein Ergebnis im
+  Sheet und ein Beleg unter Konto → Dokumente. Kein Toast fuer Folgenreiches.
+  "Abbrechen"/"Fertig" fuehren ins Ursprungs-Sheet zurueck, das X schliesst.
+  Tarifwechsel fuehrt **nicht** mehr durch Bestellung, Ausweis und neue eSIM.
+- **Schrittanzeige auf jedem Screen des Ablaufs**, an derselben Stelle
+  (`.flow-top` bzw. `.flow-steps-space` im Kopf). Die Takte von Ident und eSIM
+  fuellen das Segment ihres Schritts (`FlowSteps progress`); der Taktmesser
+  (`BeatMeter`) ist entfallen.
+- **Anmelden per Passkey.** Der Intro-Knopf heisst "Mit Passkey anmelden"
+  (**Abweichung von Figma 1700:3984**, dort "Einloggen";
+  `managing-accounts.md`: die Methode nennen). Der Login-Ladebildschirm
+  (`Activation`, 4,6 s) ist entfallen. `components/passkey.tsx` ist eine
+  Nachbildung des System-Sheets und steht deshalb im Systemstil, nicht in Glas.
+- **Magic Codes aus drei Quellen**, ein Feld, ein Alphabet
+  (`data/magic.ts`): Creator-Drops (60 min, Stueckzahl), Partner-Vorteile
+  (dauerhaft, je Tarif nach `magicScope`), Freundes-Codes (`JANA`, eigener
+  Code `MRCL`). Ein Code geht schon vor dem Kauf — Tarifwahl oder Link
+  `?code=` — und wird bei "Du bist im Netz" eingeloest. Onboarding Schritt 2
+  laesst einen Beispiel-Code (`NURA`) einrasten.
+- **Apple Pay zuerst** im Checkout; die gewaehlte Zahlart steht danach im
+  Konto (Kachel "Zahlung", Seite `PaymentPage`) und in jeder Bestaetigung.
+- **Glossar:** Tarif (nicht Plan), "Mit Passkey anmelden"/"Abmelden",
+  "Einstellungen" (nicht "Sonstiges"), "Fertig" am Ende eines Ablaufs. Offen,
+  weil auf Home: der Knopf "Plan anpassen" im Mehr-Menue.
+
+**Vorschlaege, von Niclas zu bestaetigen:** Tarifwechsel nach oben sofort
+(anteilig) oder zum Abrechnungstag, nach unten nur zum Abrechnungstag
+(`switchQuote`); Partner und Vorteile sind erfunden; der Wert eines
+Freundes-Codes ist eine Tuer (Community-Abend), kein Rabatt.
 
 ## Grenzen
 

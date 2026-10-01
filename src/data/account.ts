@@ -1,5 +1,5 @@
 /* ============================================================
-   NOURA — Konto-, Verbrauchs- und Reisedaten
+   NOURA — Konto- und Verbrauchsdaten
 
    Prototyp: alles statisch, aber so geschnitten, dass ein echter
    Endpunkt dieselbe Form liefern koennte. Abgeleitete Werte
@@ -14,13 +14,23 @@ import type { Beat } from '../components/esim-forge'
     Im Echtbetrieb hier `new Date()` einsetzen. */
 export const DEMO_TODAY = new Date(2026, 6, 19, 10, 0, 0)
 
+/** Der Vorfuehrtag mit der echten Uhrzeit — fuer Belege, die "Datum und
+    Uhrzeit" tragen muessen (§ 312k Abs. 4 BGB), ohne dem Abrechnungs-
+    zeitraum zu widersprechen, der am Vorfuehrtag haengt. */
+export const demoNow = () => {
+  const n = new Date()
+  const d = new Date(DEMO_TODAY)
+  d.setHours(n.getHours(), n.getMinutes(), 0, 0)
+  return d
+}
+
 /* ---------- Abrechnungszeitraum ---------- */
 export const CYCLE = {
   start: new Date(2026, 6, 8),
   end: new Date(2026, 7, 7),
   invoiceDate: new Date(2026, 7, 8),
   /* Kein Betrag mehr: er haengt am gewaehlten Tarif und wird dort
-     gerechnet (CycleCard in components/usage.tsx). Als feste Zahl hier
+     gerechnet (StatusCard und Verbrauchs-Sheet, aus plan.monthly). Als feste Zahl hier
      widersprach er dem Tarifpreis, sobald einer von beiden sich
      bewegte — und genau das war zuletzt der Fall. */
 }
@@ -73,20 +83,20 @@ export function usageSummary(today: Date = DEMO_TODAY): UsageSummary {
   }
 }
 
-/* ---------- Roaming ----------
-   Zwei Produktregeln, die der Nutzer verstehen muss:
+/* ---------- EU-Roaming ----------
+   Der Inlandstarif gilt in der EU weiter ("Roam like at home"). Bei
+   einem unbegrenzten Inlandstarif ist das EU-Volumen aber *nicht*
+   unbegrenzt: die Verordnung (EU) 2022/612 laesst eine Fair-Use-Grenze
+   zu und schreibt zugleich ihren Mindestwert vor. Wer "unbegrenzt in
+   der EU" sagt, sagt die Unwahrheit — und faellt beim ersten
+   Drosselungs-Beschwerdefall darauf zurueck.
 
-     EU   → der Inlandstarif gilt weiter ("Roam like at home"). Bei einem
-            unbegrenzten Inlandstarif ist das EU-Volumen aber *nicht*
-            unbegrenzt: die Verordnung (EU) 2022/612 laesst eine
-            Fair-Use-Grenze zu und schreibt zugleich ihren Mindestwert
-            vor. Wer "unbegrenzt in der EU" sagt, sagt die Unwahrheit —
-            und faellt beim ersten Drosselungs-Beschwerdefall darauf
-            zurueck.
-     Welt → begrenztes Kontingent aus dem Tarif, danach Preis je GB.
+   Die Grenze wird gerechnet, nicht geschaetzt. Eine hart notierte Zahl
+   waere beim naechsten Preiswechsel still falsch.
 
-   Die EU-Grenze wird gerechnet, nicht geschaetzt. Eine hart notierte
-   Zahl waere beim naechsten Preiswechsel still falsch. */
+   Die Reiseansicht (Standort, Kontingent-Ring, Datenpakete) ist am
+   2026-09-25 entfallen. Was bleibt, ist die Vertragsangabe: die
+   Vertragszusammenfassung nennt die Grenze weiter. */
 
 /** Umsatzsteuersatz. Alle Preise in der App sind Brutto-Endpreise (PAngV). */
 export const VAT = 0.19
@@ -103,82 +113,83 @@ export const EU_WHOLESALE_CAP_PER_GB = 1.3
 export const euFupGb = (monthlyGross: number) =>
   Math.floor((2 * (monthlyGross / (1 + VAT))) / EU_WHOLESALE_CAP_PER_GB)
 
-export type RoamZone = 'home' | 'eu' | 'world'
-
-export interface RoamingState {
-  zone: RoamZone
-  country: string
-  flag: string
-  network: string
-  /** Weltweites Kontingent aus Tarif + zugebuchten Paketen.
-      null ausserhalb der Welt-Zone — dort gibt es nichts, was leer wird. */
-  allowanceGb: number | null
-  /** Anteil, der im Tarif steckt. 0, wenn der Tarif keinen enthaelt. */
-  includedGb: number
-  /** In dieser Sitzung zugebucht. */
-  extraGb: number
-  usedGb: number
-  /** Preis je GB nach Aufbrauchen des Kontingents */
-  extraPerGb: string | null
-  /** Fair-Use-Grenze im EU-Roaming, aus dem Tarifpreis gerechnet. */
-  euFupGb: number
-  /** Bereits im EU-Roaming verbraucht — bezogen auf die Fair-Use-Grenze. */
-  euUsedGb: number
-}
-
-const ZONES: Record<RoamZone, { country: string; flag: string; network: string; usedGb: number }> = {
-  home: { country: 'Deutschland', flag: '\u{1F1E9}\u{1F1EA}', network: 'Vodafone DE', usedGb: 0 },
-  eu: { country: 'Spanien', flag: '\u{1F1EA}\u{1F1F8}', network: 'Vodafone ES', usedGb: 4.6 },
-  world: { country: 'T\u00FCrkei', flag: '\u{1F1F9}\u{1F1F7}', network: 'Vodafone TR', usedGb: 2.1 },
-}
-
-/** Der Reisezustand haengt am Tarif, nicht an einer festen Tabelle.
-    Seit dem 2026-09-22 traegt KEIN Tarif mehr ein Weltkontingent —
-    weltweit wird in beiden vor der Reise zugebucht. Was am Tarif
-    haengt, ist die EU-Fair-Use-Grenze: sie folgt dem Preis und liegt
-    damit bei 32 GB (CONNECT) gegen 51 GB (CREATE).
-
-    Der Weg fuer ein Kontingent bleibt bestehen: `roamingGb` steuert
-    ihn weiter, steht nur bei beiden Tarifen auf null. Frueher stand
-    hier fuer jeden Tarif fest "3 GB weltweit". */
-export function roamingState(zone: RoamZone, plan: Plan, extraGb = 0): RoamingState {
-  const z = ZONES[zone]
-  const includedGb = plan.roamingGb ?? 0
-  return {
-    zone,
-    country: z.country,
-    flag: z.flag,
-    network: z.network,
-    includedGb,
-    extraGb,
-    allowanceGb: zone === 'world' ? includedGb + extraGb : null,
-    /* Ohne Kontingent im Tarif konnte auch nichts verbraucht werden. */
-    usedGb: zone === 'world' ? (includedGb > 0 ? z.usedGb : 0) : z.usedGb,
-    extraPerGb: zone === 'world' ? '4,99 \u20AC' : null,
-    euFupGb: euFupGb(plan.monthly),
-    euUsedGb: zone === 'eu' ? z.usedGb : 0,
-  }
-}
-
-/** Zusatzpakete fuer die Welt-Zone */
-export const ROAMING_ADDONS = [
-  { key: 'S', gb: 1, price: '4,99 €', note: '7 Tage gültig' },
-  { key: 'M', gb: 3, price: '9,99 €', note: '14 Tage gültig' },
-  { key: 'L', gb: 10, price: '19,99 €', note: '30 Tage gültig' },
-]
-
 /* ---------- Checkout ---------- */
 export interface PayMethod {
-  key: 'sepa' | 'card' | 'paypal'
+  key: 'applepay' | 'sepa' | 'card' | 'paypal'
   label: string
   meta: string
 }
 
+/* Apple Pay zuerst und vorgewaehlt (seit 2026-09-25):
+   > apple-pay.md › Streamlining checkout: "If Apple Pay is available,
+   > assume people want to use it."
+   Im Echtbetrieb nur, wenn das Geraet es meldet — sonst entfaellt die
+   Zeile, und SEPA ist die Voreinstellung. */
 export const PAY_METHODS: PayMethod[] = [
+  { key: 'applepay', label: 'Apple Pay', meta: 'Mit Face ID bestätigen — keine Kontodaten eintippen' },
   { key: 'sepa', label: 'SEPA-Lastschrift', meta: 'Abbuchung am 8. jeden Monats' },
   { key: 'card', label: 'Kredit- oder Debitkarte', meta: 'Visa, Mastercard, Amex' },
   { key: 'paypal', label: 'PayPal', meta: 'Weiterleitung zur Bestätigung' },
 ]
+
+/** Die Zahlart, die im Checkout gewaehlt wurde. Sie reist bis ins
+    Konto und in jede Bestaetigung — vorher stand dort eine Karte, die
+    niemand hinterlegt hatte. */
+export interface Payment {
+  method: PayMethod['key']
+  /** Letzte vier Stellen der IBAN, nur bei Lastschrift. */
+  last4?: string
+}
+
+export const payLabel = (p: Payment) =>
+  p.method === 'applepay'
+    ? 'Apple Pay'
+    : p.method === 'sepa'
+      ? `Lastschrift ···· ${p.last4 ?? '0000'}`
+      : p.method === 'card'
+        ? 'Kredit- oder Debitkarte'
+        : 'PayPal'
+
+/* ---------- Tarifwechsel ----------
+   Ein bestehender Kunde ist identifiziert und hat seine eSIM. Ein
+   Wechsel aendert nur den Tarif — keine Bestellung, kein Ausweis, keine
+   neue Karte (vorher lief er durch den ganzen Neukunden-Ablauf).
+
+   Hoeher wechseln geht sofort (anteilig fuer den Rest des Zeitraums)
+   oder zum naechsten Abrechnungstag; niedriger nur zum naechsten
+   Abrechnungstag. Das ist die Voreinstellung dieses Prototyps — ob es
+   so bleibt, ist offen (Konzept, Decision 2). */
+export interface SwitchQuote {
+  upgrade: boolean
+  /** Heute faellig bei sofortigem Wechsel, anteilig. */
+  proratedToday: number
+  /** Ab hier gilt der neue Monatspreis, wenn zum Zeitraumende gewechselt wird. */
+  nextCycle: Date
+  daysLeft: number
+}
+
+export function switchQuote(from: Plan, to: Plan, today: Date = DEMO_TODAY): SwitchQuote {
+  const u = usageSummary(today)
+  const diff = to.monthly - from.monthly
+  return {
+    upgrade: diff > 0,
+    proratedToday: Math.max(0, Math.round(((diff * u.left) / u.days) * 100) / 100),
+    nextCycle: CYCLE.invoiceDate,
+    daysLeft: u.left,
+  }
+}
+
+/* ---------- Bestaetigungen ----------
+   Jede verbindliche Aenderung — Wechsel, Kuendigung — endet
+   in einem Beleg unter Dokumente, nicht in einem Toast, der nach 2,6s
+   weg ist. Die Kuendigung muss ohnehin in Textform bestaetigt werden
+   (§ 312k Abs. 4 BGB). */
+export interface Receipt {
+  id: string
+  title: string
+  detail: string
+  at: Date
+}
 
 /* ---------- Identifizierung ----------
    Pflicht nach § 172 TKG — ohne Nachweis darf keine SIM aktiviert
@@ -204,13 +215,13 @@ export const IDENT_METHODS: IdentMethod[] = [
     key: 'video',
     label: 'Video-Chat',
     duration: 'ca. 5 Min',
-    meta: 'Mit Mitarbeiter, täglich 8–22 Uhr — Wartezeit möglich',
+    meta: 'Mit jemandem aus dem Serviceteam, täglich 8–22 Uhr — Wartezeit möglich',
   },
   {
     key: 'photo',
     label: 'Foto-Ident',
     duration: 'ca. 3 Min',
-    meta: 'Ausweis abfotografieren — Prüfung dauert bis zu 24 Stunden',
+    meta: 'Ausweis und Gesicht per Kamera — meist in Minuten geprüft, selten bis zu 24 Stunden',
   },
 ]
 
@@ -254,8 +265,8 @@ export const IDENT_ACTS: Record<IdentMethod['key'], IdentAct[]> = {
     {
       beat: 'read',
       ms: 2900,
-      title: 'Verbindung wird aufgebaut',
-      text: 'Gleich meldet sich jemand aus dem Serviceteam bei Dir.',
+      title: 'Du bist gleich dran',
+      text: 'Noch eine Person vor Dir. Gleich meldet sich jemand aus dem Serviceteam.',
     },
     {
       beat: 'check',
@@ -280,14 +291,17 @@ export const IDENT_ACTS: Record<IdentMethod['key'], IdentAct[]> = {
     {
       beat: 'check',
       ms: 2300,
-      title: 'Daten werden abgeglichen',
-      text: 'Die Felder aus dem Ausweis gegen die Angaben aus Deiner Bestellung.',
+      title: 'Echtheit wird geprüft',
+      text: 'Hologramme, Schrift und Dein Gesicht gegen das Foto im Ausweis.',
     },
     {
+      /* Die Zusage "selten bis zu 24 Stunden" steht an der Auswahl —
+         hier steht, dass es diesmal schnell ging und was sonst
+         passiert, statt so zu tun, als gaebe es den Fall nicht. */
       beat: 'confirm',
       ms: 1900,
       title: 'Identität bestätigt',
-      text: 'Das war der gesetzliche Teil. Jetzt entsteht Deine eSIM.',
+      text: 'Diesmal in Minuten. Dauert es länger, kommt eine Mitteilung — dann geht es hier weiter.',
     },
   ],
 }
@@ -385,9 +399,7 @@ export function contractSummary(plan: Plan): ContractRow[] {
     },
     {
       label: 'Roaming',
-      value: `EU zum Inlandspreis mit ${euFupGb(plan.monthly)} GB Fair-Use-Volumen. Weltweit ${
-        plan.roamingGb ? `${plan.roamingGb} GB inklusive, danach 4,99 €` : 'zubuchbar ab 4,99 €'
-      } je GB.`,
+      value: `EU zum Inlandspreis mit ${euFupGb(plan.monthly)} GB Fair-Use-Volumen. Weltweit zubuchbar ab 4,99 € je GB.`,
     },
     {
       label: 'Bei Störungen',
@@ -411,7 +423,12 @@ export const ESIM_REQUIREMENTS = [
     im Markup; seit die Karte seinen Namen traegt, waeren es sechs —
     und die Karte koennte dem Screen widersprechen, auf dem sie liegt.
     Der Nachname ist Vorfuehrdatum wie die Rufnummer und die IBAN. */
-export const HOLDER = { first: 'Marcel', full: 'Marcel de Groot', phone: '+49 170 5550123' }
+export const HOLDER = {
+  first: 'Marcel',
+  full: 'Marcel de Groot',
+  phone: '+49 170 5550123',
+  email: 'marcel@beispiel.de',
+}
 
 /* ---------- Die Entstehung der eSIM ----------
    Zwei Screens, eine Geschichte. Beim Anbieter wird die Karte gebaut,
@@ -502,8 +519,12 @@ export const ESIM_MANUAL = {
 
 /** Was direkt nach der Einrichtung ansteht. Ohne diese Liste landet
     ein frischer Kunde auf einem Verbrauchs-Dashboard und weiss nicht,
-    ob er noch etwas tun muss. */
-export const FIRST_STEPS = [
+    ob er noch etwas tun muss.
+
+    Der Portierungsschritt gilt nur, wenn eine Nummer umzieht. Bis zum
+    2026-09-25 stand er immer da — auch direkt unter "Deine neue
+    Nummer", wo es nichts umzuziehen gibt. */
+const STEPS: { title: string; text: string; portOnly?: boolean }[] = [
   {
     title: 'Mobile Daten auf NOURA stellen',
     text: 'Einstellungen → Mobilfunk → Mobile Daten. Sonst surfst Du weiter über Deinen alten Tarif.',
@@ -511,12 +532,15 @@ export const FIRST_STEPS = [
   {
     title: 'Alte SIM behalten, bis die Portierung durch ist',
     text: 'Wir melden uns, sobald Deine Nummer umgezogen ist. Erst danach kannst Du sie entfernen.',
+    portOnly: true,
   },
   {
-    title: 'iMessage und FaceTime neu verknüpfen',
-    text: 'Beide hängen an der Rufnummer und brauchen nach dem Wechsel einmal ein paar Minuten.',
+    title: 'iMessage und FaceTime prüfen',
+    text: 'Beide hängen an der Rufnummer. Nach dem Wechsel brauchen sie einmal ein paar Minuten.',
   },
 ]
+
+export const firstSteps = (porting: boolean) => STEPS.filter((s) => porting || !s.portOnly)
 
 /* ---------- Verfuegbarkeit der Ident-Verfahren ----------
    Das Video-Ident laeuft mit Menschen und hat deshalb Oeffnungszeiten.

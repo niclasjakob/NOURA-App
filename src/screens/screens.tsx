@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import appIcon from '../assets/img/noura-app-icon.svg'
 import lockup from '../assets/img/connected-by-vodafone.png'
-import { ONBOARDING, PLAN_DIFF, PLAN_SHARED, PLANS, planTitle, type Plan } from '../data/plans'
+import { ONBOARDING, PLAN_DIFF, PLAN_SHARED, PLANS, planTitle } from '../data/plans'
 import {
   ArrowLeft,
   ArrowRight,
   BackgroundGradient,
-  ChevronDown,
   DemoSkip,
+  FlowSteps,
   Monogram,
   Plus,
   Screen,
@@ -16,16 +16,14 @@ import {
   Button,
 } from '../components/ui'
 import { useInert } from '../hooks/a11y'
-import { hapticSelection } from '../lib/haptics'
-import { CycleCard, ForecastCard } from '../components/usage'
+import { hapticError, hapticSelection, hapticSuccess } from '../lib/haptics'
+import { StatusCard } from '../components/usage'
 import { MagicCodeCard } from '../components/magic-code'
 import { PassCard } from '../components/magic-pass'
-import type { MagicPass } from '../data/magic'
-import { CALLS_MIN, HOLDER, MESSAGES, fmtGb, usageSummary } from '../data/account'
+import { CODE_LEN, failText, normalizeCode, redeem, type MagicPass } from '../data/magic'
+import { HOLDER, usageSummary } from '../data/account'
 import {
   AuroraFlow,
-  Card3D,
-  SuccessBurst,
   VisualDigital,
   VisualMagic,
   VisualNetwork,
@@ -66,7 +64,11 @@ export function Intro({
         <div className="intro-nav">
           {/* In Figma ist dieser Button Glas, nicht rot gefuellt */}
           <Button onClick={onStart}>Jetzt loslegen</Button>
-          <Button variant="ghost" onClick={onLogin}>Einloggen</Button>
+          {/* Die Methode steht im Knopf (managing-accounts.md › Best
+              practices: "Always identify the authentication method you
+              offer"). Bis zum 2026-09-25 hiess er "Einloggen" und fuehrte
+              ohne jede Anmeldung auf einen Ladebildschirm. */}
+          <Button variant="ghost" onClick={onLogin}>Mit Passkey anmelden</Button>
         </div>
         {/* Oben rechts statt unter den Buttons: die beiden Knoepfe sitzen auf
             den Figma-Hoehen (y=666/743), ein dritter Eintrag in .intro-nav
@@ -91,6 +93,12 @@ export function Onboarding({
   onSkipToHome,
 }: ScreenProps & { onBack: () => void; onDone: () => void; onSkipToHome: () => void }) {
   const [step, setStep] = useState(0)
+  /* Wie oft der Beispiel-Code auf Schritt 2 ausprobiert wurde. 0 = noch
+     nicht; jeder Tipp laesst ihn neu einrasten. */
+  const [tries, setTries] = useState(0)
+  useEffect(() => {
+    if (!active) setTries(0)
+  }, [active])
   const [leaving, setLeaving] = useState<0 | 1 | -1>(0)
   const [enterDir, setEnterDir] = useState<1 | -1>(1)
   const stageRef = useRef<HTMLDivElement>(null)
@@ -109,6 +117,7 @@ export function Onboarding({
     setLeaving(dir)
     window.setTimeout(() => {
       setStep(next)
+      setTries(0)
       setLeaving(0)
       window.setTimeout(() => {
         busy.current = false
@@ -167,7 +176,7 @@ export function Onboarding({
               animation bei jedem Schritt erneut */}
           <div className="ob-visual" key={`v${step}`}>
             {step === 0 && <VisualDigital />}
-            {step === 1 && <VisualMagic run={active} />}
+            {step === 1 && <VisualMagic run={active} tryKey={tries} />}
             {step === 2 && <VisualNetwork />}
           </div>
 
@@ -177,6 +186,22 @@ export function Onboarding({
             </span>
             <h1 style={{ '--i': 1 } as React.CSSProperties}>{ob.title}</h1>
             <p style={{ '--i': 2 } as React.CSSProperties}>{ob.body}</p>
+            {/* Ausprobieren statt nur lesen (onboarding.md: "Teach through
+                interactivity"). Das Bild darueber reagiert — derselbe
+                Ablauf wie bei einem echten Code, nur ohne Einloesung. */}
+            {step === 1 && (
+              <button
+                type="button"
+                className="ob-try"
+                style={{ '--i': 3 } as React.CSSProperties}
+                onClick={() => setTries((n) => n + 1)}
+              >
+                {tries ? 'Noch einmal' : 'Beispiel-Code ausprobieren'}
+              </button>
+            )}
+            {step === 1 && tries > 0 && (
+              <span className="sr-only">Beispiel-Code eingelöst: Du stehst auf der Liste.</span>
+            )}
           </div>
         </div>
       </div>
@@ -249,11 +274,16 @@ export function SelectPlan({
   onPlanChange,
   onBack,
   onChoose,
+  reservedCode,
+  onReserve,
 }: ScreenProps & {
   planIdx: number
   onPlanChange: (i: number) => void
   onBack: () => void
   onChoose: () => void
+  /** Ein Magic Code, der vor dem Kauf eingegeben wurde (hier oder per Link). */
+  reservedCode: string | null
+  onReserve: (code: string | null) => void
 }) {
   /* Das Karussell rastet auf einer Karte ein — das iOS-Idiom fuer
      "eine Wahl schrubbt vorbei". Beide Wege dorthin (Reiter tippen,
@@ -262,6 +292,33 @@ export function SelectPlan({
   const choosePlan = (i: number) => {
     if (i !== planIdx) hapticSelection()
     onPlanChange(i)
+  }
+
+  /* ---- Magic Code vor dem Kauf ----
+     Der Code eines Creators ist oft der Grund, ueberhaupt hier zu sein
+     (Pitch-Deck "Customer Hooks": Creator-Communities bringen neue
+     Mitglieder). Er wird gegen den GEWAEHLTEN Tarif geprueft und
+     reserviert; eingeloest wird er, wenn die eSIM im Netz ist. */
+  const plan = PLANS[planIdx]
+  const [codeIn, setCodeIn] = useState('')
+  const [codeMiss, setCodeMiss] = useState<string | null>(null)
+  const held = reservedCode ? redeem(reservedCode, [], plan.key) : null
+  const heldDrop = held ? (held.ok ? held.pass.drop : held.drop) : undefined
+  const reserve = () => {
+    if (codeIn.length !== CODE_LEN) return
+    const res = redeem(codeIn, [], plan.key)
+    /* Ein Partner-Code des anderen Tarifs wird trotzdem gehalten: wer
+       den Reiter wechselt, hat ihn dann dabei. Die Karte sagt, woran es
+       haengt. */
+    if (res.ok || res.reason === 'plan') {
+      hapticSuccess()
+      onReserve(normalizeCode(codeIn))
+      setCodeIn('')
+      setCodeMiss(null)
+    } else {
+      hapticError()
+      setCodeMiss(failText(res))
+    }
   }
 
   const trackRef = useRef<HTMLDivElement>(null)
@@ -339,6 +396,9 @@ export function SelectPlan({
       </div>
       <div className="plan-flow">
       <div className="plan-header">
+        {/* Schritt 1 von 4 — bis zum 2026-09-25 stand die Anzeige erst ab
+            der Bestellung, und Schritt 1 war dort schon erledigt. */}
+        <FlowSteps current={0} />
         <h1>Wähle Deinen Tarif</h1>
         {/* Nur noch das Gemeinsame, eine Zeile. Hier stand bis zum
             2026-09-22 zusaetzlich, WORIN sich die Tarife unterscheiden
@@ -346,6 +406,11 @@ export function SelectPlan({
             eine Bildschirmhoehe darunter tatsaechlich steht. Ein Screen,
             der den Unterschied zeigt, muss ihn nicht vorher erzaehlen. */}
         <p>Beide unbegrenzt, beide monatlich kündbar.</p>
+        {held?.ok && heldDrop && (
+          <p className="plan-code-flag">
+            Magic Code {reservedCode} reserviert: {heldDrop.title}
+          </p>
+        )}
         <div className="tabs" ref={tabsRef}>
           <span className="pill" style={{ left: pill.left, width: pill.width }} />
           {PLANS.map((p, i) => (
@@ -441,6 +506,64 @@ export function SelectPlan({
             ))}
           </ul>
         </section>
+
+        <section className="plan-code-sec" aria-labelledby="plan-code-h">
+          <h2 id="plan-code-h">Hast Du einen Magic Code?</h2>
+          {reservedCode ? (
+            <div className="card drop-row code-held">
+              <div className="drop-top">
+                <span className="drop-kind">{heldDrop?.kind ?? 'Code'}</span>
+                <span className="drop-left">{held?.ok ? 'reserviert' : 'nicht einlösbar'}</span>
+              </div>
+              <b>{heldDrop?.title ?? reservedCode}</b>
+              <span className="drop-detail" role="status">
+                {held?.ok
+                  ? `Code ${reservedCode} · wird eingelöst, sobald Deine eSIM läuft`
+                  : held
+                    ? failText(held)
+                    : ''}
+              </span>
+              <button type="button" className="link-plain" onClick={() => onReserve(null)}>
+                Code entfernen
+              </button>
+            </div>
+          ) : (
+            <div className="card magic-redeem">
+              <div className="magic-entry">
+                <input
+                  className={`magic-input${codeMiss ? ' bad' : ''}`}
+                  type="text"
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  spellCheck={false}
+                  maxLength={CODE_LEN}
+                  placeholder="XXXX"
+                  aria-label="Vierstelligen Magic Code eingeben"
+                  aria-invalid={codeMiss !== null}
+                  aria-describedby={codeMiss ? 'plan-code-err' : 'plan-code-note'}
+                  value={codeIn}
+                  onChange={(e) => {
+                    setCodeIn(normalizeCode(e.target.value))
+                    setCodeMiss(null)
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && reserve()}
+                />
+                <Button disabled={codeIn.length !== CODE_LEN} onClick={reserve}>
+                  Reservieren
+                </Button>
+              </div>
+              {codeMiss ? (
+                <p className="magic-error" id="plan-code-err" role="alert">{codeMiss}</p>
+              ) : (
+                <p className="magic-fine" id="plan-code-note">
+                  Von einem Creator, einem Partner oder von Freunden. Dein Platz wartet, bis
+                  Deine eSIM läuft.
+                </p>
+              )}
+            </div>
+          )}
+        </section>
       </div>
       </div>
       <div className="plan-cta">
@@ -457,95 +580,6 @@ export function SelectPlan({
   )
 }
 
-/* ================= Activation =================
-   Nur noch der Login: das Konto wird geladen, der Kunde wartet. Hier
-   entsteht nichts, deshalb steht hier auch keine Fertigung — die
-   schwebende Karte aus Figma 1330:1775 mit abhakender Schrittliste
-   ist fuer diesen Fall genau richtig.
-
-   Der Neukunde ist seit dem 2026-09-17 nicht mehr hier: seine eSIM
-   entsteht in screens/esim.tsx, zusammen mit ihrer Einrichtung. Es
-   waren zwei Wartebilder hintereinander, jetzt ist es eines. */
-const STEP_MS = 1500
-const FINALE_MS = 3050
-
-export function Activation({
-  active,
-  messages,
-  plan,
-  onDone,
-}: ScreenProps & { messages: string[]; plan: Plan; onDone: () => void }) {
-  const [idx, setIdx] = useState(0)
-
-  /* Der Ruecksprung auf den ersten Schritt wartet, bis der Screen
-     wirklich weg ist. Waehrend der Ueberblendung ist er noch zu sehen,
-     und ein Haken, der dabei zurueck auf die Schrittliste springt, ist
-     ein Ruck ohne Anlass — dieselbe Falle wie im eSIM-Ablauf. */
-  useEffect(() => {
-    if (!active) {
-      const t = window.setTimeout(() => setIdx(0), 700)
-      return () => window.clearTimeout(t)
-    }
-    if (messages.length === 0) {
-      setIdx(0)
-      return
-    }
-    setIdx(0)
-    const count = messages.length - 1
-    const timers = Array.from({ length: count }, (_, i) =>
-      window.setTimeout(() => setIdx(i + 1), STEP_MS * (i + 1)),
-    )
-    timers.push(window.setTimeout(onDone, STEP_MS * count + FINALE_MS))
-    return () => timers.forEach(window.clearTimeout)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, messages])
-
-  const tasks = messages.slice(0, -1)
-  const finale = messages[messages.length - 1] ?? ''
-  const done = tasks.length > 0 && idx >= tasks.length
-
-  return (
-    <Screen active={active}>
-      <AuroraFlow tone={done ? 'coral' : 'violet'} />
-      {/* Figma 1330:1775: dieselbe 3D-SIM-Karte wie im Onboarding, der
-          Statustext steht mittig darunter. Beim Login ist es die Karte,
-          die der Kunde schon hat — sein Tarif, sein Name, aktiv. */}
-      <div className="act-stage">
-        <div className="act-visual">
-          {/* Die Karte raeumt zum Schluss den Platz fuer den Haken — beides
-              uebereinander kollidiert mit dem Kartenaufdruck. */}
-          <div className={`act-card${done ? ' gone' : ''}`}>
-            <Card3D scanning={!done} plan={plan} holder={HOLDER.full} chipText="Aktiv" />
-          </div>
-          {done && <SuccessBurst />}
-        </div>
-
-        <div className="act-status">
-          <ul className={`act-steps${done ? ' out' : ''}`}>
-            {tasks.map((t, i) => (
-              <li key={t} className={i < idx ? 'ok' : i === idx ? 'now' : ''}>
-                <span className="mark">
-                  <svg viewBox="0 0 16 16" aria-hidden="true">
-                    <path d="M3.5 8.5 6.5 11.5 12.5 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-                <span className="tx">{t}</span>
-              </li>
-            ))}
-          </ul>
-          <p className={`act-finale${done ? ' on' : ''}`} aria-live="polite">
-            {finale}
-          </p>
-        </div>
-
-        <div className={`act-bar${done ? ' done' : ''}`} role="progressbar" aria-valuemin={0} aria-valuemax={tasks.length} aria-valuenow={idx}>
-          <i style={{ transform: `scaleX(${tasks.length ? idx / tasks.length : 1})` }} />
-        </div>
-      </div>
-    </Screen>
-  )
-}
-
 /* ================= Home ================= */
 export function Home({
   active,
@@ -553,8 +587,8 @@ export function Home({
   onOpenProfile,
   onOpenSupport,
   onOpenPlan,
-  onOpenRoaming,
   onOpenMagic,
+  onOpenUsage,
   passes,
   onOpenPass,
 }: ScreenProps & {
@@ -562,15 +596,14 @@ export function Home({
   onOpenProfile: () => void
   onOpenSupport: () => void
   onOpenPlan: () => void
-  onOpenRoaming: () => void
   onOpenMagic: () => void
+  onOpenUsage: () => void
   passes: MagicPass[]
   onOpenPass: (id: string) => void
 }) {
-  const [usageOpen, setUsageOpen] = useState(true)
   const [fabsOpen, setFabsOpen] = useState(false)
   /* Das eingeklappte Menue ist nur durchsichtig, nicht weg — ohne
-     `inert` laeuft der Tabulator durch drei unsichtbare Knoepfe. */
+     `inert` laeuft der Tabulator durch zwei unsichtbare Knoepfe. */
   const fabsRef = useRef<HTMLDivElement>(null)
   useInert(fabsRef, !fabsOpen)
   const plan = PLANS[planIdx]
@@ -635,79 +668,15 @@ export function Home({
           <PassCard key={p.id} pass={p} onOpen={() => onOpenPass(p.id)} />
         ))}
 
-        <button
-          className={`section-toggle${usageOpen ? '' : ' closed'}`}
-          aria-expanded={usageOpen}
-          aria-controls="usage-panel"
-          onClick={() => setUsageOpen(!usageOpen)}
-        >
-          Dein Verbrauch
-          <ChevronDown />
-        </button>
-        <div id="usage-panel" className={`usage-panel${usageOpen ? '' : ' hidden'}`}>
-          <div className="usage-panel-in">
-          {/* Zeitbezug zuerst: ohne "Tag 12 von 31" ist jede Zahl
-              darunter nicht einzuordnen. */}
-          <CycleCard usage={usage} plan={plan} run={active} />
-
-          <div className="usage">
-          <div className="card col-l">
-            {/* Icons in Akzentrot (Figma), nicht weiss — auf einer dunklen
-                Platte, sonst traegt Koralle ueber der Aurora-Koralle nicht. */}
-            <span className="use-ic" aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M3 12h18M12 3c2.5 2.6 3.8 5.7 3.8 9S14.5 18.4 12 21M12 3c-2.5 2.6-3.8 5.7-3.8 9s1.3 6.4 3.8 9" />
-              </svg>
-            </span>
-            <div className="ring-wrap">
-              {/* Figma: nur ein heller Kreisumriss, kein Fortschrittsbogen */}
-              <svg width="126" height="126" viewBox="0 0 126 126">
-                <circle cx="63" cy="63" r="62" fill="none" stroke="rgba(255,255,255,.2)" strokeWidth="1.5" />
-              </svg>
-              <span className="inf">∞</span>
-            </div>
-            <div>
-              <div className="label">Internet</div>
-              <div className="val">{fmtGb(usage.usedGb)}</div>
-            </div>
-          </div>
-          <div className="col-r">
-            <div className="card">
-              <span className="use-ic" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-              </span>
-              <div>
-                <div className="label">Nachrichten</div>
-                <div className="val">{MESSAGES}</div>
-              </div>
-            </div>
-            <div className="card">
-              <span className="use-ic" aria-hidden="true">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z" />
-                </svg>
-              </span>
-              <div>
-                <div className="label">Anrufe</div>
-                <div className="val">{CALLS_MIN} min</div>
-              </div>
-            </div>
-          </div>
-          </div>
-
-          {/* Die eigentliche Aussage: wo der Monat hinlaeuft und was
-              das kostet — naemlich nichts. */}
-          <ForecastCard usage={usage} plan={plan} run={active} />
-          </div>
-        </div>
+        {/* Statt der Klappe "Dein Verbrauch" mit fuenf Karten (bis zum
+            2026-09-25): beide Tarife sind unbegrenzt, also zaehlt nur, ob
+            etwas begrenzt ist und was die naechste Rechnung kostet. Die
+            Zahlen stehen im Sheet "Verbrauch & Rechnung" (usage-sheet.tsx). */}
+        <StatusCard usage={usage} plan={plan} onOpen={onOpenUsage} />
       </div>
 
       <div id="more-menu" ref={fabsRef} className={`fab-stack${fabsOpen ? ' open' : ''}`}>
         <Button onClick={() => { setFabsOpen(false); onOpenSupport() }}>Support</Button>
-        <Button onClick={() => { setFabsOpen(false); onOpenRoaming() }}>Reisen</Button>
         <Button onClick={() => { setFabsOpen(false); onOpenPlan() }}>Plan anpassen</Button>
       </div>
       <div className="navbar">

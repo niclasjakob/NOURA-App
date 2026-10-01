@@ -25,16 +25,9 @@ export interface Plan {
       die Produktinformation die Mindestrate wie bisher aus der
       Maximalrate. */
   guaranteedMbit: number | null
-  /** Weltweites Roaming-Kontingent in GB (EU laeuft ueber das
-      Inlandsvolumen). null = im Tarif nicht enthalten.
-
-      Steht seit dem 2026-09-22 bei BEIDEN Tarifen auf null: die 3 GB
-      weltweit sind aus CREATE gestrichen, Roaming ist kein
-      Unterschied zwischen den Tarifen mehr. Das Feld bleibt, weil es
-      die Welt-Zone und die Produktinformation weiter steuern — beide
-      zeigen dann "zubuchbar ab 4,99 € je GB", und genau das ist jetzt
-      fuer beide richtig. */
-  roamingGb: number | null
+  /* `roamingGb` (weltweites Kontingent) stand seit dem 2026-09-22 bei
+     beiden Tarifen auf null und steuerte nur noch die Reiseansicht.
+     Mit ihr ist das Feld am 2026-09-25 entfallen. */
   /** Monatspreis als Zahl — `price` ist Anzeigetext und taugt nicht
       als Rechengrundlage fuer die Kostenaufstellung im Checkout. */
   monthly: number
@@ -61,7 +54,7 @@ export const PLAN_SHARED = [
   'Unbegrenztes Datenvolumen mit 5G',
   'Allnet Telefonie & SMS Flat',
   'EU-Roaming mit Fair-Use',
-  'Chat & Callback Service',
+  'Hilfe per Chat und Rückruf',
 ]
 
 /* Tarifdaten aus "Proposition & pricing" (GigaMobil Young):
@@ -86,7 +79,6 @@ const SPECS: PlanSpec[] = [
     downMbit: 100,
     speedNote: 'Schreiben, telefonieren, streamen und teilen — den ganzen Tag, ohne aufs Volumen zu schauen.',
     guaranteedMbit: null,
-    roamingGb: null,
     monthly: 25,
     magicScope: 'Konzerte, Kino, Sport & Reisen',
   },
@@ -105,7 +97,6 @@ const SPECS: PlanSpec[] = [
     downMbit: 300,
     speedNote: 'Livestreams, große Uploads und Arbeiten in vollen Netzen — auch unterwegs ohne Warten.',
     guaranteedMbit: 1,
-    roamingGb: null,
     monthly: 40,
     magicScope: 'Tools, Lernvorteile & Co-Creations',
   },
@@ -141,9 +132,8 @@ export const planTitle = (p: Plan) => p.name.charAt(0) + p.name.slice(1).toLower
    Nicht ganz dasselbe ist das Fair-Use-Volumen: es haengt am Preis
    (§ euFupGb) und ergibt 32 GB fuer CONNECT gegen 51 GB fuer CREATE.
    Das ist eine Folge der EU-Verordnung, kein verkauftes Merkmal —
-   es steht deshalb in der Reiseansicht und in der
-   Produktinformation, wo es gebraucht wird, und nicht in der
-   Schlagzeile der Tarifwahl. */
+   es steht deshalb in der Produktinformation, wo es gebraucht wird,
+   und nicht in der Schlagzeile der Tarifwahl. */
 export const PLAN_DIFF: { label: string; value: (p: Plan) => string }[] = [
   {
     label: 'Tempo',
@@ -188,7 +178,9 @@ export const ONBOARDING = [
   {
     tag: 'Magic Codes',
     title: 'Codes, die Türen öffnen.',
-    body: 'Vier Zeichen aus einem Stream oder von Freunden — und Du stehst beim Festival, Konzert oder Meet-up auf der Liste.',
+    /* Seit 2026-09-25 mit allen drei Quellen: Creator, Partner, Freunde
+       — derselbe Satz wie im Magic-Sheet und in der Hilfe. */
+    body: 'Vier Zeichen von Creators, Partnern oder Freunden — und Du stehst beim Festival, Konzert oder Meet-up auf der Liste.',
   },
   {
     /* "Network Slicing" ist Fachsprache, und writing.md rät davon ab.

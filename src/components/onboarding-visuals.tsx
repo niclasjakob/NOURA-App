@@ -63,7 +63,7 @@ export function Card3D({
 }
 
 /* ================= Schritt 1 — Digital =================
-   Die Karte schwebt, drei Glaspunkte kreisen als App-Metapher. */
+   Die Karte liegt still, drei Glaspunkte kreisen als App-Metapher. */
 export function VisualDigital() {
   return (
     <div className="viz">
@@ -100,19 +100,33 @@ const DOORS = ['Festival', 'Konzert', 'Meet-up'] as const
    Walzen, Funke, Tueren — und laesst danach Ruhe zum Lesen. */
 const CODE_CYCLE_MS = 4600
 
-export function VisualMagic({ run }: { run: boolean }) {
+/* Der Beispiel-Code zum Ausprobieren. Aus dem Code-Alphabet, aber an
+   keinen Drop gebunden — im Onboarding wird nichts eingeloest. */
+export const DEMO_CODE = 'NURA'
+
+export function VisualMagic({ run, tryKey = 0 }: { run: boolean; tryKey?: number }) {
   const reduced = useMemo(prefersReducedMotion, [])
   /* Die Kacheln selbst bleiben stehen, wenn der Code wechselt — nur
      Walzen, Funke und Tuerlicht haengen an `cycle`. Sonst liefe der
      Auftritt der Kacheln bei jedem Code von vorn. */
-  const { cycle, reels, advance } = useCodeReels(reduced)
+  const { cycle, reels, advance, advanceTo } = useCodeReels(reduced)
+  const trying = tryKey > 0
 
-  /* Nur laufen, solange der Screen sichtbar ist. */
+  /* Nur laufen, solange der Screen sichtbar ist — und nicht, solange
+     jemand gerade selbst einen Code ausprobiert: der soll stehen
+     bleiben, bis er gelesen ist. */
   useEffect(() => {
-    if (!run) return
+    if (!run || trying) return
     const iv = window.setInterval(advance, CODE_CYCLE_MS)
     return () => window.clearInterval(iv)
-  }, [run, advance])
+  }, [run, advance, trying])
+
+  /* "Teach through interactivity" (onboarding.md › Best practices):
+     jeder Tipp laesst den Beispiel-Code einrasten und die Tueren
+     aufgehen — dieselbe Abfolge, die ein echter Code ausloest. */
+  useEffect(() => {
+    if (trying) advanceTo(DEMO_CODE)
+  }, [tryKey, trying, advanceTo])
 
   const moving = cycle > 0 && !reduced
 
@@ -143,6 +157,13 @@ export function VisualMagic({ run }: { run: boolean }) {
             </span>
           ))}
         </div>
+        {/* Erst wenn die Tueren leuchten — vorher waere es ein Ergebnis
+            vor dem Vorgang. Der key startet den Auftritt je Versuch neu. */}
+        {trying && (
+          <span key={cycle} className="mcode-result">
+            Beispiel eingelöst · Du stehst auf der Liste
+          </span>
+        )}
       </div>
     </div>
   )

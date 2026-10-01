@@ -24,7 +24,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button, ArrowLeft, Consent, Disclosure, Field, FlowSteps, OptionRow, Screen } from '../components/ui'
 import { AuroraFlow } from '../components/onboarding-visuals'
 import { IdentStage } from '../components/ident-stage'
-import { BeatCaption, BeatMeter } from '../components/beats'
+import { BeatCaption } from '../components/beats'
 import type { Plan } from '../data/plans'
 import {
   DEVICE,
@@ -37,6 +37,7 @@ import {
   fmtEuro,
   identAvailable,
   type IdentMethod,
+  type Payment,
 } from '../data/account'
 import { hapticSuccess } from '../lib/haptics'
 
@@ -59,19 +60,24 @@ export function Checkout({
   onNumberMode,
   onBack,
   onSubmit,
+  reserved,
 }: {
   active: boolean
   plan: Plan
   numberMode: NumberMode
   onNumberMode: (m: NumberMode) => void
   onBack: () => void
-  onSubmit: () => void
+  /** Die gewaehlte Zahlart reist mit — ins Konto und in jede spaetere
+      Bestaetigung. */
+  onSubmit: (payment: Payment) => void
+  /** Ein vor dem Kauf reservierter Magic Code, falls es einen gibt. */
+  reserved?: { code: string; title: string } | null
 }) {
   const [provider, setProvider] = useState('')
   const [number, setNumber] = useState('')
   const [portDate, setPortDate] = useState<PortDateKey>('now')
   const [email, setEmail] = useState('')
-  const [pay, setPay] = useState<(typeof PAY_METHODS)[number]['key']>('sepa')
+  const [pay, setPay] = useState<(typeof PAY_METHODS)[number]['key']>('applepay')
   const [iban, setIban] = useState('')
   const [consent, setConsent] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
@@ -109,7 +115,10 @@ export function Checkout({
       /* Der eine folgenreiche Tipp in der App: hier wird bestellt.
          Alles davor laesst sich zuruecknehmen, das hier nicht. */
       hapticSuccess()
-      onSubmit()
+      onSubmit({
+        method: pay,
+        last4: pay === 'sepa' ? iban.replace(/\s/g, '').slice(-4) : undefined,
+      })
       return
     }
     setTried(true)
@@ -146,6 +155,13 @@ export function Checkout({
           <p className="sum-sub">
             5G eSIM · monatlich kündbar · keine Anschlussgebühr · Preis inkl. MwSt.
           </p>
+          {/* Der Code, mit dem jemand hergekommen ist, bleibt bis zum Ende
+              sichtbar — sonst fragt er sich an dieser Stelle, ob er noch gilt. */}
+          {reserved && (
+            <p className="sum-code">
+              Magic Code {reserved.code}: {reserved.title} · wird mit Deiner eSIM eingelöst
+            </p>
+          )}
         </div>
 
         {/* ---- Geraetecheck ----
@@ -450,6 +466,18 @@ export function Ident({
     <Screen active={active}>
       <AuroraFlow tone="violet" />
 
+      {/* Eine Schrittanzeige fuer Auswahl und Pruefung, an derselben
+          Stelle wie auf jedem Screen des Ablaufs. Waehrend die Pruefung
+          laeuft, fuellen ihre Takte das Segment "Identitaet" — der
+          eigene Taktmesser darunter ist entfallen (2026-09-25). */}
+      <div className="flow-top">
+        <FlowSteps
+          current={2}
+          progress={running ? Math.min(idx + 1, acts.length) / acts.length : 0}
+          stepMs={running ? act.ms : 0}
+        />
+      </div>
+
       {!running && (
         <div className="top-nav">
           <button className="icon-plain" aria-label="Zurück zur Bestellung" onClick={onBack}>
@@ -462,17 +490,11 @@ export function Ident({
         <div className="act-stage beat-stage">
           <IdentStage beat={act.beat} method={method} run={warm} />
           <BeatCaption title={act.title} text={act.text} />
-          <BeatMeter
-            step={idx}
-            msList={acts.map((a) => a.ms)}
-            run={warm}
-            label={`Schritt ${Math.min(idx + 1, acts.length)} von ${acts.length} der Identitätsprüfung`}
-          />
         </div>
       ) : (
         <div className="flow">
           <div className="flow-head">
-            <FlowSteps current={2} />
+            <div className="flow-steps-space" aria-hidden="true" />
             <h1>Kurz noch: Wer bist Du?</h1>
             {/* Der Grund steht vor der Aufgabe. Ohne ihn wirkt der
                 Schritt wie eine Huerde, mit ihm wie eine Formalie. */}

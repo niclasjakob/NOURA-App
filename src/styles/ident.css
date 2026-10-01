@@ -102,12 +102,9 @@
 
 /* Video-Chat — jemand schaut sich das Dokument an */
 [data-ibeat='read'][data-method='video'] .id-call { opacity: 1; }
-.ident.run[data-ibeat='read'][data-method='video'] .id-call-win {
-  animation: idPulse 3.2s var(--ease-out) infinite;
-  transform-box: view-box; transform-origin: 150px -34px;
-}
-@keyframes idPulse { 0%, 100% { opacity: 0.75; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
-/* Der Punkt laeuft die Leitung entlang. Die Bahn ist eine Gerade auf
+/* Das Fenster steht still (bis zum 2026-09-25 pumpte es um 5 %). Dass
+   gerade jemand schaut, sagt der Punkt auf der Leitung.
+   Der Punkt laeuft die Leitung entlang. Die Bahn ist eine Gerade auf
    eine sanfte Kurve — auf 90px Weg faellt das nicht auf, und
    offset-path traegt auf dem iPhone nicht zuverlaessig. */
 .ident.run[data-ibeat='read'][data-method='video'] .id-call-dot {
