@@ -9,7 +9,7 @@
 
    Jetzt ist es EIN Ablauf mit sieben Takten und einer Pause:
 
-     entworfen · gelasert · versiegelt          — wir bauen sie
+     angelegt · personalisiert · versiegelt     — wir bauen sie
      [ Uebergabe: der Kunde tippt ]
      geladen · eingerichtet · gesucht · aktiv   — sein iPhone holt sie
 
@@ -187,7 +187,7 @@ export function EsimJourney({
      einen schwereren hin: "im Netz" ist der letzte, und er ist der
      einzige, der anders landet.
 
-         entworfen · gelasert · versiegelt · bereit
+         angelegt · personalisiert · versiegelt · bereit
          geladen · eingerichtet · gesucht · IM NETZ
             ·          ·           ·         ●
 
@@ -286,7 +286,7 @@ export function EsimJourney({
             <div className="jr-gap" aria-hidden="true" />
             <h1>{FORGE_FINALE.title}</h1>
             <p className="flow-lead">
-              Deine eSIM ist gebaut. Den Rest macht Dein iPhone — rund zwei Minuten.
+              Deine eSIM liegt bereit. Den Rest macht Dein iPhone — rund zwei Minuten.
             </p>
           </div>
 

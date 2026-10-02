@@ -440,31 +440,41 @@ export const HOLDER = {
    zeigt. Stuende er nur in der Komponente, waere jeder eingeschobene
    Schritt eine stille Verschiebung aller folgenden Bilder. */
 /* ms = wie lange dieser Takt laeuft. Die Takte sind verschieden lang,
-   weil in ihnen verschieden viel passiert — der Laser hat drei
+   weil in ihnen verschieden viel passiert — der Laser im Bild hat drei
    Aufgaben, die Netzsuche muss einmal rundherum. Eine einheitliche
    Dauer liesse entweder den Balken gegen das Bild laufen oder das Bild
    abschneiden. */
 export type EsimAct = { beat: Beat; title: string; text: string; ms: number }
 
+/* Bild und Text haben verschiedene Aufgaben. Das Bild darf Metapher
+   sein — eine Karte, ein Laser, ein Siegel. Der Text darf es nicht:
+   er steht da, wo der Kunde wissen will, was gerade wirklich passiert.
+
+   Bis zum 2026-10-01 behauptete er "Chip und Dein Name werden fest in
+   die Karte geschrieben". Eine eSIM hat keinen eigenen Chip — sie ist
+   ein Profil fuer den eUICC, der schon im iPhone steckt —, und Dein
+   Name steht in diesem Profil nicht. Jetzt nennt jeder Takt, was beim
+   Anbieter (SM-DP+) tatsaechlich geschieht: Kennung vergeben, Schluessel
+   erzeugen, Profil an genau dieses Geraet binden. */
 /** Anbieterseite. Hier wartet der Kunde — also zeigen wir ihm, worauf. */
 export const FORGE_ACTS: EsimAct[] = [
   {
     beat: 'design',
     ms: 1900,
-    title: 'Entworfen',
-    text: 'Deine eSIM entsteht als Entwurf: eine Kennung, die es genau einmal gibt.',
+    title: 'Angelegt',
+    text: 'Deine eSIM bekommt ihre Kennung — eine Nummer, die es weltweit genau einmal gibt.',
   },
   {
     beat: 'laser',
     ms: 3200,
-    title: 'Gelasert',
-    text: 'Chip und Dein Name werden fest in die Karte geschrieben.',
+    title: 'Personalisiert',
+    text: 'Die Schlüssel, mit denen sich Dein iPhone im Netz ausweist, entstehen — nur für Dich.',
   },
   {
     beat: 'seal',
     ms: 2050,
     title: 'Versiegelt',
-    text: 'Dein Tarif kommt auf die Karte — freigegeben nur für Dein iPhone.',
+    text: 'Das Profil wird für Dein iPhone verschlüsselt. Installieren lässt es sich nur dort.',
   },
 ]
 
@@ -477,7 +487,7 @@ export const FORGE_FINALE: EsimAct = {
      aufrichtet und zum Kunden dreht. */
   ms: 1300,
   title: 'Bereit für Dein iPhone',
-  text: 'Fertig gebaut. Jetzt muss sie nur noch auf Dein Gerät.',
+  text: 'Dein Profil liegt bereit. Jetzt muss es nur noch auf Dein Gerät.',
 }
 
 /** Geraeteseite. Dieselbe Karte, vier weitere Takte — sie zieht um und

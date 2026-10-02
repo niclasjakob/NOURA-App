@@ -290,6 +290,28 @@
     0.8761, 0.9314, 0.9725, 1.0016, 1.0207, 1.032, 1.0373, 1.0383,
     1.0365, 1.0328, 1.0281, 1.0232, 1.0184, 1.0139, 1.0101, 1
   );
+
+  /* ---- Sheet und Kartenstapel (seit 2026-10-01) ----
+     Die Statusleiste: im Browser die 54px der Attrappe, auf dem Geraet
+     der echte Inset (59–62pt mit Dynamic Island). Das Sheet beginnt
+     16px darunter, der zurueckgetretene Screen genau an ihr — so ragt
+     er auf jedem Geraet gleich weit ueber das Sheet, wie unter iOS.
+     Auf dem 852er Rahmen ergibt das 70px, also Figmas 782px Sheet. */
+  --status-h: max(54px, env(safe-area-inset-top, 0px));
+  --sheet-top: calc(var(--status-h) + 16px);
+  /* Das Sheet reicht so weit unter die Kante. Unsichtbar, solange es
+     ruht — es traegt die Feder und das Nachgeben beim Ziehen nach
+     oben, ohne dass unten eine Luecke aufgeht. */
+  --sheet-overhang: 40px;
+  /* Wie weit der Screen hinter einem Sheet zuruecktritt: 8 % kleiner,
+     auf 393px also 16px Rand je Seite. */
+  --recede-scale: 0.92;
+  /* Ab hier gilt ein Sheet als angekommen: nach 300 der 460ms steht es
+     auf der iOS-Kurve zu 98 % (rund 15px vor dem Ziel, kaum noch in
+     Bewegung). Was sich im Sheet selbst aufbaut — Balken, die wachsen —
+     beginnt hier. Frueher laeuft es ungesehen in der Fahrt mit, am Ende
+     der 460ms liest sich das Warten schon als Verzoegerung. */
+  --sheet-landed: 300ms;
 }
 
 /* ---------- Bewegung reduziert ----------
@@ -363,9 +385,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
 
 /* ---------- Phone frame ---------- */
 .stage { display: flex; align-items: center; justify-content: center; width: 100%; height: 100vh; }
+/* Schwarz, weil es nur hinter dem zurueckgetretenen Screen zu sehen
+   ist (siehe .presenter) — sonst deckt ihn die Aurora vollstaendig. */
 .phone {
   position: relative; width: 393px; height: var(--screen-h);
-  border-radius: 54px; overflow: hidden; background: var(--noura-canvas);
+  border-radius: 54px; overflow: hidden; background: #000;
   box-shadow: 0 0 0 12px #191a2e, 0 0 0 14px #2c2d4a, 0 40px 100px rgba(0, 0, 0, 0.6);
   flex-shrink: 0;
 }
@@ -414,8 +438,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
 }
 
 /* ---------- Status bar ---------- */
+/* Ueber dem Schleier der Sheets (48): iOS dunkelt die Statusleiste
+   nicht ab, sie steht ueber dem zurueckgetretenen Screen auf Schwarz. */
 .statusbar {
-  position: absolute; top: 0; left: 0; right: 0; height: 54px; z-index: 40;
+  position: absolute; top: 0; left: 0; right: 0; height: 54px; z-index: 49;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 28px 0 40px; pointer-events: none;
 }
@@ -436,21 +462,39 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); o
 .screens { --screen-enter: 24px; --screen-exit: -24px; }
 .screens[data-dir='back'] { --screen-enter: -24px; --screen-exit: 24px; }
 
-/* Hinter einem Sheet tritt der Screen zurueck — wie unter einem
-   iOS-Sheet: er wird ein wenig kleiner, waehrend der Schleier ihn
-   abdunkelt. Ohne das lag das Sheet flach auf dem Screen, nur der
-   Schleier sagte "dahinter". Mit dem Rueckzug entsteht Tiefe: das Sheet
-   kommt nach vorn, der Screen geht nach hinten.
+/* ---------- Kartenstapel hinter dem Sheet (seit 2026-10-01) ----------
+   Hinter einem Sheet tritt der Screen zurueck wie unter iOS: Aurora und
+   Inhalt zusammen, als EINE Karte mit runden Ecken, oben an der
+   Statusleiste, auf Schwarz. Bis hierhin schrumpfte nur .screens,
+   waehrend die Aurora stehen blieb — der verkleinerte Kopf von Home
+   schwebte ohne Kante auf demselben Verlauf und las sich als "Inhalt
+   wird kleiner", nicht als "Seite liegt jetzt hinten".
 
-   Gleiche Dauer und Kurven wie das Sheet selbst (--dur-move, hinein
-   ease-out, hinaus ease-in), damit beides eine Bewegung ist. Nur
-   transform — der Hintergrund liegt ausserhalb von .screens und bleibt
-   stehen, der Rueckzug ist also Tiefe, kein Zoom der ganzen Welt. */
-.screens {
-  transform-origin: 50% 30%;
-  transition: transform var(--dur-move) var(--ease-in);
+   Hinein auf dem Sheet-Takt (dur-screen, ease-out), hinaus ebenfalls
+   abbremsend: der Screen kommt dabei nach vorn, also ist es eine
+   Ankunft — mit ease-in schlug er hart auf. Beim Ziehen folgt er dem
+   Finger: useDragToDismiss setzt --sheet-drag (0 = Sheet oben, 1 =
+   Sheet unten) und schaltet ueber data-sheet-motion die Uebergaenge.
+
+   Die Ecken haengen nicht in der Animation (nur transform, siehe
+   "Leistung"): sie setzen beim Zuruecktreten sofort ein, solange die
+   Karte noch bildschirmgross ist und die Geraeteecken sie verdecken,
+   und fallen beim Zurueckkommen erst weg, wenn sie wieder dort ist. */
+.presenter {
+  position: absolute; inset: 0; overflow: hidden;
+  transform-origin: 50% 0;
+  transition:
+    transform var(--dur-move) var(--ease-out),
+    border-radius 0s linear var(--dur-move);
 }
-.screens.behind-sheet { transform: scale(0.94); transition-timing-function: var(--ease-out); }
+.presenter.behind-sheet {
+  --recede-p: calc(1 - var(--sheet-drag, 0));
+  transform:
+    translate3d(0, calc(var(--status-h) * var(--recede-p)), 0)
+    scale(calc(1 - (1 - var(--recede-scale)) * var(--recede-p)));
+  border-radius: var(--noura-radius-card);
+  transition: transform var(--dur-screen) var(--ease-out), border-radius 0s;
+}
 
 .screen {
   position: absolute; inset: 0;
@@ -1087,20 +1131,51 @@ button.sim-card { cursor: pointer; }
 /* 61px Knopfhoehe + 12px Abstand ueber der Leiste — der Stapel haengt am
    selben Mass wie der "Mehr"-Knopf und verrutscht nicht gegen ihn. */
 .fab-stack { position: absolute; right: 24px; bottom: calc(var(--bar-bottom) + 73px); display: flex; flex-direction: column; align-items: flex-end; gap: 12px; z-index: 19; }
-.fab-stack .btn { width: auto; opacity: 0; transform: translateY(14px); pointer-events: none; transition: opacity var(--dur-move) var(--ease-out), transform var(--dur-move) var(--ease-out); }
-.fab-stack.open .btn { opacity: 1; transform: translateY(0); pointer-events: auto; }
+/* Das Menue waechst aus dem Knopf, wie ein iOS-Menue aus seiner
+   Glasflaeche: Ursprung unten rechts, an der Ecke des "Mehr"-Knopfs,
+   auf der Feder. Vorher glitten die Eintraege 14px hoch — eine Liste,
+   die erscheint, nicht eine, die aus etwas herauskommt. Zu geht es
+   schneller und ohne Feder: was geht, beschleunigt weg. */
+.fab-stack .btn {
+  width: auto; opacity: 0; pointer-events: none;
+  transform: translate3d(0, 16px, 0) scale(0.6); transform-origin: 100% 100%;
+  transition: opacity var(--dur-quick) var(--ease-in), transform var(--dur-quick) var(--ease-in);
+}
+.fab-stack.open .btn {
+  opacity: 1; transform: none; pointer-events: auto;
+  transition: opacity var(--dur-quick) var(--ease-out), transform var(--dur-screen) var(--spring);
+}
+/* Die Regel oben schlaegt .btn:active an Spezifitaet — ohne diese Zeile
+   gaben die Eintraege beim Druecken nicht nach. */
+.fab-stack.open .btn:active {
+  transform: scale(0.97);
+  transition: transform var(--dur-tap) var(--ease-out), background var(--dur-tap) var(--ease-out);
+}
+/* Faengt den Tipp neben das offene Menue ab und schliesst es — der Tipp
+   loest dabei nichts darunter aus, wie bei jedem iOS-Menue. */
+.fab-catch { position: absolute; inset: 0; z-index: 18; }
 .mehr-btn { width: auto; }
-.mehr-btn svg { transition: transform var(--dur-quick) var(--ease-out); }
+.mehr-btn svg { transition: transform var(--dur-screen) var(--spring); }
 .mehr-btn.open svg { transform: rotate(45deg); }
 
 /* ---------- Bottom sheets ---------- */
 /* Figma: Sheets 393x782, Glas @10%, Backdrop-Blur 40px, Radius 24px,
    Griff 29x4 oben. */
 .sheet-backdrop { position: absolute; inset: 0; background: var(--noura-scrim); z-index: 48; opacity: 0; pointer-events: none; transition: opacity var(--dur-move) var(--ease-in); }
-.sheet-backdrop.on { transition-timing-function: var(--ease-out); }
-.sheet-backdrop.on { opacity: 1; pointer-events: auto; }
+.sheet-backdrop.on {
+  opacity: calc(1 - var(--sheet-drag, 0)); pointer-events: auto;
+  transition: opacity var(--dur-screen) var(--ease-out);
+}
+/* Oben beginnt das Sheet an --sheet-top statt mit fester Hoehe: auf dem
+   852er Rahmen sind das Figmas 782px, auf hoeheren Geraeten waechst es
+   mit, statt eine immer breitere Luecke ueber sich zu lassen (Rangfolge
+   2: Sheet-Verhalten ist Plattform-Mechanik). Unten reicht es um
+   --sheet-overhang unter die Kante; der Innenabstand haelt den Inhalt
+   darueber. */
 .sheet {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 782px; max-height: 94%; z-index: 50;
+  position: absolute; left: 0; right: 0; z-index: 50;
+  top: var(--sheet-top); bottom: calc(-1 * var(--sheet-overhang));
+  padding-bottom: var(--sheet-overhang);
   background: var(--noura-glass);
   -webkit-backdrop-filter: blur(var(--noura-blur-bar)); backdrop-filter: blur(var(--noura-blur-bar));
   border-radius: var(--noura-radius-card) var(--noura-radius-card) 0 0; border: none;
@@ -1110,7 +1185,28 @@ button.sim-card { cursor: pointer; }
   transform: translateY(105%); transition: transform var(--dur-move) var(--ease-in);
   display: flex; flex-direction: column; overflow: hidden;
 }
-.sheet.on { transform: translateY(0); transition-timing-function: var(--ease-out); }
+/* Hinein auf dem Screen-Takt, nicht dem Reise-Takt: ein Sheet loest den
+   Screen fuer die Dauer ab, und die lange Auslaufphase der iOS-Kurve
+   braucht die 460ms, um sich als Ankommen zu lesen. Mit 320ms sass es
+   abrupt. Schleier und Kartenstapel laufen auf demselben Takt. */
+.sheet.on { transform: translateY(0); transition: transform var(--dur-screen) var(--ease-out); }
+
+/* ---- Ziehen ----
+   data-sheet-motion am Rahmen, gesetzt von useDragToDismiss:
+   drag   — alles folgt dem Finger, kein Uebergang
+   settle — losgelassen, das Sheet faellt zurueck: Feder fuer alle drei
+   fling  — losgelassen, das Sheet geht: Dauer und Kurve aus dem Tempo
+            des Fingers (--fling-dur, --fling-ease), damit es nicht erst
+            stehen bleibt und dann losfaehrt. */
+.phone[data-sheet-motion='drag'] .presenter,
+.phone[data-sheet-motion='drag'] .sheet-backdrop { transition: none; }
+.phone[data-sheet-motion='settle'] .presenter { transition: transform var(--dur-screen) var(--spring); }
+.phone[data-sheet-motion='settle'] .sheet-backdrop { transition: opacity var(--dur-screen) var(--spring); }
+/* Die Ecken bleiben, bis der Screen wieder bildschirmgross ist. */
+.phone[data-sheet-motion='fling'] .presenter {
+  transition: transform var(--fling-dur) var(--fling-ease), border-radius 0s linear var(--fling-dur);
+}
+.phone[data-sheet-motion='fling'] .sheet-backdrop { transition: opacity var(--fling-dur) var(--fling-ease); }
 /* Unten angekommen: nicht nur aus dem Bild, sondern aus dem Rendern.
    Beides ist noetig — content-visibility ueberspringt den Inhalt, die
    Glasflaeche des Sheets selbst bleibt dabei stehen; die nimmt erst

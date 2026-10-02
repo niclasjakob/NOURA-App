@@ -628,11 +628,26 @@ export function Home({
   useEffect(() => {
     if (!active) return
     setArriving(true)
-    /* Sechs Versaetze zu 80ms plus die 460ms des letzten Eintritts —
-       danach steht alles. 2600ms hielt die Klasse doppelt so lange am
-       Screen wie der Auftritt dauerte. */
-    const t = window.setTimeout(() => setArriving(false), 1200)
+    /* Fuenf Versaetze zu 50ms plus die 460ms des letzten Eintritts —
+       danach steht alles (app.css › Ankunft auf Home). */
+    const t = window.setTimeout(() => setArriving(false), 800)
     return () => window.clearTimeout(t)
+  }, [active])
+
+  /* Ein offenes Menue schliesst wie unter iOS: Tipp daneben oder
+     Escape. Vorher blieb es stehen, bis man "Mehr" ein zweites Mal
+     traf. */
+  useEffect(() => {
+    if (!fabsOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFabsOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [fabsOpen])
+  /* Wer Home verlaesst und wiederkommt, findet das Menue geschlossen. */
+  useEffect(() => {
+    if (!active) setFabsOpen(false)
   }, [active])
 
   return (
@@ -675,6 +690,7 @@ export function Home({
         <StatusCard usage={usage} plan={plan} onOpen={onOpenUsage} />
       </div>
 
+      {fabsOpen && <div className="fab-catch" aria-hidden="true" onClick={() => setFabsOpen(false)} />}
       <div id="more-menu" ref={fabsRef} className={`fab-stack${fabsOpen ? ' open' : ''}`}>
         <Button onClick={() => { setFabsOpen(false); onOpenSupport() }}>Support</Button>
         <Button onClick={() => { setFabsOpen(false); onOpenPlan() }}>Plan anpassen</Button>

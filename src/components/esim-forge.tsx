@@ -9,8 +9,8 @@
    Stattdessen laeuft hier eine durchgehende Fertigung ueber beide
    Haelften des Ablaufs. EIN Objekt, acht Takte:
 
-     entworfen · gelasert · versiegelt · bereit      (wir bauen sie)
-     geladen · eingerichtet · gesucht · im Netz      (sein iPhone holt sie)
+     angelegt · personalisiert · versiegelt · bereit      (wir bauen sie)
+     geladen · eingerichtet · gesucht · im Netz           (sein iPhone holt sie)
 
    ---------------------------------------------------------------
    Gezeichnet wird die Karte, die es im Produkt wirklich gibt.

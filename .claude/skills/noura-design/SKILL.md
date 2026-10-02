@@ -113,6 +113,20 @@ wird es bei gedämpftem Text und bei der Akzentfarbe:
 > Punkt sagen "Fehler", der Text ist weiss. Als Symbol, Balken, Rand und
 > Punkt bleibt der Akzent `#e15055`.
 
+> **WebKit-Falle (2026-10-01): Glas nie unter einem ausblendenden
+> Vorfahren.** Steht ein Vorfahr eines Elements mit `backdrop-filter`
+> auf `opacity` unter 1, rendert WebKit es ohne Weichzeichner — schon bei
+> .99. Gemessen im iOS-Simulator an den Kacheln im Konto-Sheet (Kachel
+> minus Sheet, Luminanz): Ruhe +37,7, Vorfahr .99 → +22,4 (= ganz ohne
+> Weichzeichner), Vorfahr nur verschoben → +39,5, Kachel selbst .99 →
+> +37,0. Beim Vor- und Zurueckblaettern liefen die Kacheln deshalb dunkel
+> durch den Wechsel und sprangen am Ende hell (Niclas: „erscheinen kurz
+> hell“). **Regel:** Bewegung (`transform`) darf auf den Behaelter,
+> Deckkraft nur auf das Glas selbst oder auf Geschwister ohne Glas —
+> siehe `.acct-pane` in `app.css`. Ueber der Aurora (Screenwechsel) sieht
+> man den Unterschied nicht, im Glas-Sheet schon. Chrome zeigt dasselbe
+> mit umgekehrtem Vorzeichen.
+
 > **Build-Falle (2026-09-24):** `-webkit-backdrop-filter` muss **vor**
 > `backdrop-filter` stehen. Umgekehrt verwirft Lightning CSS im
 > Tailwind-Build die ungepraefixte Zeile, sobald es gleiche Selektoren
@@ -215,6 +229,26 @@ Was weiter endlos laeuft, laeuft **in eine Richtung**: Lichtstreif ueber
 der Karte, kreisende Glaspunkte, Farbwolken auf der Kreisbahn — oder zeigt
 einen Vorgang an (Suchbalken, Ladelinie, Ident-Lesen). Wer eine neue
 Schleife baut, die umkehrt, braucht einen Grund, der im Produkt steht.
+
+**Beauftragt 2026-10-01 (Niclas): Sheets und Home „wie in
+Apple-Software“.** Gemessen in Chrome (393x852 und 402x874 mit
+Safe-Area 62/34, Gesten als echte TouchEvents mit Bildtakt):
+
+| Was | vorher | jetzt |
+|---|---|---|
+| Hinter dem Sheet | nur `.screens` auf 94 %, Aurora blieb stehen | `.presenter` (Aurora + Screens) tritt als Karte zurueck: 92 %, oben an `--status-h`, Radius 24, auf Schwarz |
+| Sheet hinein | 320ms ease-out | **460ms** ease-out (`--dur-screen`), Schleier und Karte im selben Takt — Abweichung von `motion.md` („Sheet in: dur-move“) |
+| Sheet-Hoehe | fest 782px | ab `--sheet-top` (Statusleiste + 16px): auf 852 weiter 782, auf 874 dann 796 |
+| Ziehen | nur am 16px-Griff, ab 110px, Abgang aus dem Stand | per Touch ueberall, solange der Inhalt oben steht; Karte und Schleier folgen; Wurf schliesst mit Fingertempo, sonst Feder zurueck; nach oben Nachgeben bis 40px (`--sheet-overhang`) |
+| Home-Ankunft | 7 Bloecke, 24px, 80ms Takt (~1s) | Inhalt 12px aus 98 %, 50ms Takt; Profil und Mehr entstehen am Platz aus 60 % auf der Feder (~0,7s) |
+| Mehr-Menue | 14px hoch | waechst aus der Knopfecke (Feder), Tipp daneben oder Escape schliesst |
+| Passkey-Sheet | ragte 4pt ueber den unteren Rand | ganz hinaus (`100% + 8px + Inset`) |
+| Balken in Sheets (Tagesbalken, Plaetze im Magic-Sheet) | wuchsen im selben Bild wie die Sheet-Fahrt, 20ms Versatz, schrumpften beim Schliessen | ab `--sheet-landed` (300ms), Tagesbalken als Welle mit 50ms je Tag — fertig nach ~1,3s; beim Schliessen bleiben sie stehen. Keyframes statt Uebergang (geparktes Sheet hat keinen Ausgangswert) |
+
+Gesten-Logik: `useDragToDismiss` in `hooks/a11y.ts`; die Uebergaenge
+schaltet `data-sheet-motion` am `.phone` (`drag`/`settle`/`fling`).
+Nicht auf dem Geraet geprueft — WKWebView-Touch vor der Vorfuehrung
+einmal von Hand ziehen.
 
 ---
 

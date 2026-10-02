@@ -191,14 +191,30 @@ button.status-row:active { opacity: var(--press-dim); }
    Die Balken wachsen einmal beim Oeffnen, versetzt von links — der
    Monat liest sich als Zeitachse. Nur transform, im Leerlauf steht
    alles. Punkte fuer die Tage, die noch kommen, in --noura-text-faint:
-   ein nicht-textliches Zeichen, genau dafuer ist die Stufe da. */
+   ein nicht-textliches Zeichen, genau dafuer ist die Stufe da. Sie
+   stehen von Anfang an: sie sind die Strecke, die Balken fuellen sie.
+
+   Seit dem 2026-10-01 erst, wenn das Sheet angekommen ist
+   (--sheet-landed), und als Welle mit 50ms je Tag statt 20ms (Niclas:
+   „langsamer“). Vorher startete das Wachsen im selben Bild wie das
+   Sheet und war vorbei, bevor man hinsah; beim Schliessen schrumpften
+   die Balken sichtbar in der Abfahrt.
+
+   Animation statt Uebergang: das Sheet ist geschlossen geparkt
+   (content-visibility), ein Uebergang haette beim Oeffnen keinen
+   Ausgangswert und sprang. Die Animation beginnt immer bei null, und
+   ohne .run stehen die Balken voll — beim Schliessen bleiben sie also
+   stehen und fahren mit dem Sheet hinaus. */
 .day-bars { display: flex; align-items: flex-end; gap: 3px; height: 64px; margin: 16px 0 12px; }
 .day-bars i {
   flex: 1; min-width: 0; height: var(--h); border-radius: 2px; background: var(--noura-accent);
-  transform: scaleY(0); transform-origin: bottom;
-  transition: transform var(--dur-screen) var(--ease-out) calc(var(--i) * 20ms);
+  transform-origin: bottom;
 }
-.day-bars.run i { transform: scaleY(1); }
+.day-bars.run i {
+  animation: dayBarIn var(--dur-screen) var(--ease-out) backwards;
+  animation-delay: calc(var(--sheet-landed) + var(--i) * 50ms);
+}
+@keyframes dayBarIn { from { transform: scaleY(0); } }
 .day-bars b { flex: 1; min-width: 0; display: flex; justify-content: center; }
 .day-bars b::before { content: ''; width: 3px; height: 3px; border-radius: 50%; background: var(--noura-text-faint); }
 
@@ -214,14 +230,19 @@ button.status-row:active { opacity: var(--press-dim); }
   background: var(--noura-accent); transform-origin: left;
   transition: transform var(--dur-screen) var(--ease-out);
 }
+/* Plaetze im Magic-Sheet: fuellt sich, wenn das Sheet angekommen ist —
+   aus demselben Grund und auf dieselbe Weise wie die Tagesbalken. Bis
+   zum 2026-10-01 lief es als Uebergang an `open`: gefuellt in der Fahrt,
+   und beim Schliessen leerte sich der Balken sichtbar. */
+.event-bar i { transform: scaleX(var(--f)); }
+.sheet.on .event-bar i { animation: barIn var(--dur-screen) var(--ease-out) var(--sheet-landed) backwards; }
 
 /* Das "Mehr"-Menue traegt zwei Eintraege (bis zum 2026-09-25 drei,
-   mit "Reisen"). Sie fahren von unten nach oben versetzt ein, damit
-   die Liste als Bewegung aus dem Knopf heraus liest statt als Block,
-   der erscheint. */
-.fab-stack .btn:nth-child(1) { transition-delay: 60ms; }
-.fab-stack .btn:nth-child(2) { transition-delay: 0s; }
-.fab-stack:not(.open) .btn { transition-delay: 0s; }
+   mit "Reisen"). Sie kommen von unten nach oben versetzt, der dem Knopf
+   naechste zuerst — die Liste liest sich als Bewegung aus dem Knopf
+   heraus statt als Block, der erscheint. Zu gehen beide zugleich. */
+.fab-stack.open .btn:nth-child(1) { transition-delay: 40ms; }
+.fab-stack.open .btn:active { transition-delay: 0s; }
 
 /* ============================================================
    3 — Geteilte Bausteine
@@ -1096,36 +1117,52 @@ button.status-row:active { opacity: var(--press-dim); }
    Bewegungsleiter, und nur die Karte behaelt ihre eigene Kurve — sie
    ist der Gegenstand, nicht eine Kachel.
    ============================================================ */
+/* Seit dem 2026-10-01 knapper und in zwei Sorten. Vorher stiegen
+   sieben Bloecke je 24px im 80ms-Takt auf und standen erst nach fast
+   einer Sekunde — das bekannte Einblenden-beim-Scrollen einer
+   Webseite. iOS laesst Inhalt kaum reisen; was sich bewegt, setzt
+   sich.
+
+   Inhalt (Kopfzeilen, Karten) steigt 12px und setzt sich aus 98 % —
+   die Bewegung ist Ankunft, nicht Weg. Bedienelemente (Profil, Mehr)
+   reisen gar nicht: sie entstehen an ihrem Platz aus 60 % auf der
+   Feder, so wie Liquid Glass unter iOS 26 erscheint. Damit trennt der
+   Auftritt dieselben zwei Schichten, die das Material trennt. */
 .home.arriving {
-  /* Der Versatz zwischen zwei Eintritten. Vorher standen hier sieben
-     einzeln gesetzte Verzoegerungen zwischen 0,07s und 0,85s, deren
-     Abstaende (0,16 / 0,17 / 0,10 / 0,15 / 0,10 / 0,10) nichts
-     Erkennbares unterschieden. */
-  --stagger: 80ms;
+  /* Der Versatz zwischen zwei Eintritten. Vorher 80ms, davor sieben
+     einzeln gesetzte Verzoegerungen zwischen 0,07s und 0,85s. */
+  --stagger: 50ms;
 }
-.home.arriving .home-header,
-.home.arriving .home-scroll > *,
-.home.arriving .navbar {
+.home.arriving .home-brand,
+.home.arriving .home-header h1,
+.home.arriving .home-scroll > * {
   animation: homeRise var(--dur-screen) var(--ease-out) backwards;
 }
-@keyframes homeRise { from { opacity: 0; transform: translateY(24px); } }
+@keyframes homeRise { from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.98); } }
 
-.home.arriving .home-header { animation-delay: 0s; }
 .home.arriving .home-scroll > *:nth-child(1) { animation-delay: calc(1 * var(--stagger)); }
 .home.arriving .home-scroll > *:nth-child(2) { animation-delay: calc(2 * var(--stagger)); }
 .home.arriving .home-scroll > *:nth-child(3) { animation-delay: calc(3 * var(--stagger)); }
 .home.arriving .home-scroll > *:nth-child(4) { animation-delay: calc(4 * var(--stagger)); }
 .home.arriving .home-scroll > *:nth-child(5) { animation-delay: calc(5 * var(--stagger)); }
-.home.arriving .navbar { animation-delay: calc(6 * var(--stagger)); }
+
+.home.arriving .avatar-btn,
+.home.arriving .mehr-btn {
+  animation: glassIn var(--dur-screen) var(--spring) backwards;
+}
+.home.arriving .avatar-btn { animation-delay: calc(2 * var(--stagger)); }
+.home.arriving .mehr-btn { animation-delay: calc(4 * var(--stagger)); }
+@keyframes glassIn { from { opacity: 0; transform: scale(0.6); } }
 
 /* Muss nach den nth-child-Regeln stehen: die Karte ist das erste Kind
    und soll trotzdem ihren eigenen Auftritt behalten. Sie wird abgelegt,
-   also reist sie — dur-move auf der Feder, wie die Uebergabe zwischen
-   den Screens. */
+   kommt also etwas groesser und senkt sich auf die Flaeche — auf der
+   Feder, in ihrer vollen Laenge (dur-screen), damit der kleine
+   Ueberschwinger als Aufsetzen zu spueren ist. */
 .home.arriving .sim-card {
-  animation: homeCard var(--dur-move) var(--spring) var(--stagger) backwards;
+  animation: homeCard var(--dur-screen) var(--spring) var(--stagger) backwards;
 }
-@keyframes homeCard { from { opacity: 0; transform: translateY(36px) scale(1.07); } }
+@keyframes homeCard { from { opacity: 0; transform: translate3d(0, 24px, 0) scale(1.05); } }
 
 /* ============================================================
    Konto-Sheet: Unterseiten (seit 2026-09-24)
@@ -1139,11 +1176,26 @@ button.status-row:active { opacity: var(--press-dim); }
 .acct-nav { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 .acct-pane {
   position: absolute; inset: 0; display: flex; flex-direction: column;
-  transition: transform var(--dur-move) var(--ease-out), opacity var(--dur-move) var(--ease-out);
+  transition: transform var(--dur-move) var(--ease-out);
 }
 .acct-pane.sub { transform: translateX(100%); touch-action: pan-y; }
-.acct-nav.deep .acct-pane.root { transform: translateX(-30%); opacity: 0; }
+.acct-nav.deep .acct-pane.root { transform: translateX(-30%); }
 .acct-nav.deep .acct-pane.sub { transform: none; }
+
+/* Ausgeblendet wird der Inhalt, nicht die Ebene (seit 2026-10-01).
+   Bis dahin trug .acct-pane.root selbst die Deckkraft. Sobald ein
+   Vorfahr unter 1 steht, schaltet WebKit den Weichzeichner der
+   Glaskacheln darin ab — gemessen im iOS-Simulator: Kachel ueber dem
+   Sheet +37,7 in Ruhe, +22,4 schon bei .99, also derselbe Wert wie
+   ganz ohne Weichzeichner. Die Kacheln liefen deshalb dunkel durch den
+   Wechsel und sprangen am Ende hell (Niclas: „erscheinen kurz hell").
+   Eigene Deckkraft macht das nicht (.99 → +37,0, .9 → +34,8), Versatz
+   auch nicht. Also blendet jedes Kind selbst aus, die Kacheln einzeln —
+   ihr Behaelter .quick-cards waere wieder ein Vorfahr. */
+.acct-pane.root .sheet-body > :not(.quick-cards),
+.acct-pane.root .quick-cards > * { transition: opacity var(--dur-move) var(--ease-out); }
+.acct-nav.deep .acct-pane.root .sheet-body > :not(.quick-cards),
+.acct-nav.deep .acct-pane.root .quick-cards > * { opacity: 0; }
 
 /* Zeilen, die eine Seite oeffnen, tragen rechts den Pfeil. */
 .list-row .chev { margin-left: auto; color: var(--noura-text-muted); line-height: 0; }
@@ -1371,9 +1423,14 @@ button.status-row:active { opacity: var(--press-dim); }
   background: #1c1c1e; color: #fff;
   font-family: -apple-system, 'SF Pro Text', system-ui, sans-serif;
   display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
-  transform: translateY(110%); transition: transform var(--dur-move) var(--ease-in);
+  /* Ganz hinaus heisst: die eigene Hoehe PLUS der Abstand zur Kante.
+     Mit 110 % blieb auf dem Geraet (34px Inset) ein 4pt-Streifen der
+     dunklen Flaeche am unteren Rand stehen — auf jedem Screen, auch
+     ueber offenen Sheets. */
+  transform: translateY(calc(100% + 8px + env(safe-area-inset-bottom, 0px)));
+  transition: transform var(--dur-move) var(--ease-in);
 }
-.pk-sheet.on { transform: translateY(0); transition-timing-function: var(--ease-out); }
+.pk-sheet.on { transform: translateY(0); transition: transform var(--dur-screen) var(--ease-out); }
 .pk-sheet:focus { outline: none; }
 .pk-close {
   position: absolute; top: 16px; right: 16px; width: 30px; height: 30px; border-radius: 50%;

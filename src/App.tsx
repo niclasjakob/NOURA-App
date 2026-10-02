@@ -230,11 +230,13 @@ export default function App() {
   return (
     <div className="stage">
       <div ref={phoneRef} className="phone">
+        {/* Aurora und Screens in einer Huelle: hinter einem Sheet treten
+            sie zusammen als eine Karte zurueck (global.css › Kartenstapel).
+            Die Statusleiste bleibt draussen und steht still — wie unter iOS. */}
+        <div className={`presenter${sheet ? ' behind-sheet' : ''}`}>
         <BackgroundGradient />
-        {/* On the native build iOS draws the real status bar, so skip the mock one */}
-        {!Capacitor.isNativePlatform() && <StatusBar />}
 
-        <div ref={screensRef} className={`screens${sheet ? ' behind-sheet' : ''}`} data-dir={dir}>
+        <div ref={screensRef} className="screens" data-dir={dir}>
           <Intro
             active={screen === 'intro'}
             onStart={() => go('onboarding')}
@@ -303,6 +305,9 @@ export default function App() {
             onOpenPass={(id) => openMagic(id)}
           />
         </div>
+        </div>
+        {/* On the native build iOS draws the real status bar, so skip the mock one */}
+        {!Capacitor.isNativePlatform() && <StatusBar />}
 
         <div className={`sheet-backdrop${sheet ? ' on' : ''}`} onClick={() => setSheet(null)} />
         {/* Der Chat kennt den Tarif, damit er mit echten Zahlen

@@ -782,7 +782,7 @@ export function MagicSheet({
               aria-valuenow={FEATURED.taken}
               aria-label={`${FEATURED.taken} von ${FEATURED.spots} Plätzen vergeben`}
             >
-              <i style={{ transform: `scaleX(${open ? FEATURED.taken / FEATURED.spots : 0})` }} />
+              <i style={{ '--f': FEATURED.taken / FEATURED.spots } as React.CSSProperties} />
             </div>
 
             <Button
